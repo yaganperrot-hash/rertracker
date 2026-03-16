@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Retards IDF — Tableau de bord</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3248;
+      --text: #e8eaf6;
+      --muted: #7c8099;
+      --accent: #4f8ef7;
+      --red: #e53935;
+      --yellow: #ffd740;
+      --green: #43a047;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .logo { display: flex; align-items: center; gap: 0.75rem; }
+    .logo-icon {
+      width: 40px; height: 40px;
+      background: var(--red);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+    }
+    h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.02em; }
+    h1 span { color: var(--muted); font-weight: 400; }
+    .meta { font-size: 0.78rem; color: var(--muted); text-align: right; }
+    .meta strong { color: var(--text); }
+    .dot {
+      display: inline-block; width: 8px; height: 8px;
+      border-radius: 50%; background: var(--green);
+      margin-right: 4px; animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* ── Nav ── */
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex; gap: 0;
+    }
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      padding: 0.75rem 1rem;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    nav a.active, nav a:hover { color: var(--text); border-color: var(--accent); }
+
+    /* ── Layout ── */
+    main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+
+    /* ── Section title ── */
+    .section-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+
+    /* ── KPI cards ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+    .kpi {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi::before {
+      content: '';
+      position: absolute; top: 0; left: 0;
+      width: 3px; height: 100%;
+      background: var(--accent);
+    }
+    .kpi.danger::before { background: var(--red); }
+    .kpi.warn::before { background: var(--yellow); }
+    .kpi.ok::before { background: var(--green); }
+    .kpi-label { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.4rem; }
+    .kpi-value {
+      font-size: 2.2rem; font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .kpi-sub { font-size: 0.75rem; color: var(--muted); margin-top: 0.3rem; }
+
+    /* ── Incidents en cours ── */
+    .incidents-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 2.5rem;
+    }
+    .incident-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      display: flex; align-items: flex-start; gap: 0.75rem;
+    }
+    .line-badge {
+      flex-shrink: 0;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+    .incident-info { flex: 1; min-width: 0; }
+    .incident-type { font-size: 0.85rem; font-weight: 600; }
+    .incident-cause { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+    .incident-time { font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
+
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .empty-state .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+
+    /* ── Chart ── */
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+    .chart-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+    .chart-header h3 { font-size: 0.9rem; font-weight: 600; }
+    .chart-wrap { position: relative; height: 260px; }
+
+    /* ── Lignes perturbées ── */
+    .lines-grid {
+      display: flex; flex-wrap: wrap; gap: 0.5rem;
+      margin-bottom: 2.5rem;
+    }
+    .line-chip {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.4rem 0.75rem;
+      font-size: 0.8rem;
+    }
+    .line-chip .dot-line {
+      width: 10px; height: 10px; border-radius: 50%;
+    }
+
+    /* ── Skeleton ── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 6px;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      header { padding: 1rem; }
+      main { padding: 1rem; }
+      .kpi-value { font-size: 1.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🚆</div>
+    <div>
+      <h1>Retards IDF <span>/ Tableau de bord</span></h1>
+    </div>
+  </div>
+  <div class="meta">
+    <div><span class="dot"></span>Temps réel</div>
+    <div>Màj : <strong id="last-update">—</strong></div>
+    <div>Prochaine : <strong id="next-update">—</strong></div>
+  </div>
+</header>
+
+<nav>
+  <a href="index.html" class="active">Tableau de bord</a>
+  <a href="stats.html">Statistiques</a>
+  <a href="methode.html">Méthode</a>
+</nav>
+
+<main>
+
+  <!-- KPI du jour -->
+  <p class="section-title">Aujourd'hui</p>
+  <div class="kpi-grid" id="kpi-grid">
+    <div class="kpi danger skeleton" style="height:100px"></div>
+    <div class="kpi warn skeleton" style="height:100px"></div>
+    <div class="kpi skeleton" style="height:100px"></div>
+    <div class="kpi skeleton" style="height:100px"></div>
+  </div>
+
+  <!-- Incidents en cours -->
+  <p class="section-title">Incidents en cours</p>
+  <div class="incidents-grid" id="incidents-grid">
+    <div class="skeleton" style="height:72px;border-radius:10px"></div>
+    <div class="skeleton" style="height:72px;border-radius:10px"></div>
+  </div>
+
+  <!-- Graphe 30 jours -->
+  <p class="section-title">Incidents — 30 derniers jours (toutes lignes)</p>
+  <div class="chart-card">
+    <div class="chart-header">
+      <h3>Incidents quotidiens</h3>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="chart-incidents"></canvas>
+    </div>
+  </div>
+
+</main>
+
+<script>
+/* ── Couleurs lignes ── */
+const LINE_COLORS = {
+  'A': { bg: '#E3051B', fg: '#fff' },
+  'B': { bg: '#4DA4DC', fg: '#fff' },
+  'C': { bg: '#F3D929', fg: '#000' },
+  'D': { bg: '#5FAA00', fg: '#fff' },
+  'E': { bg: '#6E1E78', fg: '#fff' },
+  'H': { bg: '#7B7B7B', fg: '#fff' },
+  'J': { bg: '#D2B464', fg: '#000' },
+  'K': { bg: '#8C4B31', fg: '#fff' },
+  'L': { bg: '#9F3E96', fg: '#fff' },
+  'N': { bg: '#1F1F1F', fg: '#fff' },
+  'P': { bg: '#E87722', fg: '#fff' },
+  'R': { bg: '#228B22', fg: '#fff' },
+  'U': { bg: '#7B0F1F', fg: '#fff' },
+};
+
+function lineColor(lineId) {
+  const key = lineId.replace(/^(RER|Transilien)\s*/i, '').trim().toUpperCase();
+  return LINE_COLORS[key] || { bg: '#4f8ef7', fg: '#fff' };
+}
+
+function lineLabel(lineId) {
+  const key = lineId.replace(/^(RER|Transilien)\s*/i, '').trim().toUpperCase();
+  if (['A','B','C','D','E'].includes(key)) return 'RER ' + key;
+  return key;
+}
+
+/* ── Formatage ── */
+function fmt(n) {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace('.', ',') + ' M';
+  if (n >= 1_000) return (n / 1_000).toFixed(0) + ' k';
+  return n.toString();
+}
+
+function fmtDuration(min) {
+  if (!min) return '0 min';
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h === 0) return `${m} min`;
+  return `${h} h ${m > 0 ? m + ' min' : ''}`.trim();
+}
+
+function fmtTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function fmtNow() {
+  return new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+/* ── KPI ── */
+async function loadTodayStats() {
+  const res = await fetch('/api/stats/today');
+  if (!res.ok) throw new Error('stats/today failed');
+  return res.json();
+}
+
+function renderKpis(data) {
+  const grid = document.getElementById('kpi-grid');
+  const nbLignes = data.nb_lignes_perturbees || 0;
+  const colorClass = nbLignes === 0 ? 'ok' : nbLignes < 3 ? 'warn' : 'danger';
+
+  grid.innerHTML = `
+    <div class="kpi ${colorClass}">
+      <div class="kpi-label">Incidents aujourd'hui</div>
+      <div class="kpi-value">${data.total_incidents}</div>
+      <div class="kpi-sub">${nbLignes} ligne${nbLignes > 1 ? 's' : ''} touchée${nbLignes > 1 ? 's' : ''}</div>
+    </div>
+    <div class="kpi warn">
+      <div class="kpi-label">Durée cumulée</div>
+      <div class="kpi-value">${fmtDuration(data.total_duree_min)}</div>
+      <div class="kpi-sub">temps d'arrêt ou de perturbation</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Minutes-voyageurs perdues</div>
+      <div class="kpi-value">${fmt(data.total_minutes_voyageurs)}</div>
+      <div class="kpi-sub">estimation selon fréquentation</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Lignes perturbées</div>
+      <div class="kpi-value" style="font-size:1rem;display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+        ${data.lignes_perturbees.length === 0
+          ? '<span style="font-size:1.8rem;color:var(--green)">✓ Aucune</span>'
+          : data.lignes_perturbees.map(l => {
+              const c = lineColor(l);
+              return `<span style="background:${c.bg};color:${c.fg};padding:3px 8px;border-radius:12px;font-size:0.75rem;font-weight:700">${lineLabel(l)}</span>`;
+            }).join('')
+        }
+      </div>
+      <div class="kpi-sub" style="margin-top:0.5rem">sur RER A–E + H J K L N P R U</div>
+    </div>
+  `;
+}
+
+/* ── Incidents en cours ── */
+async function loadCurrentIncidents() {
+  const res = await fetch('/api/incidents/current');
+  if (!res.ok) throw new Error('incidents/current failed');
+  return res.json();
+}
+
+function renderIncidents(incidents) {
+  const grid = document.getElementById('incidents-grid');
+  if (incidents.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">✅</div>
+        Aucun incident en cours sur le réseau RER / Transilien
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = incidents.map(inc => {
+    const c = lineColor(inc.line_id);
+    const label = lineLabel(inc.line_id);
+    return `
+      <div class="incident-card">
+        <div class="line-badge" style="background:${c.bg};color:${c.fg}">${label}</div>
+        <div class="incident-info">
+          <div class="incident-type">${inc.type_incident || 'Perturbation'}</div>
+          <div class="incident-cause">${inc.cause || '—'}</div>
+          <div class="incident-time">Depuis ${fmtTime(inc.heure_debut)}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+/* ── Graphe 30 jours ── */
+let chartInstance = null;
+
+async function loadChartData() {
+  const LINES = ['A','B','C','D','E','H','J','K','L','N','P','R','U'];
+  const results = await Promise.all(
+    LINES.map(l => fetch(`/api/stats/line/${l}?period=30`).then(r => r.ok ? r.json() : null))
+  );
+
+  // Agréger par date
+  const byDate = {};
+  results.forEach((data, i) => {
+    if (!data) return;
+    data.daily.forEach(d => {
+      byDate[d.date] = (byDate[d.date] || 0) + d.nb_incidents;
+    });
+  });
+
+  const labels = Object.keys(byDate).sort();
+  const values = labels.map(d => byDate[d]);
+
+  return { labels, values };
+}
+
+function renderChart({ labels, values }) {
+  const ctx = document.getElementById('chart-incidents').getContext('2d');
+  if (chartInstance) chartInstance.destroy();
+
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels.map(d => {
+        const dt = new Date(d + 'T12:00:00');
+        return dt.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+      }),
+      datasets: [{
+        label: 'Incidents',
+        data: values,
+        backgroundColor: 'rgba(79,142,247,0.7)',
+        borderColor: 'rgba(79,142,247,1)',
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => items[0].label,
+            label: (item) => ` ${item.raw} incident${item.raw > 1 ? 's' : ''}`,
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#7c8099', font: { size: 11 }, maxRotation: 45 },
+          grid: { color: '#2e3248' },
+        },
+        y: {
+          ticks: { color: '#7c8099', font: { size: 11 }, stepSize: 1 },
+          grid: { color: '#2e3248' },
+          beginAtZero: true,
+        }
+      }
+    }
+  });
+}
+
+/* ── Refresh loop ── */
+const REFRESH_MS = 5 * 60 * 1000;
+let nextRefreshAt = null;
+
+function updateTimers() {
+  document.getElementById('last-update').textContent = fmtNow();
+  nextRefreshAt = Date.now() + REFRESH_MS;
+  const tick = setInterval(() => {
+    const remaining = Math.max(0, nextRefreshAt - Date.now());
+    const mm = String(Math.floor(remaining / 60000)).padStart(2, '0');
+    const ss = String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0');
+    document.getElementById('next-update').textContent = `${mm}:${ss}`;
+    if (remaining === 0) clearInterval(tick);
+  }, 1000);
+}
+
+async function refresh() {
+  try {
+    const [stats, incidents, chartData] = await Promise.all([
+      loadTodayStats(),
+      loadCurrentIncidents(),
+      loadChartData(),
+    ]);
+    renderKpis(stats);
+    renderIncidents(incidents);
+    renderChart(chartData);
+  } catch (err) {
+    console.error('Erreur de chargement :', err);
+    document.getElementById('kpi-grid').innerHTML =
+      `<div style="color:var(--red);padding:1rem;grid-column:1/-1">Erreur de connexion à l'API. Vérifiez que le backend est démarré.</div>`;
+  }
+  updateTimers();
+}
+
+refresh();
+setInterval(refresh, REFRESH_MS);
+</script>
+</body>
+</html>

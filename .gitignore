@@ -47,3 +47,6 @@ htmlcov/
 # Misc
 *.bak
 *.tmp
+
+# Claude Code local settings
+.claude/settings.local.json

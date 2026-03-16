@@ -94,28 +94,27 @@ docker-compose logs -f backend
 - Étape 01 — CLAUDE.md créé
 - Étape 02 — TODO.md créé
 - Étape 03 — git init + .gitignore + structure dossiers
-
-### 🔄 En cours
-- Étape 04 — Docker + PostgreSQL
+- Étape 04 — Docker + PostgreSQL (`docker-compose.yml`, `Dockerfile`, `requirements.txt`)
+- Étape 05 — Modèles SQLAlchemy (`backend/models.py`, `backend/database.py`, `backend/config.py`)
+- Étape 06 — Collector PRIM (`backend/collector.py`, `data/frequentation.json`)
+- Étape 07 — Calcul des métriques (`backend/metrics.py`)
+- Étape 08 — Endpoints API REST (`backend/api.py`, `backend/main.py`)
+- Étape 09 — Frontend page principale (`frontend/index.html`)
+- Étape 10 — Frontend page statistiques (`frontend/stats.html`)
+- Étape 12 — Page /methode (`frontend/methode.html`)
+- Étape 13 — Tests unitaires (`tests/test_collector.py`, `tests/test_metrics.py`, `pytest.ini`)
 
 ### ⏳ À faire
-- Étape 05 — Modèles SQLAlchemy
-- Étape 06 — Collector PRIM
-- Étape 07 — Calcul des métriques
-- Étape 08 — Endpoints API REST
-- Étape 09 — Frontend page principale
-- Étape 10 — Frontend page statistiques
 - Étape 11 — Bot X quotidien
-- Étape 12 — Page /methode
-- Étape 13 — Tests unitaires
 - Étape 14 — README.md final
 
 ---
 
 ## Problèmes rencontrés & solutions
-_(à remplir au fur et à mesure)_
+- `pydantic-settings` ajouté à `requirements.txt` (nécessaire pour `BaseSettings` dans FastAPI moderne)
+- `DATABASE_URL` avec préfixe `postgresql://` converti automatiquement en `postgresql+asyncpg://` dans `database.py`
 
 ---
 
 ## Prochaine étape à reprendre
-**Étape 04** — Docker + PostgreSQL (`docker-compose.yml`, `Dockerfile`, `requirements.txt`)
+**Étape 11** — Bot X quotidien (`backend/bot.py`)
