@@ -12,6 +12,7 @@ from backend.database import init_db
 from backend.collector import collect_disruptions
 from backend.metrics import compute_daily_metrics
 from backend.api import router
+from backend.bot import post_daily_recap
 
 settings = get_settings()
 logging.basicConfig(level=settings.log_level)
@@ -38,6 +39,13 @@ async def lifespan(app: FastAPI):
         "interval",
         minutes=settings.polling_interval_minutes,
         id="compute_metrics",
+    )
+    scheduler.add_job(
+        post_daily_recap,
+        "cron",
+        hour=20,
+        minute=0,
+        id="daily_tweet",
     )
     scheduler.start()
 

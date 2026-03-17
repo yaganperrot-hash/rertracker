@@ -104,9 +104,11 @@ docker-compose logs -f backend
 - Étape 12 — Page /methode (`frontend/methode.html`)
 - Étape 13 — Tests unitaires (`tests/test_collector.py`, `tests/test_metrics.py`, `pytest.ini`)
 
-### ⏳ À faire
-- Étape 11 — Bot X quotidien
-- Étape 14 — README.md final
+- Étape 11 — Bot X quotidien (`backend/bot.py`, planifié à 20h dans `main.py`)
+- Étape 14 — README.md final (`README.md`)
+- Frontend refonte complète — design light cream + Roboto, API fetch avec fallback mock
+
+### ✅ Projet complet
 
 ---
 
@@ -117,4 +119,4 @@ docker-compose logs -f backend
 ---
 
 ## Prochaine étape à reprendre
-**Étape 11** — Bot X quotidien (`backend/bot.py`)
+**Projet terminé.** Seule action restante : renseigner les clés API dans `.env` (PRIM + Twitter/X).

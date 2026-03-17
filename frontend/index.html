@@ -1,501 +1,800 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Retards IDF — Tableau de bord</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RETARDS IDF — Compteur en temps réel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0f1117;
-      --surface: #1a1d27;
-      --surface2: #22263a;
-      --border: #2e3248;
-      --text: #e8eaf6;
-      --muted: #7c8099;
-      --accent: #4f8ef7;
-      --red: #e53935;
-      --yellow: #ffd740;
-      --green: #43a047;
+      --bg:     #F7F4EF;
+      --bg2:    #EDEAE4;
+      --bg3:    #E2DED7;
+      --border: #D4CFC7;
+      --text:   #111111;
+      --muted:  #999999;
+      --sub:    #666666;
+      --red:    #C0392B;
+      --orange: #C45000;
+      --rer-a:  #E2231A;
+      --rer-b:  #5191CF;
+      --rer-c:  #C8A800;
+      --rer-d:  #00814F;
+      --rer-e:  #B04191;
+      --font:   'Roboto', sans-serif;
     }
+
+    html { scroll-behavior: smooth; }
 
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      min-height: 100vh;
+      font-family: var(--font);
+      font-size: 14px;
+      overflow-x: hidden;
     }
 
-    /* ── Header ── */
-    header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 1rem 2rem;
+    /* ─── 1. TICKER ─── */
+    .ticker {
+      background: var(--text);
+      padding: 7px 0;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .ticker-track {
+      display: inline-block;
+      animation: tick 28s linear infinite;
+      font-family: var(--font);
+      font-weight: 400;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      color: #fff;
+    }
+    @keyframes tick {
+      from { transform: translateX(100vw); }
+      to   { transform: translateX(-100%); }
+    }
+
+    /* ─── 2. NAVIGATION ─── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg);
+      border-bottom: 2px solid var(--text);
+      padding: 14px 32px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 1rem;
+      gap: 24px;
     }
-    .logo { display: flex; align-items: center; gap: 0.75rem; }
-    .logo-icon {
-      width: 40px; height: 40px;
-      background: var(--red);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.3rem;
+    .nav-logo {
+      font-weight: 700;
+      font-size: 22px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      text-decoration: none;
+      flex-shrink: 0;
     }
-    h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.02em; }
-    h1 span { color: var(--muted); font-weight: 400; }
-    .meta { font-size: 0.78rem; color: var(--muted); text-align: right; }
-    .meta strong { color: var(--text); }
-    .dot {
-      display: inline-block; width: 8px; height: 8px;
-      border-radius: 50%; background: var(--green);
-      margin-right: 4px; animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
+    .nav-logo .logo-retards { color: var(--text); }
+    .nav-logo .logo-idf     { color: var(--red); }
 
-    /* ── Nav ── */
-    nav {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0 2rem;
-      display: flex; gap: 0;
+    .nav-links {
+      display: flex;
+      gap: 28px;
+      list-style: none;
     }
-    nav a {
+    .nav-links a {
+      font-weight: 400;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
       color: var(--muted);
       text-decoration: none;
-      font-size: 0.85rem;
-      padding: 0.75rem 1rem;
-      border-bottom: 2px solid transparent;
-      transition: color 0.15s, border-color 0.15s;
+      transition: color 0.15s;
     }
-    nav a.active, nav a:hover { color: var(--text); border-color: var(--accent); }
+    .nav-links a:hover { color: var(--text); }
 
-    /* ── Layout ── */
-    main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
-
-    /* ── Section title ── */
-    .section-title {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--muted);
-      margin-bottom: 1rem;
-    }
-
-    /* ── KPI cards ── */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 1rem;
-      margin-bottom: 2.5rem;
-    }
-    .kpi {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.25rem 1.5rem;
-      position: relative;
-      overflow: hidden;
-    }
-    .kpi::before {
-      content: '';
-      position: absolute; top: 0; left: 0;
-      width: 3px; height: 100%;
-      background: var(--accent);
-    }
-    .kpi.danger::before { background: var(--red); }
-    .kpi.warn::before { background: var(--yellow); }
-    .kpi.ok::before { background: var(--green); }
-    .kpi-label { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.4rem; }
-    .kpi-value {
-      font-size: 2.2rem; font-weight: 700;
-      letter-spacing: -0.03em;
-      line-height: 1;
-    }
-    .kpi-sub { font-size: 0.75rem; color: var(--muted); margin-top: 0.3rem; }
-
-    /* ── Incidents en cours ── */
-    .incidents-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 0.75rem;
-      margin-bottom: 2.5rem;
-    }
-    .incident-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 1rem 1.25rem;
-      display: flex; align-items: flex-start; gap: 0.75rem;
-    }
-    .line-badge {
+    .nav-live {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-weight: 600;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--red);
       flex-shrink: 0;
-      width: 36px; height: 36px;
+    }
+    .live-dot {
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.65rem; font-weight: 800;
-      letter-spacing: -0.03em;
+      background: var(--red);
+      animation: blink 1.5s ease-in-out infinite;
     }
-    .incident-info { flex: 1; min-width: 0; }
-    .incident-type { font-size: 0.85rem; font-weight: 600; }
-    .incident-cause { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
-    .incident-time { font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.15; }
+    }
 
-    .empty-state {
-      grid-column: 1 / -1;
+    /* ─── 3. HERO ─── */
+    .hero {
+      padding: 48px 32px 32px;
       text-align: center;
-      padding: 2rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .hero-date {
+      font-weight: 300;
+      font-size: 14px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
       color: var(--muted);
-      font-size: 0.9rem;
+      margin-bottom: 8px;
     }
-    .empty-state .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .hero-subtitle {
+      font-weight: 300;
+      font-size: 18px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--sub);
+      margin-bottom: 20px;
+    }
+    .hero-counter {
+      font-weight: 700;
+      font-size: clamp(72px, 14vw, 148px);
+      letter-spacing: -2px;
+      line-height: .88;
+      color: var(--text);
+    }
+    .hero-unit {
+      font-weight: 300;
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 10px;
+      margin-bottom: 20px;
+    }
 
-    /* ── Chart ── */
-    .chart-card {
-      background: var(--surface);
+    /* Bloc minutes */
+    .minutes-block {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin-bottom: 2.5rem;
+      background: var(--bg2);
+      padding: 12px 24px;
+      margin: 20px 0;
     }
-    .chart-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 1.25rem;
+    .minutes-arrow {
+      font-weight: 300;
+      font-size: 18px;
+      color: var(--sub);
+      line-height: 1;
+      flex-shrink: 0;
     }
-    .chart-header h3 { font-size: 0.9rem; font-weight: 600; }
-    .chart-wrap { position: relative; height: 260px; }
+    .minutes-value {
+      font-weight: 700;
+      font-size: clamp(32px, 5vw, 48px);
+      color: var(--red);
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .minutes-text { text-align: left; }
+    .minutes-label {
+      font-weight: 300;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      line-height: 2;
+    }
+    .minutes-note {
+      font-weight: 300;
+      font-size: 9px;
+      color: var(--border);
+    }
 
-    /* ── Lignes perturbées ── */
-    .lines-grid {
-      display: flex; flex-wrap: wrap; gap: 0.5rem;
-      margin-bottom: 2.5rem;
+    /* ─── 4. BARRE DE STATS ─── */
+    .stats-bar {
+      display: flex;
+      border-bottom: 1px solid var(--border);
     }
-    .line-chip {
-      display: flex; align-items: center; gap: 0.5rem;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.4rem 0.75rem;
-      font-size: 0.8rem;
+    .stat-cell {
+      flex: 1;
+      padding: 16px 12px;
+      text-align: center;
+      border-right: 1px solid var(--border);
     }
-    .line-chip .dot-line {
-      width: 10px; height: 10px; border-radius: 50%;
+    .stat-cell:last-child { border-right: none; }
+    .stat-value {
+      font-weight: 700;
+      font-size: 26px;
+      line-height: 1;
+      margin-bottom: 5px;
+    }
+    .stat-label {
+      font-weight: 300;
+      font-size: 12px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
     }
 
-    /* ── Skeleton ── */
-    .skeleton {
-      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-      border-radius: 6px;
+    /* ─── 5. INCIDENTS EN COURS ─── */
+    .section-wrap {
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 28px 32px;
+      border-bottom: 1px solid var(--border);
     }
-    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 2px solid var(--text);
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-weight: 600;
+      font-size: 16px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .section-meta {
+      font-weight: 300;
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: var(--muted);
+    }
 
-    /* ── Responsive ── */
-    @media (max-width: 640px) {
-      header { padding: 1rem; }
-      main { padding: 1rem; }
-      .kpi-value { font-size: 1.8rem; }
+    .incidents-list { display: flex; flex-direction: column; gap: 1px; }
+
+    .incident {
+      display: grid;
+      grid-template-columns: 40px 1fr auto auto;
+      align-items: center;
+      gap: 14px;
+      padding: 11px 14px;
+      background: var(--bg2);
+      border-left: 3px solid transparent;
+      transition: background 0.15s;
+    }
+    .incident:hover { background: var(--bg3); }
+    .incident.critical { border-left-color: var(--red); }
+    .incident.warning  { border-left-color: var(--orange); }
+    .incident.minor    { border-left-color: #C8A800; }
+
+    .incident-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .incident-info { min-width: 0; }
+    .incident-desc {
+      font-weight: 500;
+      font-size: 16px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .incident-cause {
+      font-weight: 300;
+      font-size: 13px;
+      letter-spacing: .5px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .incident-duree {
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--red);
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .incident-cout {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--orange);
+      text-align: right;
+      flex-shrink: 0;
+      min-width: 76px;
+    }
+
+    /* ─── 6. TABLEAU TOUTES LES LIGNES ─── */
+    .table-wrap {
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 28px 32px;
+    }
+    .table-header-row {
+      display: grid;
+      grid-template-columns: 42px 1fr 70px 110px 120px 120px;
+      padding: 8px 14px;
+      font-weight: 400;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .table-header-row span { text-align: right; }
+    .table-header-row span:nth-child(2) { text-align: left; padding-left: 2px; }
+
+    .lines-list { display: flex; flex-direction: column; gap: 1px; margin-top: 1px; }
+
+    .line-row {
+      display: grid;
+      grid-template-columns: 42px 1fr 70px 110px 120px 120px;
+      align-items: center;
+      padding: 11px 14px;
+      background: var(--bg2);
+      transition: background 0.15s;
+    }
+    .line-row:hover { background: var(--bg3); }
+
+    .line-row.rer-b-row             { background: #FFF0EE; }
+    .line-row.rer-b-row:hover       { background: #FFE8E5; }
+    .line-row.rer-b-row .line-name  { color: var(--red); font-weight: 600; }
+    .line-row.rer-b-row .line-value { color: var(--red); font-weight: 600; }
+
+    .line-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 12px;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .line-name-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-left: 2px;
+    }
+    .line-name {
+      font-weight: 400;
+      font-size: 16px;
+      color: var(--text);
+    }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-ok       { background: #2ECC71; }
+    .status-warning  { background: var(--orange); animation: blink 2s ease-in-out infinite; }
+    .status-critical { background: var(--red);    animation: blink 1s ease-in-out infinite; }
+
+    .line-value {
+      font-weight: 500;
+      font-size: 14px;
+      color: var(--text);
+      text-align: right;
+    }
+    .line-incidents { text-align: center; }
+
+    /* ─── 7. FOOTER ─── */
+    footer {
+      border-top: 2px solid var(--text);
+      padding: 18px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .footer-left {
+      font-weight: 300;
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: var(--muted);
+    }
+    .footer-right {
+      font-weight: 300;
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: var(--muted);
+    }
+    .footer-right a {
+      color: var(--muted);
+      text-decoration: none;
+      margin-left: 14px;
+      transition: color 0.15s;
+    }
+    .footer-right a:hover { color: var(--text); }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 768px) {
+      nav { padding: 12px 16px; }
+      .nav-links { display: none; }
+      .hero { padding: 32px 16px 24px; }
+      .minutes-block { padding: 10px 16px; gap: 10px; }
+      .section-wrap, .table-wrap { padding: 20px 16px; }
+      footer { padding: 14px 16px; flex-direction: column; align-items: flex-start; }
+      .footer-right a:first-child { margin-left: 0; }
+
+      .table-header-row { grid-template-columns: 36px 1fr 60px 100px; }
+      .line-row          { grid-template-columns: 36px 1fr 60px 100px; }
+      .col-coutday, .col-coutmonth { display: none; }
+      .incident-cout { display: none; }
+      .incident { grid-template-columns: 40px 1fr auto; }
     }
   </style>
 </head>
 <body>
 
-<header>
-  <div class="logo">
-    <div class="logo-icon">🚆</div>
-    <div>
-      <h1>Retards IDF <span>/ Tableau de bord</span></h1>
-    </div>
-  </div>
-  <div class="meta">
-    <div><span class="dot"></span>Temps réel</div>
-    <div>Màj : <strong id="last-update">—</strong></div>
-    <div>Prochaine : <strong id="next-update">—</strong></div>
-  </div>
-</header>
+<!-- ════════════════════════════════════════════════════════
+     1. TICKER
+════════════════════════════════════════════════════════ -->
+<div class="ticker">
+  <!-- TODO: ticker dynamique depuis les incidents en cours -->
+  <span class="ticker-track">
+    ⚠ INCIDENT EN COURS — RER B — Panne signalisation Gare du Nord — 47 min
+    &nbsp;•&nbsp; RER A : trafic normal
+    &nbsp;•&nbsp; RER D : ralentissement Châtelet — 12 min
+    &nbsp;•&nbsp; RER E : retard matériel — 8 min
+    &nbsp;•&nbsp; Transilien J : normal
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    ⚠ INCIDENT EN COURS — RER B — Panne signalisation Gare du Nord — 47 min
+    &nbsp;•&nbsp; RER A : trafic normal
+    &nbsp;•&nbsp; RER D : ralentissement Châtelet — 12 min
+    &nbsp;•&nbsp; RER E : retard matériel — 8 min
+    &nbsp;•&nbsp; Transilien J : normal
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  </span>
+</div>
 
+<!-- ════════════════════════════════════════════════════════
+     2. NAVIGATION
+════════════════════════════════════════════════════════ -->
 <nav>
-  <a href="index.html" class="active">Tableau de bord</a>
-  <a href="stats.html">Statistiques</a>
-  <a href="methode.html">Méthode</a>
+  <a href="#" class="nav-logo">
+    <span class="logo-retards">RETARDS </span><span class="logo-idf">IDF</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#">Aujourd'hui</a></li>
+    <li><a href="stats.html">Statistiques</a></li>
+    <li><a href="#lignes">Par ligne</a></li>
+    <li><a href="methode.html">Méthode</a></li>
+  </ul>
+  <div class="nav-live">
+    <span class="live-dot"></span>
+    LIVE
+  </div>
 </nav>
 
-<main>
-
-  <!-- KPI du jour -->
-  <p class="section-title">Aujourd'hui</p>
-  <div class="kpi-grid" id="kpi-grid">
-    <div class="kpi danger skeleton" style="height:100px"></div>
-    <div class="kpi warn skeleton" style="height:100px"></div>
-    <div class="kpi skeleton" style="height:100px"></div>
-    <div class="kpi skeleton" style="height:100px"></div>
+<!-- ════════════════════════════════════════════════════════
+     3. HERO — COMPTEUR CENTRAL
+════════════════════════════════════════════════════════ -->
+<section class="hero">
+  <div class="hero-date" id="hero-date">MARDI 17 MARS 2026 &nbsp;·&nbsp; MÀJ 09H43</div>
+  <div class="hero-subtitle">Temps de travail volé aujourd'hui — RER &amp; Transilien IDF</div>
+  <div class="hero-counter" id="ctr-eur">9.377 €</div>
+  <div class="hero-unit">
+    au SMIC horaire brut · réseau IDF complet<br>
+    base SMIC 11,88 €/h · 2025 · <span id="smic-note">≈ 376 salaires journaliers</span>
   </div>
 
-  <!-- Incidents en cours -->
-  <p class="section-title">Incidents en cours</p>
-  <div class="incidents-grid" id="incidents-grid">
-    <div class="skeleton" style="height:72px;border-radius:10px"></div>
-    <div class="skeleton" style="height:72px;border-radius:10px"></div>
-  </div>
-
-  <!-- Graphe 30 jours -->
-  <p class="section-title">Incidents — 30 derniers jours (toutes lignes)</p>
-  <div class="chart-card">
-    <div class="chart-header">
-      <h3>Incidents quotidiens</h3>
-    </div>
-    <div class="chart-wrap">
-      <canvas id="chart-incidents"></canvas>
+  <!-- Bloc minutes -->
+  <div class="minutes-block">
+    <span class="minutes-arrow">→</span>
+    <div class="minutes-value" id="ctr-min">2.847.340</div>
+    <div class="minutes-text">
+      <div class="minutes-label">minutes de vie perdues</div>
     </div>
   </div>
+</section>
 
-</main>
+<!-- ════════════════════════════════════════════════════════
+     4. BARRE DE STATS
+════════════════════════════════════════════════════════ -->
+<!-- TODO: remplacer les valeurs stats par fetch API Google Sheets -->
+<div class="stats-bar">
+  <div class="stat-cell">
+    <div class="stat-value" style="color:var(--red)">23</div>
+    <div class="stat-label">Incidents ce jour</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-value" style="color:var(--orange)">3</div>
+    <div class="stat-label">En cours</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-value" style="color:var(--red)">47 min</div>
+    <div class="stat-label">Incident le + long</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-value" style="color:var(--text)">RER B</div>
+    <div class="stat-label">Ligne la + touchée</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-value" style="color:var(--orange)">68%</div>
+    <div class="stat-label">Jours perturbés / mois</div>
+  </div>
+</div>
 
+<!-- ════════════════════════════════════════════════════════
+     5. INCIDENTS EN COURS
+════════════════════════════════════════════════════════ -->
+<div class="section-wrap">
+  <div class="section-header">
+    <span class="section-title">Incidents en cours</span>
+    <span class="section-meta" id="tmr">Actualisation dans 4 min 52 sec</span>
+  </div>
+  <!-- TODO: remplacer mockIncidents par fetch API Google Sheets -->
+  <div class="incidents-list" id="incidents-list"></div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     6. TABLEAU TOUTES LES LIGNES
+════════════════════════════════════════════════════════ -->
+<div class="table-wrap" id="lignes">
+  <div class="section-header">
+    <span class="section-title">Toutes les lignes — aujourd'hui</span>
+    <span class="section-meta">coût estimé au SMIC brut 2025</span>
+  </div>
+
+  <div class="table-header-row">
+    <span></span>
+    <span style="text-align:left;padding-left:2px">Ligne</span>
+    <span style="text-align:center">Incidents</span>
+    <span>Min perdues</span>
+    <span class="col-coutday">Coût / jour</span>
+    <span class="col-coutmonth">Coût / mois</span>
+  </div>
+
+  <!-- TODO: remplacer mockLines par fetch API Google Sheets -->
+  <div class="lines-list" id="lines-list"></div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     7. FOOTER
+════════════════════════════════════════════════════════ -->
+<footer>
+  <div class="footer-left">Données : API PRIM · IDF Mobilités · Licence Open Data Etalab</div>
+  <div class="footer-right">
+    <a href="methode.html">Méthodologie</a>
+    <a href="https://github.com/" target="_blank" rel="noopener">GitHub</a>
+    <a href="mailto:contact@retardsidf.fr">Contact</a>
+  </div>
+</footer>
+
+<!-- ════════════════════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════════════════════ -->
 <script>
-/* ── Couleurs lignes ── */
-const LINE_COLORS = {
-  'A': { bg: '#E3051B', fg: '#fff' },
-  'B': { bg: '#4DA4DC', fg: '#fff' },
-  'C': { bg: '#F3D929', fg: '#000' },
-  'D': { bg: '#5FAA00', fg: '#fff' },
-  'E': { bg: '#6E1E78', fg: '#fff' },
-  'H': { bg: '#7B7B7B', fg: '#fff' },
-  'J': { bg: '#D2B464', fg: '#000' },
-  'K': { bg: '#8C4B31', fg: '#fff' },
-  'L': { bg: '#9F3E96', fg: '#fff' },
-  'N': { bg: '#1F1F1F', fg: '#fff' },
-  'P': { bg: '#E87722', fg: '#fff' },
-  'R': { bg: '#228B22', fg: '#fff' },
-  'U': { bg: '#7B0F1F', fg: '#fff' },
-};
+  /* ── Données mock ──────────────────────────────────────────
+     TODO: remplacer mockIncidents par fetch API Google Sheets
+  ─────────────────────────────────────────────────────────── */
+  const mockIncidents = [
+    {
+      ligne: "B", color: "#5191CF", severity: "critical",
+      desc: "Panne de signalisation — Gare du Nord",
+      cause: "Responsabilité SNCF · Démarré à 08h14",
+      duree: "47 min", cout: "+9 300 €"
+    },
+    {
+      ligne: "D", color: "#00814F", severity: "warning",
+      desc: "Ralentissement — Châtelet Les Halles",
+      cause: "Incident voyageur · Démarré à 09h02",
+      duree: "12 min", cout: "+1 850 €"
+    },
+    {
+      ligne: "E", color: "#B04191", severity: "minor",
+      desc: "Retard — matériel roulant défaillant",
+      cause: "Responsabilité SNCF · Démarré à 09h18",
+      duree: "8 min", cout: "+780 €"
+    }
+  ];
 
-function lineColor(lineId) {
-  const key = lineId.replace(/^(RER|Transilien)\s*/i, '').trim().toUpperCase();
-  return LINE_COLORS[key] || { bg: '#4f8ef7', fg: '#fff' };
-}
+  /* ── Données mock ──────────────────────────────────────────
+     TODO: remplacer mockLines par fetch API Google Sheets
+  ─────────────────────────────────────────────────────────── */
+  const mockLines = [
+    {
+      id: "A", color: "#E2231A", name: "RER A", status: "ok",
+      incidents: "2", minDay: "124 500",
+      coutDay: "24 651 €", coutMonth: "689 000 €"
+    },
+    {
+      id: "B", color: "#5191CF", name: "RER B", status: "critical",
+      incidents: "8", minDay: "847 340",
+      coutDay: "167 774 €", coutMonth: "4 700 000 €"
+    },
+    {
+      id: "C", color: "#C8A800", name: "RER C", status: "warning",
+      incidents: "4", minDay: "312 000",
+      coutDay: "61 776 €", coutMonth: "1 729 000 €"
+    },
+    {
+      id: "D", color: "#00814F", name: "RER D", status: "warning",
+      incidents: "5", minDay: "421 000",
+      coutDay: "83 358 €", coutMonth: "2 334 000 €"
+    },
+    {
+      id: "E", color: "#B04191", name: "RER E", status: "ok",
+      incidents: "1", minDay: "89 000",
+      coutDay: "17 622 €", coutMonth: "493 000 €"
+    }
+  ];
 
-function lineLabel(lineId) {
-  const key = lineId.replace(/^(RER|Transilien)\s*/i, '').trim().toUpperCase();
-  if (['A','B','C','D','E'].includes(key)) return 'RER ' + key;
-  return key;
-}
-
-/* ── Formatage ── */
-function fmt(n) {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace('.', ',') + ' M';
-  if (n >= 1_000) return (n / 1_000).toFixed(0) + ' k';
-  return n.toString();
-}
-
-function fmtDuration(min) {
-  if (!min) return '0 min';
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  if (h === 0) return `${m} min`;
-  return `${h} h ${m > 0 ? m + ' min' : ''}`.trim();
-}
-
-function fmtTime(iso) {
-  const d = new Date(iso);
-  return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-}
-
-function fmtNow() {
-  return new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}
-
-/* ── KPI ── */
-async function loadTodayStats() {
-  const res = await fetch('/api/stats/today');
-  if (!res.ok) throw new Error('stats/today failed');
-  return res.json();
-}
-
-function renderKpis(data) {
-  const grid = document.getElementById('kpi-grid');
-  const nbLignes = data.nb_lignes_perturbees || 0;
-  const colorClass = nbLignes === 0 ? 'ok' : nbLignes < 3 ? 'warn' : 'danger';
-
-  grid.innerHTML = `
-    <div class="kpi ${colorClass}">
-      <div class="kpi-label">Incidents aujourd'hui</div>
-      <div class="kpi-value">${data.total_incidents}</div>
-      <div class="kpi-sub">${nbLignes} ligne${nbLignes > 1 ? 's' : ''} touchée${nbLignes > 1 ? 's' : ''}</div>
-    </div>
-    <div class="kpi warn">
-      <div class="kpi-label">Durée cumulée</div>
-      <div class="kpi-value">${fmtDuration(data.total_duree_min)}</div>
-      <div class="kpi-sub">temps d'arrêt ou de perturbation</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-label">Minutes-voyageurs perdues</div>
-      <div class="kpi-value">${fmt(data.total_minutes_voyageurs)}</div>
-      <div class="kpi-sub">estimation selon fréquentation</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-label">Lignes perturbées</div>
-      <div class="kpi-value" style="font-size:1rem;display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
-        ${data.lignes_perturbees.length === 0
-          ? '<span style="font-size:1.8rem;color:var(--green)">✓ Aucune</span>'
-          : data.lignes_perturbees.map(l => {
-              const c = lineColor(l);
-              return `<span style="background:${c.bg};color:${c.fg};padding:3px 8px;border-radius:12px;font-size:0.75rem;font-weight:700">${lineLabel(l)}</span>`;
-            }).join('')
-        }
+  /* ── Render dynamique ────────────────────────────────────── */
+  document.getElementById('incidents-list').innerHTML =
+    mockIncidents.map(inc => `
+      <div class="incident ${inc.severity}">
+        <div class="incident-badge" style="background:${inc.color}">${inc.ligne}</div>
+        <div class="incident-info">
+          <div class="incident-desc">${inc.desc}</div>
+          <div class="incident-cause">${inc.cause}</div>
+        </div>
+        <div class="incident-duree">${inc.duree}</div>
+        <div class="incident-cout">${inc.cout}</div>
       </div>
-      <div class="kpi-sub" style="margin-top:0.5rem">sur RER A–E + H J K L N P R U</div>
-    </div>
-  `;
-}
+    `).join('');
 
-/* ── Incidents en cours ── */
-async function loadCurrentIncidents() {
-  const res = await fetch('/api/incidents/current');
-  if (!res.ok) throw new Error('incidents/current failed');
-  return res.json();
-}
+  document.getElementById('lines-list').innerHTML =
+    mockLines.map(line => `
+      <div class="line-row${line.id === 'B' ? ' rer-b-row' : ''}">
+        <div class="line-badge" style="background:${line.color}">${line.id}</div>
+        <div class="line-name-wrap">
+          <span class="line-name">${line.name}</span>
+          <span class="status-dot status-${line.status}"></span>
+        </div>
+        <div class="line-value line-incidents">${line.incidents}</div>
+        <div class="line-value">${line.minDay}</div>
+        <div class="line-value col-coutday">${line.coutDay}</div>
+        <div class="line-value col-coutmonth">${line.coutMonth}</div>
+      </div>
+    `).join('');
 
-function renderIncidents(incidents) {
-  const grid = document.getElementById('incidents-grid');
-  if (incidents.length === 0) {
-    grid.innerHTML = `
-      <div class="empty-state">
-        <div class="icon">✅</div>
-        Aucun incident en cours sur le réseau RER / Transilien
-      </div>`;
-    return;
+  /* ── 1. Compteur — € principal, minutes secondaire ──────── */
+  let minutes = 2847340;
+
+  function fmt(n) {
+    return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   }
 
-  grid.innerHTML = incidents.map(inc => {
-    const c = lineColor(inc.line_id);
-    const label = lineLabel(inc.line_id);
-    return `
-      <div class="incident-card">
-        <div class="line-badge" style="background:${c.bg};color:${c.fg}">${label}</div>
-        <div class="incident-info">
-          <div class="incident-type">${inc.type_incident || 'Perturbation'}</div>
-          <div class="incident-cause">${inc.cause || '—'}</div>
-          <div class="incident-time">Depuis ${fmtTime(inc.heure_debut)}</div>
-        </div>
-      </div>`;
-  }).join('');
-}
+  function updateCounters() {
+    const euros = Math.floor(minutes * 0.198 / 60);
+    const salaires = Math.floor(euros / 90); // SMIC journalier brut ≈ 90 €
+    document.getElementById('ctr-eur').textContent = fmt(euros) + ' €';
+    document.getElementById('ctr-min').textContent = fmt(minutes);
+    document.getElementById('smic-note').textContent =
+      '≈ ' + fmt(salaires) + ' salaires journaliers';
+  }
 
-/* ── Graphe 30 jours ── */
-let chartInstance = null;
+  updateCounters();
 
-async function loadChartData() {
-  const LINES = ['A','B','C','D','E','H','J','K','L','N','P','R','U'];
-  const results = await Promise.all(
-    LINES.map(l => fetch(`/api/stats/line/${l}?period=30`).then(r => r.ok ? r.json() : null))
-  );
+  setInterval(() => {
+    minutes += Math.floor(Math.random() * 45) + 10;
+    updateCounters();
+  }, 2800);
 
-  // Agréger par date
-  const byDate = {};
-  results.forEach((data, i) => {
-    if (!data) return;
-    data.daily.forEach(d => {
-      byDate[d.date] = (byDate[d.date] || 0) + d.nb_incidents;
-    });
-  });
+  /* ── 2. Countdown actualisation ─────────────────────────── */
+  let t = 292;
+  setInterval(() => {
+    t--;
+    if (t < 0) t = 300;
+    const mn = Math.floor(t / 60);
+    const sc = String(t % 60).padStart(2, '0');
+    document.getElementById('tmr').textContent =
+      'Actualisation dans ' + mn + ' min ' + sc + ' sec';
+  }, 1000);
 
-  const labels = Object.keys(byDate).sort();
-  const values = labels.map(d => byDate[d]);
+  /* ── Mapping lignes (pour fetch API backend) ────────────── */
+  const LINE_META = {
+    'RER_A':        { short: 'A', name: 'RER A',        color: '#E2231A' },
+    'RER_B':        { short: 'B', name: 'RER B',        color: '#5191CF' },
+    'RER_C':        { short: 'C', name: 'RER C',        color: '#C8A800' },
+    'RER_D':        { short: 'D', name: 'RER D',        color: '#00814F' },
+    'RER_E':        { short: 'E', name: 'RER E',        color: '#B04191' },
+    'TRANSILIEN_H': { short: 'H', name: 'Transilien H', color: '#7B7B7B' },
+    'TRANSILIEN_J': { short: 'J', name: 'Transilien J', color: '#D2B464' },
+    'TRANSILIEN_K': { short: 'K', name: 'Transilien K', color: '#8C4B31' },
+    'TRANSILIEN_L': { short: 'L', name: 'Transilien L', color: '#9F3E96' },
+    'TRANSILIEN_N': { short: 'N', name: 'Transilien N', color: '#333333' },
+    'TRANSILIEN_P': { short: 'P', name: 'Transilien P', color: '#E87722' },
+    'TRANSILIEN_R': { short: 'R', name: 'Transilien R', color: '#228B22' },
+    'TRANSILIEN_U': { short: 'U', name: 'Transilien U', color: '#7B0F1F' },
+  };
 
-  return { labels, values };
-}
+  function severityFromType(type) {
+    if (['NO_SERVICE', 'SIGNIFICANT_DELAYS'].includes(type)) return 'critical';
+    if (['REDUCED_SERVICE', 'MODIFIED_SERVICE'].includes(type)) return 'warning';
+    return 'minor';
+  }
 
-function renderChart({ labels, values }) {
-  const ctx = document.getElementById('chart-incidents').getContext('2d');
-  if (chartInstance) chartInstance.destroy();
+  /* ── Fetch API backend (remplace les mocks si dispo) ────── */
+  async function fetchLiveData() {
+    try {
+      const [statsRes, incRes] = await Promise.all([
+        fetch('/api/stats/today').catch(() => null),
+        fetch('/api/incidents/current').catch(() => null),
+      ]);
 
-  chartInstance = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels.map(d => {
-        const dt = new Date(d + 'T12:00:00');
-        return dt.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
-      }),
-      datasets: [{
-        label: 'Incidents',
-        data: values,
-        backgroundColor: 'rgba(79,142,247,0.7)',
-        borderColor: 'rgba(79,142,247,1)',
-        borderWidth: 1,
-        borderRadius: 4,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            title: (items) => items[0].label,
-            label: (item) => ` ${item.raw} incident${item.raw > 1 ? 's' : ''}`,
-          }
+      if (statsRes && statsRes.ok) {
+        const stats = await statsRes.json();
+        if (stats.total_minutes_voyageurs > 0) {
+          minutes = stats.total_minutes_voyageurs;
+          updateCounters();
         }
-      },
-      scales: {
-        x: {
-          ticks: { color: '#7c8099', font: { size: 11 }, maxRotation: 45 },
-          grid: { color: '#2e3248' },
-        },
-        y: {
-          ticks: { color: '#7c8099', font: { size: 11 }, stepSize: 1 },
-          grid: { color: '#2e3248' },
-          beginAtZero: true,
+        // Mise à jour barre de stats
+        const vals = document.querySelectorAll('.stat-cell .stat-value');
+        if (vals[0]) vals[0].textContent = stats.total_incidents;
+        if (vals[1]) vals[1].textContent = stats.nb_lignes_perturbees;
+      }
+
+      if (incRes && incRes.ok) {
+        const incidents = await incRes.json();
+        if (incidents.length > 0) {
+          const liveInc = incidents.slice(0, 5).map(inc => {
+            const meta = LINE_META[inc.line_id] || { short: '?', color: '#999', name: inc.line_id };
+            const severity = severityFromType(inc.type_incident);
+            const debut = inc.heure_debut ? new Date(inc.heure_debut) : null;
+            const dureeMin = debut ? Math.floor((Date.now() - debut.getTime()) / 60000) : 0;
+            const debutStr = debut
+              ? debut.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+              : '';
+            return {
+              ligne: meta.short, color: meta.color, severity,
+              desc: inc.cause || `Incident — ${meta.name}`,
+              cause: `${inc.type_incident} · Démarré à ${debutStr}`,
+              duree: dureeMin > 0 ? dureeMin + ' min' : 'En cours',
+              cout: '+' + fmt(Math.floor(dureeMin * 0.198 / 60 * 1000)) + ' €',
+            };
+          });
+          document.getElementById('incidents-list').innerHTML =
+            liveInc.map(inc => `
+              <div class="incident ${inc.severity}">
+                <div class="incident-badge" style="background:${inc.color}">${inc.ligne}</div>
+                <div class="incident-info">
+                  <div class="incident-desc">${inc.desc}</div>
+                  <div class="incident-cause">${inc.cause}</div>
+                </div>
+                <div class="incident-duree">${inc.duree}</div>
+                <div class="incident-cout">${inc.cout}</div>
+              </div>
+            `).join('');
         }
       }
-    }
-  });
-}
-
-/* ── Refresh loop ── */
-const REFRESH_MS = 5 * 60 * 1000;
-let nextRefreshAt = null;
-
-function updateTimers() {
-  document.getElementById('last-update').textContent = fmtNow();
-  nextRefreshAt = Date.now() + REFRESH_MS;
-  const tick = setInterval(() => {
-    const remaining = Math.max(0, nextRefreshAt - Date.now());
-    const mm = String(Math.floor(remaining / 60000)).padStart(2, '0');
-    const ss = String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0');
-    document.getElementById('next-update').textContent = `${mm}:${ss}`;
-    if (remaining === 0) clearInterval(tick);
-  }, 1000);
-}
-
-async function refresh() {
-  try {
-    const [stats, incidents, chartData] = await Promise.all([
-      loadTodayStats(),
-      loadCurrentIncidents(),
-      loadChartData(),
-    ]);
-    renderKpis(stats);
-    renderIncidents(incidents);
-    renderChart(chartData);
-  } catch (err) {
-    console.error('Erreur de chargement :', err);
-    document.getElementById('kpi-grid').innerHTML =
-      `<div style="color:var(--red);padding:1rem;grid-column:1/-1">Erreur de connexion à l'API. Vérifiez que le backend est démarré.</div>`;
+    } catch (_) { /* fallback silencieux vers mock data */ }
   }
-  updateTimers();
-}
 
-refresh();
-setInterval(refresh, REFRESH_MS);
+  fetchLiveData();
+
+  /* ── Date/heure màj ─────────────────────────────────────── */
+  function updateDate() {
+    const now = new Date();
+    const jours = ['DIMANCHE','LUNDI','MARDI','MERCREDI','JEUDI','VENDREDI','SAMEDI'];
+    const mois  = ['JANVIER','FÉVRIER','MARS','AVRIL','MAI','JUIN',
+                   'JUILLET','AOÛT','SEPTEMBRE','OCTOBRE','NOVEMBRE','DÉCEMBRE'];
+    document.getElementById('hero-date').textContent =
+      jours[now.getDay()] + ' ' +
+      now.getDate() + ' ' +
+      mois[now.getMonth()] + ' ' +
+      now.getFullYear() +
+      '  ·  MÀJ ' +
+      String(now.getHours()).padStart(2, '0') + 'H' +
+      String(now.getMinutes()).padStart(2, '0');
+  }
+  updateDate();
+  setInterval(updateDate, 60000);
 </script>
 </body>
 </html>

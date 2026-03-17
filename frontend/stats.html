@@ -1,224 +1,638 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Retards IDF — Statistiques</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RETARDS IDF — Statistiques</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0f1117;
-      --surface: #1a1d27;
-      --surface2: #22263a;
-      --border: #2e3248;
-      --text: #e8eaf6;
-      --muted: #7c8099;
-      --accent: #4f8ef7;
-      --red: #e53935;
-      --yellow: #ffd740;
-      --green: #43a047;
+      --bg:     #F7F4EF;
+      --bg2:    #EDEAE4;
+      --bg3:    #E2DED7;
+      --border: #D4CFC7;
+      --text:   #111111;
+      --muted:  #999999;
+      --sub:    #666666;
+      --red:    #C0392B;
+      --orange: #C45000;
+      --font:   'Roboto', sans-serif;
     }
 
-    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      overflow-x: hidden;
+    }
 
-    header {
-      background: var(--surface);
+    /* ─── TICKER ─── */
+    .ticker {
+      background: var(--text);
+      padding: 7px 0;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .ticker-track {
+      display: inline-block;
+      animation: tick 28s linear infinite;
+      font-weight: 400;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      color: #fff;
+    }
+    @keyframes tick {
+      from { transform: translateX(100vw); }
+      to   { transform: translateX(-100%); }
+    }
+
+    /* ─── NAV ─── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg);
+      border-bottom: 2px solid var(--text);
+      padding: 14px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .nav-logo {
+      font-weight: 700;
+      font-size: 22px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+    .nav-logo .logo-retards { color: var(--text); }
+    .nav-logo .logo-idf     { color: var(--red); }
+    .nav-links {
+      display: flex;
+      gap: 28px;
+      list-style: none;
+    }
+    .nav-links a {
+      font-weight: 400;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-links a:hover,
+    .nav-links a.active { color: var(--text); }
+    .nav-links a.active { font-weight: 600; }
+    .nav-live {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-weight: 600;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--red);
+      flex-shrink: 0;
+    }
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--red);
+      animation: blink 1.5s ease-in-out infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.15; }
+    }
+
+    /* ─── PAGE ─── */
+    .page-header {
+      padding: 32px 32px 0;
       border-bottom: 1px solid var(--border);
-      padding: 1rem 2rem;
-      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      max-width: 1100px;
+      margin: 0 auto;
     }
-    .logo { display: flex; align-items: center; gap: 0.75rem; }
-    .logo-icon { width: 40px; height: 40px; background: var(--red); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
-    h1 { font-size: 1.2rem; font-weight: 700; }
-    h1 span { color: var(--muted); font-weight: 400; }
+    .page-title {
+      font-weight: 700;
+      font-size: 28px;
+      letter-spacing: -0.5px;
+      margin-bottom: 20px;
+    }
+    .page-title span { color: var(--red); }
 
-    nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; }
-    nav a { color: var(--muted); text-decoration: none; font-size: 0.85rem; padding: 0.75rem 1rem; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; }
-    nav a.active, nav a:hover { color: var(--text); border-color: var(--accent); }
-
-    main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
-
-    .section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 1rem; }
-
-    /* ── Period selector ── */
+    /* Period selector */
     .period-bar {
-      display: flex; align-items: center; gap: 0.5rem;
-      margin-bottom: 2rem;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding-bottom: 20px;
     }
-    .period-label { font-size: 0.8rem; color: var(--muted); margin-right: 0.5rem; }
+    .period-label {
+      font-weight: 300;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-right: 8px;
+    }
     .period-btn {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--muted); font-size: 0.8rem; padding: 0.4rem 0.9rem;
-      border-radius: 20px; cursor: pointer; transition: all 0.15s;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: var(--font);
+      font-weight: 400;
+      font-size: 12px;
+      letter-spacing: 1px;
+      padding: 6px 16px;
+      cursor: pointer;
+      transition: all 0.15s;
     }
-    .period-btn:hover { border-color: var(--accent); color: var(--text); }
-    .period-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+    .period-btn:hover { border-color: var(--text); color: var(--text); }
+    .period-btn.active {
+      background: var(--text);
+      border-color: var(--text);
+      color: var(--bg);
+      font-weight: 600;
+    }
 
-    /* ── Two columns ── */
-    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
-    @media (max-width: 768px) { .cols { grid-template-columns: 1fr; } }
+    /* ─── CONTENT ─── */
+    .content {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 32px;
+    }
 
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; }
-    .card h3 { font-size: 0.85rem; font-weight: 600; margin-bottom: 1rem; }
+    /* KPI summary */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      margin-bottom: 28px;
+    }
+    .kpi-cell {
+      background: var(--bg2);
+      padding: 18px 20px;
+      transition: background 0.15s;
+    }
+    .kpi-cell:hover { background: var(--bg3); }
+    .kpi-value {
+      font-weight: 700;
+      font-size: 28px;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .kpi-label {
+      font-weight: 300;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
 
-    /* ── Ranking list ── */
-    .rank-list { display: flex; flex-direction: column; gap: 0.5rem; }
+    /* Section header */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 2px solid var(--text);
+      padding-bottom: 8px;
+      margin-bottom: 14px;
+    }
+    .section-title {
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .section-sub {
+      font-weight: 300;
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* Rankings */
+    .cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 700px) { .cols { grid-template-columns: 1fr; } }
+
+    .rank-list { display: flex; flex-direction: column; gap: 1px; }
+
     .rank-item {
-      display: flex; align-items: center; gap: 0.75rem;
-      padding: 0.5rem 0.75rem;
-      border-radius: 8px;
-      background: var(--surface2);
+      display: grid;
+      grid-template-columns: 20px 36px 1fr 70px;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      background: var(--bg2);
       cursor: pointer;
       transition: background 0.15s;
     }
-    .rank-item:hover { background: var(--border); }
-    .rank-item.selected { background: rgba(79,142,247,0.15); border: 1px solid rgba(79,142,247,0.3); }
-    .rank-num { font-size: 0.7rem; color: var(--muted); width: 18px; text-align: right; flex-shrink: 0; }
-    .line-badge { flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.62rem; font-weight: 800; }
-    .rank-info { flex: 1; min-width: 0; }
-    .rank-name { font-size: 0.82rem; font-weight: 600; }
-    .rank-val { font-size: 0.72rem; color: var(--muted); }
-    .rank-bar-wrap { width: 80px; flex-shrink: 0; }
-    .rank-bar-bg { background: var(--border); border-radius: 3px; height: 6px; }
-    .rank-bar-fill { background: var(--accent); border-radius: 3px; height: 6px; transition: width 0.4s; }
+    .rank-item:hover { background: var(--bg3); }
+    .rank-item.selected { background: var(--bg3); border-left: 3px solid var(--text); }
 
-    /* ── Detail chart ── */
-    .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; }
-    .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem; }
-    .chart-header h3 { font-size: 0.9rem; font-weight: 600; }
-    .chart-wrap { position: relative; height: 240px; }
-    .chart-line-badge { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.58rem; font-weight: 800; }
+    .rank-num {
+      font-weight: 300;
+      font-size: 11px;
+      color: var(--muted);
+      text-align: right;
+    }
+    .rank-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .rank-info { min-width: 0; }
+    .rank-name {
+      font-weight: 500;
+      font-size: 13px;
+    }
+    .rank-val {
+      font-weight: 300;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .rank-bar-wrap { }
+    .rank-bar-bg {
+      background: var(--border);
+      height: 4px;
+    }
+    .rank-bar-fill {
+      background: var(--text);
+      height: 4px;
+      transition: width 0.4s;
+    }
 
-    /* ── Summary table ── */
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-    thead th { text-align: left; padding: 0.5rem 0.75rem; color: var(--muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); white-space: nowrap; }
-    thead th.num { text-align: right; }
-    tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
-    tbody tr:hover { background: var(--surface2); }
-    tbody tr.selected { background: rgba(79,142,247,0.1); }
-    tbody td { padding: 0.6rem 0.75rem; }
-    tbody td.num { text-align: right; color: var(--text); }
-    tbody td.muted { color: var(--muted); }
-    .tbl-badge { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 800; }
+    /* Chart */
+    .chart-block {
+      background: var(--bg2);
+      padding: 20px;
+      margin-bottom: 28px;
+    }
+    .chart-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .chart-line-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .chart-badge {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 12px;
+      color: #fff;
+    }
+    .chart-title {
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .chart-kpis {
+      display: flex;
+      gap: 24px;
+    }
+    .chart-kpi-item {
+      text-align: right;
+    }
+    .chart-kpi-val {
+      font-weight: 700;
+      font-size: 18px;
+      line-height: 1;
+    }
+    .chart-kpi-label {
+      font-weight: 300;
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .chart-wrap {
+      position: relative;
+      height: 220px;
+    }
+    .chart-placeholder {
+      height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 300;
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+
+    /* Table */
+    .table-header-row {
+      display: grid;
+      grid-template-columns: 38px 1fr 80px 100px 110px 80px;
+      padding: 8px 12px;
+      font-weight: 400;
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .table-header-row span { text-align: right; }
+    .table-header-row span:nth-child(2) { text-align: left; }
+
+    .table-rows { display: flex; flex-direction: column; gap: 1px; margin-top: 1px; }
+
+    .table-row {
+      display: grid;
+      grid-template-columns: 38px 1fr 80px 100px 110px 80px;
+      align-items: center;
+      padding: 12px 12px;
+      background: var(--bg2);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .table-row:hover { background: var(--bg3); }
+    .table-row.selected { background: var(--bg3); border-left: 3px solid var(--text); }
+    .table-row.rer-b { background: #FFF0EE; }
+    .table-row.rer-b:hover { background: #FFE8E5; }
+    .table-row.rer-b .t-val,
+    .table-row.rer-b .t-name { color: var(--red); font-weight: 600; }
+
+    .t-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 12px;
+      color: #fff;
+    }
+    .t-name { font-weight: 400; font-size: 13px; padding-left: 4px; }
+    .t-val {
+      font-weight: 500;
+      font-size: 12px;
+      text-align: right;
+      color: var(--text);
+    }
 
     /* Skeleton */
-    .skeleton { background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 6px; }
-    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .skel {
+      background: linear-gradient(90deg, var(--bg2) 25%, var(--bg3) 50%, var(--bg2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
 
-    .empty { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.85rem; }
+    .empty {
+      padding: 24px;
+      text-align: center;
+      font-weight: 300;
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+
+    /* ─── FOOTER ─── */
+    footer {
+      border-top: 2px solid var(--text);
+      padding: 18px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .footer-left, .footer-right {
+      font-weight: 300;
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: var(--muted);
+    }
+    .footer-right a {
+      color: var(--muted);
+      text-decoration: none;
+      margin-left: 14px;
+      transition: color 0.15s;
+    }
+    .footer-right a:hover { color: var(--text); }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 768px) {
+      nav { padding: 12px 16px; }
+      .nav-links { display: none; }
+      .page-header, .content { padding-left: 16px; padding-right: 16px; }
+      .kpi-row { grid-template-columns: 1fr 1fr; }
+      .table-header-row { grid-template-columns: 38px 1fr 80px 100px; }
+      .table-row          { grid-template-columns: 38px 1fr 80px 100px; }
+      .col-hide { display: none; }
+      footer { flex-direction: column; align-items: flex-start; padding: 14px 16px; }
+    }
   </style>
 </head>
 <body>
 
-<header>
-  <div class="logo">
-    <div class="logo-icon">🚆</div>
-    <div><h1>Retards IDF <span>/ Statistiques</span></h1></div>
-  </div>
-</header>
+<!-- TICKER -->
+<div class="ticker">
+  <span class="ticker-track">
+    ⚠ INCIDENT EN COURS — RER B — Panne signalisation Gare du Nord — 47 min
+    &nbsp;•&nbsp; RER A : trafic normal
+    &nbsp;•&nbsp; RER D : ralentissement Châtelet — 12 min
+    &nbsp;•&nbsp; RER E : retard matériel — 8 min
+    &nbsp;•&nbsp; Transilien J : normal
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    ⚠ INCIDENT EN COURS — RER B — Panne signalisation Gare du Nord — 47 min
+    &nbsp;•&nbsp; RER A : trafic normal
+    &nbsp;•&nbsp; RER D : ralentissement Châtelet — 12 min
+    &nbsp;•&nbsp; RER E : retard matériel — 8 min
+    &nbsp;•&nbsp; Transilien J : normal
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  </span>
+</div>
 
+<!-- NAV -->
 <nav>
-  <a href="index.html">Tableau de bord</a>
-  <a href="stats.html" class="active">Statistiques</a>
-  <a href="methode.html">Méthode</a>
+  <a href="index.html" class="nav-logo">
+    <span class="logo-retards">RETARDS </span><span class="logo-idf">IDF</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html">Aujourd'hui</a></li>
+    <li><a href="stats.html" class="active">Statistiques</a></li>
+    <li><a href="index.html#lignes">Par ligne</a></li>
+    <li><a href="methode.html">Méthode</a></li>
+  </ul>
+  <div class="nav-live">
+    <span class="live-dot"></span>
+    LIVE
+  </div>
 </nav>
 
-<main>
-
+<!-- PAGE HEADER -->
+<div class="page-header">
+  <div class="page-title">Statistiques — <span>toutes les lignes</span></div>
   <div class="period-bar">
-    <span class="period-label">Période :</span>
+    <span class="period-label">Période</span>
     <button class="period-btn" data-days="7">7 jours</button>
     <button class="period-btn active" data-days="30">30 jours</button>
     <button class="period-btn" data-days="90">90 jours</button>
   </div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- KPI Row -->
+  <div class="kpi-row" id="kpi-row">
+    <div class="kpi-cell skel" style="height:76px"></div>
+    <div class="kpi-cell skel" style="height:76px"></div>
+    <div class="kpi-cell skel" style="height:76px"></div>
+    <div class="kpi-cell skel" style="height:76px"></div>
+  </div>
 
   <!-- Rankings -->
   <div class="cols">
-    <div class="card">
-      <h3>Classement — Incidents</h3>
+    <div>
+      <div class="section-header">
+        <span class="section-title">Par incidents</span>
+        <span class="section-sub">cliquer pour détail</span>
+      </div>
       <div class="rank-list" id="rank-incidents">
-        <div class="skeleton" style="height:44px"></div>
-        <div class="skeleton" style="height:44px"></div>
-        <div class="skeleton" style="height:44px"></div>
+        <div class="skel" style="height:56px;margin-bottom:1px"></div>
+        <div class="skel" style="height:56px;margin-bottom:1px"></div>
+        <div class="skel" style="height:56px"></div>
       </div>
     </div>
-    <div class="card">
-      <h3>Classement — Minutes-voyageurs perdues</h3>
+    <div>
+      <div class="section-header">
+        <span class="section-title">Par min-voyageurs perdues</span>
+        <span class="section-sub">impact humain</span>
+      </div>
       <div class="rank-list" id="rank-mv">
-        <div class="skeleton" style="height:44px"></div>
-        <div class="skeleton" style="height:44px"></div>
-        <div class="skeleton" style="height:44px"></div>
+        <div class="skel" style="height:56px;margin-bottom:1px"></div>
+        <div class="skel" style="height:56px;margin-bottom:1px"></div>
+        <div class="skel" style="height:56px"></div>
       </div>
     </div>
   </div>
 
-  <!-- Detail chart for selected line -->
-  <div class="chart-card" id="detail-card">
-    <div class="chart-header">
-      <div style="display:flex;align-items:center;gap:0.75rem">
-        <div class="chart-line-badge" id="detail-badge"></div>
-        <h3 id="detail-title">Sélectionne une ligne pour voir le détail</h3>
-      </div>
-      <div id="detail-kpis" style="display:flex;gap:1.5rem;font-size:0.78rem;color:var(--muted)"></div>
+  <!-- Chart detail -->
+  <div class="chart-block">
+    <div class="section-header">
+      <span class="section-title">Détail par ligne</span>
     </div>
-    <div class="chart-wrap">
-      <canvas id="chart-detail"></canvas>
+    <div class="chart-meta" id="chart-meta">
+      <div class="chart-line-info">
+        <div class="chart-badge" id="chart-badge" style="background:var(--border)"></div>
+        <span class="chart-title" id="chart-title" style="color:var(--muted);font-weight:300">
+          Sélectionne une ligne dans le classement
+        </span>
+      </div>
+      <div class="chart-kpis" id="chart-kpis"></div>
+    </div>
+    <div id="chart-container">
+      <div class="chart-placeholder" id="chart-placeholder">
+        — aucune ligne sélectionnée —
+      </div>
+      <div class="chart-wrap" id="chart-wrap" style="display:none">
+        <canvas id="chart-canvas"></canvas>
+      </div>
     </div>
   </div>
 
   <!-- Full table -->
-  <p class="section-title">Toutes les lignes</p>
-  <div class="card">
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Ligne</th>
-            <th class="num">Incidents</th>
-            <th class="num">Jours perturbés</th>
-            <th class="num">Durée totale</th>
-            <th class="num">Min.-voyageurs</th>
-          </tr>
-        </thead>
-        <tbody id="table-body">
-          <tr><td colspan="5" class="empty">Chargement…</td></tr>
-        </tbody>
-      </table>
-    </div>
+  <div class="section-header">
+    <span class="section-title">Toutes les lignes</span>
+    <span class="section-sub">base SMIC brut 2025</span>
+  </div>
+  <div class="table-header-row">
+    <span></span>
+    <span style="text-align:left">Ligne</span>
+    <span>Incidents</span>
+    <span>Jours perturbés</span>
+    <span class="col-hide">Min-voyageurs</span>
+    <span class="col-hide">Durée</span>
+  </div>
+  <div class="table-rows" id="table-rows">
+    <div class="skel" style="height:56px;margin-bottom:1px"></div>
+    <div class="skel" style="height:56px;margin-bottom:1px"></div>
+    <div class="skel" style="height:56px"></div>
   </div>
 
-</main>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-left">Données : API PRIM · IDF Mobilités · Licence Open Data Etalab</div>
+  <div class="footer-right">
+    <a href="methode.html">Méthodologie</a>
+    <a href="https://github.com/" target="_blank" rel="noopener">GitHub</a>
+    <a href="mailto:contact@retardsidf.fr">Contact</a>
+  </div>
+</footer>
 
 <script>
 const LINE_COLORS = {
-  'RER_A':       { bg: '#E3051B', fg: '#fff' },
-  'RER_B':       { bg: '#4DA4DC', fg: '#fff' },
-  'RER_C':       { bg: '#F3D929', fg: '#000' },
-  'RER_D':       { bg: '#5FAA00', fg: '#fff' },
-  'RER_E':       { bg: '#6E1E78', fg: '#fff' },
-  'TRANSILIEN_H':{ bg: '#7B7B7B', fg: '#fff' },
-  'TRANSILIEN_J':{ bg: '#D2B464', fg: '#000' },
-  'TRANSILIEN_K':{ bg: '#8C4B31', fg: '#fff' },
-  'TRANSILIEN_L':{ bg: '#9F3E96', fg: '#fff' },
-  'TRANSILIEN_N':{ bg: '#1F1F1F', fg: '#fff' },
-  'TRANSILIEN_P':{ bg: '#E87722', fg: '#fff' },
-  'TRANSILIEN_R':{ bg: '#228B22', fg: '#fff' },
-  'TRANSILIEN_U':{ bg: '#7B0F1F', fg: '#fff' },
+  'RER_A':        { bg: '#E2231A', fg: '#fff' },
+  'RER_B':        { bg: '#5191CF', fg: '#fff' },
+  'RER_C':        { bg: '#C8A800', fg: '#000' },
+  'RER_D':        { bg: '#00814F', fg: '#fff' },
+  'RER_E':        { bg: '#B04191', fg: '#fff' },
+  'TRANSILIEN_H': { bg: '#7B7B7B', fg: '#fff' },
+  'TRANSILIEN_J': { bg: '#D2B464', fg: '#000' },
+  'TRANSILIEN_K': { bg: '#8C4B31', fg: '#fff' },
+  'TRANSILIEN_L': { bg: '#9F3E96', fg: '#fff' },
+  'TRANSILIEN_N': { bg: '#333333', fg: '#fff' },
+  'TRANSILIEN_P': { bg: '#E87722', fg: '#fff' },
+  'TRANSILIEN_R': { bg: '#228B22', fg: '#fff' },
+  'TRANSILIEN_U': { bg: '#7B0F1F', fg: '#fff' },
 };
 
 const ALL_LINES = Object.keys(LINE_COLORS);
+
+const SMIC = 11.88;
 
 function lineShort(id) {
   return id.replace('TRANSILIEN_', '').replace('RER_', 'RER ');
 }
 
-function fmt(n) {
+function fmtN(n) {
+  if (!n) return '0';
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace('.', ',') + ' M';
-  if (n >= 1_000) return Math.round(n / 1_000) + ' k';
-  return n.toString();
+  if (n >= 1_000)     return Math.round(n / 1_000) + ' k';
+  return String(n);
 }
 
 function fmtDur(min) {
@@ -227,12 +641,16 @@ function fmtDur(min) {
   return h > 0 ? `${h}h${m > 0 ? m + 'm' : ''}` : `${m} min`;
 }
 
+function euros(mv) {
+  return Math.floor((mv || 0) * SMIC / 60);
+}
+
 let currentPeriod = 30;
 let allData = {};
 let selectedLine = null;
-let detailChart = null;
+let chart = null;
 
-/* ── Fetch all lines ── */
+/* ── Fetch ── */
 async function fetchAll(days) {
   const results = await Promise.all(
     ALL_LINES.map(l =>
@@ -246,82 +664,102 @@ async function fetchAll(days) {
   return map;
 }
 
-/* ── Render rankings ── */
+/* ── KPI row ── */
+function renderKPIs(data) {
+  const totalInc = Object.values(data).reduce((s, d) => s + d.total_incidents, 0);
+  const totalMv  = Object.values(data).reduce((s, d) => s + d.total_minutes_voyageurs, 0);
+  const totalEur = euros(totalMv);
+  const joursMax = Math.max(...Object.values(data).map(d => d.jours_perturbes || 0));
+
+  document.getElementById('kpi-row').innerHTML = `
+    <div class="kpi-cell">
+      <div class="kpi-value" style="color:var(--red)">${totalInc.toLocaleString('fr-FR')}</div>
+      <div class="kpi-label">Incidents total</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kpi-value">${fmtN(totalMv)}</div>
+      <div class="kpi-label">Min-voyageurs perdues</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kpi-value" style="color:var(--orange)">${totalEur.toLocaleString('fr-FR')} €</div>
+      <div class="kpi-label">Coût estimé SMIC</div>
+    </div>
+    <div class="kpi-cell">
+      <div class="kpi-value">${joursMax}</div>
+      <div class="kpi-label">Jours perturbés (max)</div>
+    </div>
+  `;
+}
+
+/* ── Rankings ── */
 function renderRankings(data) {
-  const sorted_inc = Object.entries(data)
+  const byInc = Object.entries(data)
     .map(([id, d]) => ({ id, val: d.total_incidents }))
     .sort((a, b) => b.val - a.val);
-
-  const sorted_mv = Object.entries(data)
+  const byMv = Object.entries(data)
     .map(([id, d]) => ({ id, val: d.total_minutes_voyageurs }))
     .sort((a, b) => b.val - a.val);
 
-  const maxInc = sorted_inc[0]?.val || 1;
-  const maxMv = sorted_mv[0]?.val || 1;
+  const maxInc = byInc[0]?.val || 1;
+  const maxMv  = byMv[0]?.val || 1;
 
-  function renderList(containerId, items, maxVal, fmtFn) {
-    const el = document.getElementById(containerId);
-    if (items.every(i => i.val === 0)) {
-      el.innerHTML = '<div class="empty">Aucune donnée sur cette période</div>';
-      return;
-    }
-    el.innerHTML = items.map((item, idx) => {
+  function makeList(items, max, labelFn) {
+    if (items.every(i => i.val === 0))
+      return '<div class="empty">Aucune donnée sur cette période</div>';
+    return items.map((item, i) => {
       const c = LINE_COLORS[item.id];
-      const pct = Math.round((item.val / maxVal) * 100);
+      const pct = Math.round((item.val / max) * 100);
       const sel = item.id === selectedLine ? 'selected' : '';
       return `
         <div class="rank-item ${sel}" onclick="selectLine('${item.id}')">
-          <span class="rank-num">${idx + 1}</span>
-          <div class="line-badge" style="background:${c.bg};color:${c.fg}">${lineShort(item.id)}</div>
+          <span class="rank-num">${i + 1}</span>
+          <div class="rank-badge" style="background:${c.bg};color:${c.fg}">${lineShort(item.id)}</div>
           <div class="rank-info">
             <div class="rank-name">${lineShort(item.id)}</div>
-            <div class="rank-val">${fmtFn(item.val)}</div>
+            <div class="rank-val">${labelFn(item.val)}</div>
           </div>
           <div class="rank-bar-wrap">
-            <div class="rank-bar-bg">
-              <div class="rank-bar-fill" style="width:${pct}%"></div>
-            </div>
+            <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${pct}%"></div></div>
           </div>
         </div>`;
     }).join('');
   }
 
-  renderList('rank-incidents', sorted_inc, maxInc, v => `${v} incident${v > 1 ? 's' : ''}`);
-  renderList('rank-mv', sorted_mv, maxMv, v => `${fmt(v)} min-voy.`);
+  document.getElementById('rank-incidents').innerHTML =
+    makeList(byInc, maxInc, v => `${v} incident${v > 1 ? 's' : ''}`);
+  document.getElementById('rank-mv').innerHTML =
+    makeList(byMv, maxMv, v => `${fmtN(v)} min-voy.`);
 }
 
-/* ── Render table ── */
+/* ── Table ── */
 function renderTable(data) {
   const rows = Object.entries(data)
     .map(([id, d]) => ({ id, ...d }))
     .sort((a, b) => b.total_incidents - a.total_incidents);
 
-  const tbody = document.getElementById('table-body');
-  if (rows.length === 0 || rows.every(r => r.total_incidents === 0)) {
-    tbody.innerHTML = '<tr><td colspan="5" class="empty">Aucune donnée sur cette période</td></tr>';
+  if (!rows.length || rows.every(r => r.total_incidents === 0)) {
+    document.getElementById('table-rows').innerHTML =
+      '<div class="empty">Aucune donnée sur cette période</div>';
     return;
   }
 
-  tbody.innerHTML = rows.map(r => {
+  document.getElementById('table-rows').innerHTML = rows.map(r => {
     const c = LINE_COLORS[r.id];
+    const isB = r.id === 'RER_B';
     const sel = r.id === selectedLine ? 'selected' : '';
     return `
-      <tr class="${sel}" onclick="selectLine('${r.id}')">
-        <td>
-          <div style="display:flex;align-items:center;gap:0.6rem">
-            <div class="tbl-badge" style="background:${c.bg};color:${c.fg}">${lineShort(r.id)}</div>
-            <span>${lineShort(r.id)}</span>
-          </div>
-        </td>
-        <td class="num">${r.total_incidents}</td>
-        <td class="num">${r.jours_perturbes} j</td>
-        <td class="num muted">${fmtDur(r.total_duree_min)}</td>
-        <td class="num">${fmt(r.total_minutes_voyageurs)}</td>
-      </tr>`;
+      <div class="table-row ${isB ? 'rer-b' : ''} ${sel}" onclick="selectLine('${r.id}')">
+        <div class="t-badge" style="background:${c.bg};color:${c.fg}">${lineShort(r.id)}</div>
+        <div class="t-name">${lineShort(r.id)}</div>
+        <div class="t-val">${r.total_incidents}</div>
+        <div class="t-val">${r.jours_perturbes} j</div>
+        <div class="t-val col-hide">${fmtN(r.total_minutes_voyageurs)}</div>
+        <div class="t-val col-hide">${fmtDur(r.total_duree_min)}</div>
+      </div>`;
   }).join('');
 }
 
-/* ── Detail chart ── */
+/* ── Chart ── */
 function selectLine(lineId) {
   selectedLine = lineId;
   renderRankings(allData);
@@ -331,15 +769,35 @@ function selectLine(lineId) {
   if (!data) return;
 
   const c = LINE_COLORS[lineId];
-  document.getElementById('detail-badge').style.background = c.bg;
-  document.getElementById('detail-badge').style.color = c.fg;
-  document.getElementById('detail-badge').textContent = lineShort(lineId);
-  document.getElementById('detail-title').textContent = `${lineShort(lineId)} — ${currentPeriod} derniers jours`;
-  document.getElementById('detail-kpis').innerHTML = `
-    <span><strong style="color:var(--text)">${data.total_incidents}</strong> incidents</span>
-    <span><strong style="color:var(--text)">${data.jours_perturbes}</strong> jours perturbés</span>
-    <span><strong style="color:var(--text)">${fmt(data.total_minutes_voyageurs)}</strong> min-voy.</span>
+  const eur = euros(data.total_minutes_voyageurs);
+
+  const badge = document.getElementById('chart-badge');
+  badge.style.background = c.bg;
+  badge.style.color = c.fg;
+  badge.textContent = lineShort(lineId);
+
+  document.getElementById('chart-title').textContent =
+    `${lineShort(lineId)} — ${currentPeriod} derniers jours`;
+  document.getElementById('chart-title').style.color = '';
+  document.getElementById('chart-title').style.fontWeight = '600';
+
+  document.getElementById('chart-kpis').innerHTML = `
+    <div class="chart-kpi-item">
+      <div class="chart-kpi-val" style="color:var(--red)">${data.total_incidents}</div>
+      <div class="chart-kpi-label">Incidents</div>
+    </div>
+    <div class="chart-kpi-item">
+      <div class="chart-kpi-val">${data.jours_perturbes}</div>
+      <div class="chart-kpi-label">Jours perturbés</div>
+    </div>
+    <div class="chart-kpi-item">
+      <div class="chart-kpi-val" style="color:var(--orange)">${eur.toLocaleString('fr-FR')} €</div>
+      <div class="chart-kpi-label">Coût estimé</div>
+    </div>
   `;
+
+  document.getElementById('chart-placeholder').style.display = 'none';
+  document.getElementById('chart-wrap').style.display = 'block';
 
   const labels = data.daily.map(d => {
     const dt = new Date(d.date + 'T12:00:00');
@@ -347,19 +805,18 @@ function selectLine(lineId) {
   });
   const values = data.daily.map(d => d.nb_incidents);
 
-  const ctx = document.getElementById('chart-detail').getContext('2d');
-  if (detailChart) detailChart.destroy();
-  detailChart = new Chart(ctx, {
+  const ctx = document.getElementById('chart-canvas').getContext('2d');
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
     type: 'bar',
     data: {
       labels,
       datasets: [{
         label: 'Incidents',
         data: values,
-        backgroundColor: c.bg + 'cc',
+        backgroundColor: c.bg + 'bb',
         borderColor: c.bg,
         borderWidth: 1,
-        borderRadius: 3,
       }]
     },
     options: {
@@ -368,14 +825,24 @@ function selectLine(lineId) {
       plugins: {
         legend: { display: false },
         tooltip: {
+          backgroundColor: '#111',
+          titleColor: '#fff',
+          bodyColor: '#ccc',
           callbacks: {
-            label: (item) => ` ${item.raw} incident${item.raw > 1 ? 's' : ''}`,
+            label: item => ` ${item.raw} incident${item.raw > 1 ? 's' : ''}`,
           }
         }
       },
       scales: {
-        x: { ticks: { color: '#7c8099', font: { size: 10 }, maxRotation: 45 }, grid: { color: '#2e3248' } },
-        y: { ticks: { color: '#7c8099', font: { size: 10 }, stepSize: 1 }, grid: { color: '#2e3248' }, beginAtZero: true },
+        x: {
+          ticks: { color: '#999', font: { size: 10, family: 'Roboto' }, maxRotation: 45 },
+          grid: { color: '#D4CFC7' },
+        },
+        y: {
+          ticks: { color: '#999', font: { size: 10, family: 'Roboto' }, stepSize: 1 },
+          grid: { color: '#D4CFC7' },
+          beginAtZero: true,
+        },
       }
     }
   });
@@ -383,23 +850,32 @@ function selectLine(lineId) {
 
 /* ── Load ── */
 async function load(days) {
-  document.getElementById('rank-incidents').innerHTML = '<div class="skeleton" style="height:44px"></div><div class="skeleton" style="height:44px"></div><div class="skeleton" style="height:44px"></div>';
-  document.getElementById('rank-mv').innerHTML = '<div class="skeleton" style="height:44px"></div><div class="skeleton" style="height:44px"></div><div class="skeleton" style="height:44px"></div>';
-  document.getElementById('table-body').innerHTML = '<tr><td colspan="5" class="empty">Chargement…</td></tr>';
+  document.getElementById('kpi-row').innerHTML =
+    '<div class="kpi-cell skel" style="height:76px"></div>'.repeat(4);
+  document.getElementById('rank-incidents').innerHTML =
+    '<div class="skel" style="height:56px;margin-bottom:1px"></div>'.repeat(3);
+  document.getElementById('rank-mv').innerHTML =
+    '<div class="skel" style="height:56px;margin-bottom:1px"></div>'.repeat(3);
+  document.getElementById('table-rows').innerHTML =
+    '<div class="skel" style="height:56px;margin-bottom:1px"></div>'.repeat(3);
 
   try {
     allData = await fetchAll(days);
+    renderKPIs(allData);
     renderRankings(allData);
     renderTable(allData);
-    if (selectedLine) selectLine(selectedLine);
-    else {
-      // Auto-select the most impacted line
-      const top = Object.entries(allData).sort((a, b) => b[1].total_incidents - a[1].total_incidents)[0];
+
+    if (selectedLine && allData[selectedLine]) {
+      selectLine(selectedLine);
+    } else {
+      const top = Object.entries(allData)
+        .sort((a, b) => b[1].total_incidents - a[1].total_incidents)[0];
       if (top && top[1].total_incidents > 0) selectLine(top[0]);
     }
   } catch (err) {
     console.error(err);
-    document.getElementById('table-body').innerHTML = '<tr><td colspan="5" class="empty" style="color:var(--red)">Erreur de connexion à l\'API</td></tr>';
+    document.getElementById('table-rows').innerHTML =
+      '<div class="empty" style="color:var(--red)">Erreur de connexion à l\'API — vérifier que le backend tourne</div>';
   }
 }
 
