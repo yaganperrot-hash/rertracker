@@ -6,7 +6,7 @@ import logging
 from datetime import date, timedelta
 
 import tweepy
-from sqlalchemy import select, func
+from sqlalchemy import select
 
 from backend.config import get_settings
 from backend.database import AsyncSessionLocal
@@ -37,13 +37,6 @@ _JOURS = ["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"]
 def _compose_tweet(total_incidents: int, total_mv: int, lignes: list[str], d: date) -> str:
     euros = int(total_mv * SMIC_HORAIRE / 60)
     jour = _JOURS[d.weekday()]
-    date_str = f"{jour} {d.day:02d}/{d.month:02d}/{d.year}"
-
-    top = [LINE_DISPLAY.get(l, l) for l in lignes[:4]]
-    lignes_str = ", ".join(top)
-    if len(lignes) > 4:
-        lignes_str += f" et {len(lignes) - 4} autre{'s' if len(lignes) - 4 > 1 else ''}"
-
     pire = LINE_DISPLAY.get(lignes[0], lignes[0]) if lignes else None
 
     lines = [
@@ -74,22 +67,17 @@ async def post_daily_recap() -> None:
     yesterday = date.today() - timedelta(days=1)
 
     async with AsyncSessionLocal() as db:
-        # Agrégats du jour précédent
-        stmt_agg = select(
-            func.coalesce(func.sum(DailyMetric.nb_incidents), 0).label("total_inc"),
-            func.coalesce(func.sum(DailyMetric.minutes_voyageurs), 0).label("total_mv"),
-        ).where(DailyMetric.date == yesterday)
-        row = (await db.execute(stmt_agg)).one()
-        total_inc = int(row.total_inc)
-        total_mv = int(row.total_mv)
-
-        # Lignes perturbées triées par impact décroissant
-        stmt_lignes = (
-            select(DailyMetric.line_id)
-            .where(DailyMetric.date == yesterday, DailyMetric.est_jour_perturbe.is_(True))
+        # Une seule requête — agrégats calculés en Python depuis les lignes
+        stmt = (
+            select(DailyMetric)
+            .where(DailyMetric.date == yesterday)
             .order_by(DailyMetric.minutes_voyageurs.desc())
         )
-        lignes = list((await db.execute(stmt_lignes)).scalars().all())
+        rows = (await db.execute(stmt)).scalars().all()
+
+    total_inc = sum(r.nb_incidents for r in rows)
+    total_mv  = sum(r.minutes_voyageurs for r in rows)
+    lignes    = [r.line_id for r in rows if r.est_jour_perturbe]
 
     if total_inc == 0:
         logger.info("Aucun incident enregistré hier (%s) — tweet ignoré", yesterday)
