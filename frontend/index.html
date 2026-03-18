@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RETARDS IDF — Compteur en temps réel</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -13,7 +13,8 @@
       --bg2:    #EDEAE4;
       --bg3:    #E2DED7;
       --border: #D4CFC7;
-      --text:   #111111;
+      --ink:    #111111;
+      --text:   #1A1A1A;
       --muted:  #999999;
       --sub:    #666666;
       --red:    #C0392B;
@@ -23,7 +24,6 @@
       --rer-c:  #C8A800;
       --rer-d:  #00814F;
       --rer-e:  #B04191;
-      --font:   'Roboto', sans-serif;
     }
 
     html { scroll-behavior: smooth; }
@@ -31,14 +31,14 @@
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: var(--font);
+      font-family: 'Roboto', sans-serif;
       font-size: 14px;
       overflow-x: hidden;
     }
 
     /* ─── 1. TICKER ─── */
     .ticker {
-      background: var(--text);
+      background: var(--ink);
       padding: 7px 0;
       overflow: hidden;
       white-space: nowrap;
@@ -46,11 +46,10 @@
     .ticker-track {
       display: inline-block;
       animation: tick 28s linear infinite;
-      font-family: var(--font);
-      font-weight: 400;
-      font-size: 11px;
+      font-weight: 300;
+      font-size: 10px;
       letter-spacing: 1.5px;
-      color: #fff;
+      color: var(--bg);
     }
     @keyframes tick {
       from { transform: translateX(100vw); }
@@ -63,7 +62,7 @@
       top: 0;
       z-index: 100;
       background: var(--bg);
-      border-bottom: 2px solid var(--text);
+      border-bottom: 2px solid var(--ink);
       padding: 14px 32px;
       display: flex;
       align-items: center;
@@ -71,14 +70,14 @@
       gap: 24px;
     }
     .nav-logo {
-      font-weight: 700;
-      font-size: 22px;
-      letter-spacing: 4px;
+      font-weight: 900;
+      font-size: 18px;
+      letter-spacing: 5px;
       text-transform: uppercase;
       text-decoration: none;
       flex-shrink: 0;
     }
-    .nav-logo .logo-retards { color: var(--text); }
+    .nav-logo .logo-retards { color: var(--ink); }
     .nav-logo .logo-idf     { color: var(--red); }
 
     .nav-links {
@@ -88,14 +87,15 @@
     }
     .nav-links a {
       font-weight: 400;
-      font-size: 11px;
-      letter-spacing: 2px;
+      font-size: 10px;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
       color: var(--muted);
       text-decoration: none;
       transition: color 0.15s;
     }
-    .nav-links a:hover { color: var(--text); }
+    .nav-links a:hover  { color: var(--ink); }
+    .nav-links a.active { color: var(--ink); font-weight: 700; }
 
     .nav-live {
       display: flex;
@@ -121,13 +121,22 @@
 
     /* ─── 3. HERO ─── */
     .hero {
+      position: relative;
       padding: 48px 32px 32px;
       text-align: center;
       border-bottom: 1px solid var(--border);
     }
+    .stamp {
+      position: absolute; top: 20px; right: 28px;
+      border: 3px solid var(--red); padding: 4px 10px;
+      color: var(--red); font-size: 9px; font-weight: 900;
+      letter-spacing: 3px; text-transform: uppercase;
+      transform: rotate(-8deg); opacity: 0.15;
+      pointer-events: none; user-select: none;
+    }
     .hero-date {
       font-weight: 300;
-      font-size: 14px;
+      font-size: 9px;
       letter-spacing: 3px;
       text-transform: uppercase;
       color: var(--muted);
@@ -135,23 +144,23 @@
     }
     .hero-subtitle {
       font-weight: 300;
-      font-size: 18px;
+      font-size: 11px;
       letter-spacing: 4px;
       text-transform: uppercase;
       color: var(--sub);
       margin-bottom: 20px;
     }
     .hero-counter {
-      font-weight: 700;
-      font-size: clamp(72px, 14vw, 148px);
-      letter-spacing: -2px;
+      font-weight: 900;
+      font-size: clamp(64px, 13vw, 140px);
+      letter-spacing: -3px;
       line-height: .88;
-      color: var(--text);
+      color: var(--ink);
     }
     .hero-unit {
       font-weight: 300;
-      font-size: 10px;
-      letter-spacing: 3px;
+      font-size: 9px;
+      letter-spacing: 2px;
       text-transform: uppercase;
       color: var(--muted);
       margin-top: 10px;
@@ -165,19 +174,19 @@
       gap: 14px;
       border: 1px solid var(--border);
       background: var(--bg2);
-      padding: 12px 24px;
+      padding: 10px 20px;
       margin: 20px 0;
     }
     .minutes-arrow {
       font-weight: 300;
-      font-size: 18px;
+      font-size: 16px;
       color: var(--sub);
       line-height: 1;
       flex-shrink: 0;
     }
     .minutes-value {
       font-weight: 700;
-      font-size: clamp(32px, 5vw, 48px);
+      font-size: 36px;
       color: var(--red);
       line-height: 1;
       flex-shrink: 0;
@@ -185,7 +194,7 @@
     .minutes-text { text-align: left; }
     .minutes-label {
       font-weight: 300;
-      font-size: 10px;
+      font-size: 9px;
       letter-spacing: 1.5px;
       text-transform: uppercase;
       color: var(--muted);
@@ -193,7 +202,7 @@
     }
     .minutes-note {
       font-weight: 300;
-      font-size: 9px;
+      font-size: 8px;
       color: var(--border);
     }
 
@@ -201,24 +210,25 @@
     .stats-bar {
       display: flex;
       border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
     }
     .stat-cell {
       flex: 1;
-      padding: 16px 12px;
+      padding: 12px 12px;
       text-align: center;
       border-right: 1px solid var(--border);
     }
     .stat-cell:last-child { border-right: none; }
     .stat-value {
       font-weight: 700;
-      font-size: 26px;
+      font-size: 17px;
       line-height: 1;
       margin-bottom: 5px;
     }
     .stat-label {
       font-weight: 300;
-      font-size: 12px;
-      letter-spacing: 2px;
+      font-size: 8px;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
       color: var(--muted);
     }
@@ -234,7 +244,7 @@
       display: flex;
       justify-content: space-between;
       align-items: baseline;
-      border-bottom: 2px solid var(--text);
+      border-bottom: 2px solid var(--ink);
       padding-bottom: 8px;
       margin-bottom: 12px;
     }
@@ -255,9 +265,9 @@
 
     .incident {
       display: grid;
-      grid-template-columns: 40px 1fr auto auto;
+      grid-template-columns: 36px 1fr auto auto;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
       padding: 11px 14px;
       background: var(--bg2);
       border-left: 3px solid transparent;
@@ -269,21 +279,21 @@
     .incident.minor    { border-left-color: #C8A800; }
 
     .incident-badge {
-      width: 36px;
-      height: 36px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 700;
-      font-size: 14px;
+      font-size: 13px;
       color: #fff;
       flex-shrink: 0;
     }
     .incident-info { min-width: 0; }
     .incident-desc {
       font-weight: 500;
-      font-size: 16px;
+      font-size: 12px;
       color: var(--text);
       white-space: nowrap;
       overflow: hidden;
@@ -291,21 +301,21 @@
     }
     .incident-cause {
       font-weight: 300;
-      font-size: 13px;
+      font-size: 9px;
       letter-spacing: .5px;
       color: var(--muted);
       margin-top: 2px;
     }
     .incident-duree {
-      font-weight: 600;
-      font-size: 15px;
+      font-weight: 700;
+      font-size: 11px;
       color: var(--red);
       text-align: right;
       flex-shrink: 0;
     }
     .incident-cout {
-      font-weight: 600;
-      font-size: 14px;
+      font-weight: 700;
+      font-size: 10px;
       color: var(--orange);
       text-align: right;
       flex-shrink: 0;
@@ -320,10 +330,10 @@
     }
     .table-header-row {
       display: grid;
-      grid-template-columns: 42px 1fr 70px 110px 120px 120px;
+      grid-template-columns: 36px 1fr 60px 95px 105px 105px;
       padding: 8px 14px;
       font-weight: 400;
-      font-size: 11px;
+      font-size: 7px;
       letter-spacing: 2px;
       text-transform: uppercase;
       color: var(--muted);
@@ -336,7 +346,7 @@
 
     .line-row {
       display: grid;
-      grid-template-columns: 42px 1fr 70px 110px 120px 120px;
+      grid-template-columns: 36px 1fr 60px 95px 105px 105px;
       align-items: center;
       padding: 11px 14px;
       background: var(--bg2);
@@ -350,14 +360,14 @@
     .line-row.rer-b-row .line-value { color: var(--red); font-weight: 600; }
 
     .line-badge {
-      width: 32px;
-      height: 32px;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 700;
-      font-size: 12px;
+      font-size: 11px;
       color: #fff;
       flex-shrink: 0;
     }
@@ -369,12 +379,12 @@
     }
     .line-name {
       font-weight: 400;
-      font-size: 16px;
+      font-size: 12px;
       color: var(--text);
     }
     .status-dot {
-      width: 6px;
-      height: 6px;
+      width: 5px;
+      height: 5px;
       border-radius: 50%;
       flex-shrink: 0;
     }
@@ -383,8 +393,8 @@
     .status-critical { background: var(--red);    animation: blink 1s ease-in-out infinite; }
 
     .line-value {
-      font-weight: 500;
-      font-size: 14px;
+      font-weight: 400;
+      font-size: 10px;
       color: var(--text);
       text-align: right;
     }
@@ -392,7 +402,7 @@
 
     /* ─── 7. FOOTER ─── */
     footer {
-      border-top: 2px solid var(--text);
+      border-top: 2px solid var(--ink);
       padding: 18px 32px;
       display: flex;
       justify-content: space-between;
@@ -418,23 +428,23 @@
       margin-left: 14px;
       transition: color 0.15s;
     }
-    .footer-right a:hover { color: var(--text); }
+    .footer-right a:hover { color: var(--ink); }
 
     /* ─── RESPONSIVE ─── */
     @media (max-width: 768px) {
       nav { padding: 12px 16px; }
       .nav-links { display: none; }
       .hero { padding: 32px 16px 24px; }
-      .minutes-block { padding: 10px 16px; gap: 10px; }
+      .minutes-block { padding: 10px 16px; gap: 10px; flex-direction: column; align-items: flex-start; }
       .section-wrap, .table-wrap { padding: 20px 16px; }
       footer { padding: 14px 16px; flex-direction: column; align-items: flex-start; }
       .footer-right a:first-child { margin-left: 0; }
 
-      .table-header-row { grid-template-columns: 36px 1fr 60px 100px; }
-      .line-row          { grid-template-columns: 36px 1fr 60px 100px; }
+      .table-header-row { grid-template-columns: 28px 1fr 50px 80px; }
+      .line-row          { grid-template-columns: 28px 1fr 50px 80px; }
       .col-coutday, .col-coutmonth { display: none; }
       .incident-cout { display: none; }
-      .incident { grid-template-columns: 40px 1fr auto; }
+      .incident { grid-template-columns: 32px 1fr auto; }
     }
   </style>
 </head>
@@ -444,7 +454,6 @@
      1. TICKER
 ════════════════════════════════════════════════════════ -->
 <div class="ticker">
-  <!-- TODO: ticker dynamique depuis les incidents en cours -->
   <span class="ticker-track">
     ⚠ INCIDENT EN COURS — RER B — Panne signalisation Gare du Nord — 47 min
     &nbsp;•&nbsp; RER A : trafic normal
@@ -469,7 +478,7 @@
     <span class="logo-retards">RETARDS </span><span class="logo-idf">IDF</span>
   </a>
   <ul class="nav-links">
-    <li><a href="#">Aujourd'hui</a></li>
+    <li><a href="#" class="active">Aujourd'hui</a></li>
     <li><a href="stats.html">Statistiques</a></li>
     <li><a href="#lignes">Par ligne</a></li>
     <li><a href="methode.html">Méthode</a></li>
@@ -484,13 +493,11 @@
      3. HERO — COMPTEUR CENTRAL
 ════════════════════════════════════════════════════════ -->
 <section class="hero">
-  <div class="hero-date" id="hero-date">MARDI 17 MARS 2026 &nbsp;·&nbsp; MÀJ 09H43</div>
+  <span class="stamp">RETARDS IDF</span>
+  <div class="hero-date" id="hero-date">MARDI 18 MARS 2026 &nbsp;·&nbsp; MÀJ 09H43</div>
   <div class="hero-subtitle">Temps de travail volé aujourd'hui — RER &amp; Transilien IDF</div>
   <div class="hero-counter" id="ctr-eur">9.377 €</div>
-  <div class="hero-unit">
-    au SMIC horaire brut · réseau IDF complet<br>
-    base SMIC 11,88 €/h · 2025 · <span id="smic-note">≈ 376 salaires journaliers</span>
-  </div>
+  <div class="hero-unit">au SMIC horaire brut · réseau IDF complet</div>
 
   <!-- Bloc minutes -->
   <div class="minutes-block">
@@ -498,6 +505,7 @@
     <div class="minutes-value" id="ctr-min">2.847.340</div>
     <div class="minutes-text">
       <div class="minutes-label">minutes de vie perdues</div>
+      <div class="minutes-note">base SMIC 11,88 €/h · 2025 · <span id="smic-note">≈ 376 salaires journaliers</span></div>
     </div>
   </div>
 </section>
@@ -505,7 +513,6 @@
 <!-- ════════════════════════════════════════════════════════
      4. BARRE DE STATS
 ════════════════════════════════════════════════════════ -->
-<!-- TODO: remplacer les valeurs stats par fetch API Google Sheets -->
 <div class="stats-bar">
   <div class="stat-cell">
     <div class="stat-value" style="color:var(--red)">23</div>
@@ -520,7 +527,7 @@
     <div class="stat-label">Incident le + long</div>
   </div>
   <div class="stat-cell">
-    <div class="stat-value" style="color:var(--text)">RER B</div>
+    <div class="stat-value" style="color:var(--ink)">RER B</div>
     <div class="stat-label">Ligne la + touchée</div>
   </div>
   <div class="stat-cell">
@@ -537,7 +544,6 @@
     <span class="section-title">Incidents en cours</span>
     <span class="section-meta" id="tmr">Actualisation dans 4 min 52 sec</span>
   </div>
-  <!-- TODO: remplacer mockIncidents par fetch API Google Sheets -->
   <div class="incidents-list" id="incidents-list"></div>
 </div>
 
@@ -559,7 +565,6 @@
     <span class="col-coutmonth">Coût / mois</span>
   </div>
 
-  <!-- TODO: remplacer mockLines par fetch API Google Sheets -->
   <div class="lines-list" id="lines-list"></div>
 </div>
 
