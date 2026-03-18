@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RETARDS IDF — Méthode</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -13,19 +13,19 @@
       --bg2:    #EDEAE4;
       --bg3:    #E2DED7;
       --border: #D4CFC7;
-      --text:   #111111;
+      --ink:    #111111;
+      --text:   #1A1A1A;
       --muted:  #999999;
       --sub:    #666666;
       --red:    #C0392B;
       --orange: #C45000;
-      --font:   'Roboto', sans-serif;
     }
 
     html { scroll-behavior: smooth; }
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: var(--font);
+      font-family: 'Roboto', sans-serif;
       font-size: 14px;
       line-height: 1.7;
       overflow-x: hidden;
@@ -33,7 +33,7 @@
 
     /* ─── TICKER ─── */
     .ticker {
-      background: var(--text);
+      background: var(--ink);
       padding: 7px 0;
       overflow: hidden;
       white-space: nowrap;
@@ -41,10 +41,10 @@
     .ticker-track {
       display: inline-block;
       animation: tick 28s linear infinite;
-      font-weight: 400;
-      font-size: 11px;
+      font-weight: 300;
+      font-size: 10px;
       letter-spacing: 1.5px;
-      color: #fff;
+      color: var(--bg);
     }
     @keyframes tick {
       from { transform: translateX(100vw); }
@@ -57,7 +57,7 @@
       top: 0;
       z-index: 100;
       background: var(--bg);
-      border-bottom: 2px solid var(--text);
+      border-bottom: 2px solid var(--ink);
       padding: 14px 32px;
       display: flex;
       align-items: center;
@@ -65,14 +65,14 @@
       gap: 24px;
     }
     .nav-logo {
-      font-weight: 700;
-      font-size: 22px;
-      letter-spacing: 4px;
+      font-weight: 900;
+      font-size: 18px;
+      letter-spacing: 5px;
       text-transform: uppercase;
       text-decoration: none;
       flex-shrink: 0;
     }
-    .nav-logo .logo-retards { color: var(--text); }
+    .nav-logo .logo-retards { color: var(--ink); }
     .nav-logo .logo-idf     { color: var(--red); }
     .nav-links {
       display: flex;
@@ -81,15 +81,15 @@
     }
     .nav-links a {
       font-weight: 400;
-      font-size: 11px;
-      letter-spacing: 2px;
+      font-size: 10px;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
       color: var(--muted);
       text-decoration: none;
       transition: color 0.15s;
     }
-    .nav-links a:hover { color: var(--text); }
-    .nav-links a.active { color: var(--text); font-weight: 600; }
+    .nav-links a:hover  { color: var(--ink); }
+    .nav-links a.active { color: var(--ink); font-weight: 700; }
     .nav-live {
       display: flex;
       align-items: center;
@@ -112,56 +112,52 @@
       50%       { opacity: 0.15; }
     }
 
+    /* ─── HERO ─── */
+    .hero {
+      position: relative;
+      padding: 48px 32px 40px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .stamp {
+      position: absolute; top: 20px; right: 28px;
+      border: 3px solid var(--red); padding: 4px 10px;
+      color: var(--red); font-size: 9px; font-weight: 900;
+      letter-spacing: 3px; text-transform: uppercase;
+      transform: rotate(-8deg); opacity: 0.15;
+      pointer-events: none; user-select: none;
+    }
+    .hero-date {
+      font-weight: 300;
+      font-size: 9px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .hero-subtitle {
+      font-weight: 300;
+      font-size: 11px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--sub);
+      margin-bottom: 28px;
+    }
+    .hero-chapeau {
+      max-width: 600px;
+      margin: 0 auto;
+      font-weight: 300;
+      font-size: 14px;
+      color: var(--sub);
+      line-height: 1.8;
+    }
+
     /* ─── CONTENT ─── */
     .main-wrap {
       max-width: 820px;
       margin: 0 auto;
       padding: 40px 32px 60px;
     }
-
-    .page-title {
-      font-weight: 700;
-      font-size: 32px;
-      letter-spacing: -0.5px;
-      margin-bottom: 6px;
-    }
-    .page-title span { color: var(--red); }
-    .page-intro {
-      font-weight: 300;
-      font-size: 15px;
-      color: var(--sub);
-      margin-bottom: 32px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 24px;
-    }
-
-    /* TOC */
-    .toc {
-      background: var(--bg2);
-      border-left: 3px solid var(--text);
-      padding: 16px 20px;
-      margin-bottom: 40px;
-    }
-    .toc-label {
-      font-weight: 600;
-      font-size: 10px;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 10px;
-    }
-    .toc ol {
-      padding-left: 18px;
-    }
-    .toc li { margin-bottom: 4px; }
-    .toc a {
-      font-weight: 400;
-      font-size: 13px;
-      color: var(--text);
-      text-decoration: none;
-      transition: color 0.15s;
-    }
-    .toc a:hover { color: var(--red); }
 
     /* Sections */
     section {
@@ -170,204 +166,173 @@
     }
     .section-num {
       font-weight: 300;
-      font-size: 11px;
+      font-size: 10px;
       letter-spacing: 3px;
       text-transform: uppercase;
       color: var(--muted);
       margin-bottom: 4px;
     }
-    section h2 {
-      font-weight: 700;
-      font-size: 22px;
-      letter-spacing: -0.3px;
-      margin-bottom: 16px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid var(--text);
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      border-bottom: 2px solid var(--ink);
+      padding-bottom: 8px;
+      margin-bottom: 20px;
     }
-    section h3 {
-      font-weight: 600;
+    .section-title {
+      font-weight: 700;
       font-size: 14px;
-      letter-spacing: 0.5px;
-      margin: 20px 0 8px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
     }
     p {
       font-weight: 400;
-      font-size: 14px;
-      color: #333;
+      font-size: 13px;
+      color: var(--sub);
       margin-bottom: 12px;
+      line-height: 1.8;
     }
     strong { color: var(--text); font-weight: 600; }
+    a { color: var(--red); text-decoration: none; }
+    a:hover { text-decoration: underline; }
 
-    /* Callout */
-    .callout {
-      background: var(--bg2);
-      border-left: 3px solid var(--sub);
-      padding: 12px 16px;
-      margin: 16px 0;
-    }
-    .callout.warn { border-left-color: var(--orange); }
-    .callout p { margin: 0; font-size: 13px; }
-
-    /* Formula */
-    .formula {
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      padding: 14px 20px;
-      margin: 16px 0;
-      font-family: 'Roboto Mono', 'Courier New', monospace;
-      font-size: 13px;
-      color: var(--text);
-      text-align: center;
-      letter-spacing: 0.5px;
-    }
-
-    /* Steps */
-    .steps { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
-    .step {
-      display: flex;
-      gap: 16px;
-      align-items: flex-start;
-      padding: 14px 16px;
-      background: var(--bg2);
-      transition: background 0.15s;
-    }
-    .step:hover { background: var(--bg3); }
-    .step-num {
-      flex-shrink: 0;
-      width: 26px;
-      height: 26px;
-      background: var(--text);
-      color: var(--bg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 12px;
-    }
-    .step-body h4 {
-      font-weight: 600;
-      font-size: 13px;
-      margin-bottom: 4px;
-    }
-    .step-body p {
-      font-size: 12px;
-      color: var(--sub);
-      margin: 0;
-    }
-    code {
-      background: var(--bg3);
-      padding: 1px 5px;
-      font-size: 12px;
-      font-family: 'Courier New', monospace;
-    }
-
-    /* Table */
-    .table-wrap { overflow-x: auto; margin: 16px 0; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    thead th {
-      text-align: left;
-      padding: 8px 12px;
-      font-weight: 400;
-      font-size: 9px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--muted);
-      border-bottom: 1px solid var(--border);
-    }
-    thead th.num { text-align: right; }
-    tbody tr { border-bottom: 1px solid var(--border); }
-    tbody tr:last-child { border-bottom: none; }
-    tbody tr:hover { background: var(--bg2); }
-    tbody td { padding: 8px 12px; }
-    tbody td.num { text-align: right; color: var(--sub); }
-    .tbl-badge {
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 9px;
-      font-weight: 700;
-      vertical-align: middle;
-      margin-right: 6px;
-    }
-
-    /* Types incidents */
-    .incident-types {
+    /* Source list */
+    .source-list {
       display: flex;
       flex-direction: column;
       gap: 1px;
-      margin: 12px 0;
+      margin-top: 8px;
     }
-    .incident-type {
+    .source-item {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 10px 14px;
+      padding: 12px 16px;
       background: var(--bg2);
+      transition: background 0.15s;
     }
-    .type-tag {
-      font-family: 'Courier New', monospace;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text);
-      background: var(--bg3);
-      padding: 2px 8px;
+    .source-item:hover { background: var(--bg3); }
+    .source-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--red);
       flex-shrink: 0;
-      min-width: 180px;
     }
-    .type-desc {
+    .source-body { flex: 1; }
+    .source-name {
+      font-weight: 500;
+      font-size: 13px;
+      color: var(--text);
+    }
+    .source-desc {
+      font-weight: 300;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* Formula block */
+    .formula-block {
+      background: var(--bg2);
+      border-left: 3px solid var(--red);
+      padding: 16px 20px;
+      margin: 16px 0;
+      font-weight: 500;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.9;
+    }
+    .formula-note {
+      font-style: italic;
+      font-weight: 300;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    /* Périmètre ✓/✗ */
+    .scope-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      margin-top: 8px;
+    }
+    .scope-col {
+      background: var(--bg2);
+      padding: 16px 20px;
+    }
+    .scope-col-title {
+      font-weight: 700;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .scope-col-title.yes { color: #2ECC71; }
+    .scope-col-title.no  { color: var(--red); }
+    .scope-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .scope-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-weight: 300;
+      font-size: 12px;
+      color: var(--sub);
+      line-height: 1.5;
+    }
+    .scope-icon {
+      font-weight: 700;
+      font-size: 13px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .scope-icon.yes { color: #2ECC71; }
+    .scope-icon.no  { color: var(--red); }
+
+    /* Limits */
+    .limits-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .limit-item {
       font-weight: 300;
       font-size: 13px;
       color: var(--sub);
+      padding-left: 14px;
+      border-left: 2px solid var(--border);
+      line-height: 1.7;
     }
 
-    /* Limits grid */
-    .limit-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 2px;
-      margin-top: 12px;
-    }
-    @media (max-width: 540px) { .limit-grid { grid-template-columns: 1fr; } }
-    .limit-card {
+    /* Contact block */
+    .contact-block {
       background: var(--bg2);
-      padding: 16px;
-    }
-    .limit-card h4 {
-      font-weight: 600;
-      font-size: 12px;
-      letter-spacing: 0.5px;
-      margin-bottom: 6px;
-    }
-    .limit-card p {
-      font-weight: 300;
-      font-size: 12px;
-      color: var(--sub);
-      margin: 0;
-    }
-
-    /* Source badge */
-    .source-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
       border: 1px solid var(--border);
-      background: var(--bg2);
-      padding: 6px 14px;
-      font-size: 12px;
-      color: var(--sub);
-      margin-top: 12px;
-      text-decoration: none;
-      transition: background 0.15s;
+      padding: 24px 28px;
+      margin-top: 48px;
+      text-align: center;
     }
-    .source-badge:hover { background: var(--bg3); }
-    .source-badge a { color: var(--text); text-decoration: none; font-weight: 500; }
+    .contact-block p {
+      font-size: 14px;
+      color: var(--sub);
+      margin-bottom: 8px;
+    }
+    .contact-block a {
+      color: var(--red);
+      font-weight: 500;
+    }
 
     /* ─── FOOTER ─── */
     footer {
-      border-top: 2px solid var(--text);
+      border-top: 2px solid var(--ink);
       padding: 18px 32px;
       display: flex;
       justify-content: space-between;
@@ -387,13 +352,15 @@
       margin-left: 14px;
       transition: color 0.15s;
     }
-    .footer-right a:hover { color: var(--text); }
+    .footer-right a:hover { color: var(--ink); }
 
     /* ─── RESPONSIVE ─── */
     @media (max-width: 768px) {
       nav { padding: 12px 16px; }
       .nav-links { display: none; }
+      .hero { padding: 32px 16px 28px; }
       .main-wrap { padding: 24px 16px 40px; }
+      .scope-grid { grid-template-columns: 1fr; }
       footer { flex-direction: column; align-items: flex-start; padding: 14px 16px; }
     }
   </style>
@@ -435,224 +402,158 @@
   </div>
 </nav>
 
+<!-- HERO -->
+<div class="hero">
+  <span class="stamp">RETARDS IDF</span>
+  <div class="hero-date">MÉTHODOLOGIE</div>
+  <div class="hero-subtitle">Méthodologie &amp; Transparence</div>
+  <p class="hero-chapeau">
+    Ce site ne publie que des faits vérifiables, tirés des données officielles
+    des opérateurs eux-mêmes.
+  </p>
+</div>
+
 <!-- CONTENT -->
 <div class="main-wrap">
 
-  <div class="page-title">Méthodologie <span>&amp; transparence</span></div>
-  <p class="page-intro">
-    Comment sont collectées les données, comment sont calculées les minutes-voyageurs,
-    et quelles sont les limites de cette estimation.
-  </p>
-
-  <!-- TOC -->
-  <div class="toc">
-    <div class="toc-label">Sommaire</div>
-    <ol>
-      <li><a href="#source">Source de données</a></li>
-      <li><a href="#collecte">Processus de collecte</a></li>
-      <li><a href="#incidents">Définition d'un incident</a></li>
-      <li><a href="#formule">Calcul des minutes-voyageurs</a></li>
-      <li><a href="#frequentation">Données de fréquentation</a></li>
-      <li><a href="#limites">Limites &amp; biais</a></li>
-    </ol>
-  </div>
-
-  <!-- 1. Source -->
-  <section id="source">
+  <!-- Section 1 — SOURCES -->
+  <section id="sources">
     <div class="section-num">01</div>
-    <h2>Source de données</h2>
-    <p>
-      Toutes les données de perturbations proviennent de l'<strong>API PRIM</strong>
-      (Plateforme Régionale d'Information Multimodale),
-      opérée par <strong>Île-de-France Mobilités</strong>.
-    </p>
-    <p>
-      Cette API expose en temps réel les perturbations déclarées par les opérateurs
-      (SNCF Voyageurs pour les RER et Transilien, RATP pour le RER A et B)
-      au format <strong>GTFS-RT / Navitia</strong>.
-    </p>
-    <a class="source-badge" href="https://prim.iledefrance-mobilites.fr" target="_blank" rel="noopener">
-      🔗 <a href="https://prim.iledefrance-mobilites.fr" target="_blank" rel="noopener" style="font-weight:500;color:var(--text)">prim.iledefrance-mobilites.fr</a>
-    </a>
-    <div class="callout" style="margin-top:16px">
-      <p>Seuls les incidents sur les <strong>lignes RER (A, B, C, D, E)</strong> et <strong>Transilien (H, J, K, L, N, P, R, U)</strong> sont pris en compte. Métro, tramway et bus sont exclus.</p>
+    <div class="section-header">
+      <span class="section-title">Sources</span>
     </div>
+    <div class="source-list">
+      <div class="source-item">
+        <span class="source-dot"></span>
+        <div class="source-body">
+          <div class="source-name">
+            <a href="https://prim.iledefrance-mobilites.fr" target="_blank" rel="noopener">API PRIM — IDF Mobilités</a>
+          </div>
+          <div class="source-desc">Perturbations temps réel GTFS-RT / Navitia · polling toutes les 5 min · 288 req/jour sur 20 000 autorisées</div>
+        </div>
+      </div>
+      <div class="source-item">
+        <span class="source-dot"></span>
+        <div class="source-body">
+          <div class="source-name">Fréquentation IDF Mobilités</div>
+          <div class="source-desc">Données annuelles publiées par SNCF Voyageurs et IDF Mobilités · stockées dans <code style="background:var(--bg3);padding:1px 5px;font-size:11px">data/frequentation.json</code> · mise à jour mensuelle</div>
+        </div>
+      </div>
+      <div class="source-item">
+        <span class="source-dot"></span>
+        <div class="source-body">
+          <div class="source-name">SMIC horaire brut 2026</div>
+          <div class="source-desc">11,88 €/h · source : décret gouvernemental · utilisé comme unité de mesure de l'impact humain</div>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top:16px">
+      Seuls les incidents sur les <strong>lignes RER (A, B, C, D, E)</strong> et <strong>Transilien (H, J, K, L, N, P, R, U)</strong> sont pris en compte. Métro, tramway et bus sont exclus.
+    </p>
   </section>
 
-  <!-- 2. Collecte -->
-  <section id="collecte">
+  <!-- Section 2 — CALCUL DU COÛT -->
+  <section id="calcul">
     <div class="section-num">02</div>
-    <h2>Processus de collecte</h2>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <div class="step-body">
-          <h4>Polling toutes les 5 minutes</h4>
-          <p>Un scheduler interroge l'endpoint <code>/disruptions/</code> de l'API PRIM. Quota consommé : ~288 req/jour sur 20 000 autorisées.</p>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-body">
-          <h4>Filtrage par ligne</h4>
-          <p>Seules les perturbations dont l'objet impacté correspond à l'une des 13 lignes cibles sont conservées (identification par l'ID Navitia de la ligne).</p>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <div class="step-body">
-          <h4>Upsert en base</h4>
-          <p>Chaque perturbation est insérée ou mise à jour (upsert sur <code>navitia_id</code>). La durée est calculée à la clôture : <code>heure_fin − heure_debut</code>.</p>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">4</div>
-        <div class="step-body">
-          <h4>Calcul des métriques quotidiennes</h4>
-          <p>Toutes les 5 minutes, les métriques agrégées par ligne et par jour sont recalculées et stockées dans la table <code>daily_metrics</code>.</p>
-        </div>
+    <div class="section-header">
+      <span class="section-title">Calcul du coût</span>
+    </div>
+    <p>
+      Les <strong>minutes-voyageurs perdues</strong> estiment l'impact humain réel : combien de minutes de trajet ont été perdues par l'ensemble des usagers touchés pendant un incident.
+    </p>
+    <div class="formula-block">
+      minutes-voyageurs = durée_incident (min) × fréquentation_par_minute<br>
+      fréquentation_par_minute = voyageurs_par_jour ÷ 18h ÷ 60 min<br>
+      coût = minutes-voyageurs × 11,88 €/h ÷ 60
+      <div class="formula-note">
+        Hypothèse conservative : répartition uniforme sur 6h–24h. En réalité les heures de pointe concentrent davantage de voyageurs, ce qui sous-estime l'impact réel.
       </div>
     </div>
+    <p>
+      <strong>Exemple — RER A, incident de 45 minutes :</strong><br>
+      900 000 voy./jour ÷ 18h ÷ 60 = 833 voy./min · 45 × 833 = 37 500 min-voy. · coût estimé = <strong>7 425 €</strong>
+    </p>
   </section>
 
-  <!-- 3. Incidents -->
-  <section id="incidents">
+  <!-- Section 3 — PÉRIMÈTRE -->
+  <section id="perimetre">
     <div class="section-num">03</div>
-    <h2>Définition d'un incident</h2>
-    <p>
-      Un <strong>incident</strong> est une perturbation déclarée par l'opérateur dans l'API PRIM,
-      associée à une ligne suivie, avec une heure de début renseignée.
-    </p>
-    <h3>Types remontés par l'API Navitia</h3>
-    <div class="incident-types">
-      <div class="incident-type">
-        <span class="type-tag">NO_SERVICE</span>
-        <span class="type-desc">Ligne supprimée ou arrêtée</span>
-      </div>
-      <div class="incident-type">
-        <span class="type-tag">SIGNIFICANT_DELAYS</span>
-        <span class="type-desc">Retards importants</span>
-      </div>
-      <div class="incident-type">
-        <span class="type-tag">REDUCED_SERVICE</span>
-        <span class="type-desc">Service partiel</span>
-      </div>
-      <div class="incident-type">
-        <span class="type-tag">MODIFIED_SERVICE</span>
-        <span class="type-desc">Service modifié / dévié</span>
-      </div>
-      <div class="incident-type">
-        <span class="type-tag">UNKNOWN_EFFECT</span>
-        <span class="type-desc">Effet non précisé par l'opérateur</span>
-      </div>
+    <div class="section-header">
+      <span class="section-title">Périmètre</span>
     </div>
-    <div class="callout warn" style="margin-top:12px">
-      <p>Tous les types sont comptabilisés. <code>UNKNOWN_EFFECT</code> est inclus mais peut couvrir des perturbations mineures non qualifiées.</p>
+    <div class="scope-grid">
+      <div class="scope-col">
+        <div class="scope-col-title yes">✓ Compté</div>
+        <div class="scope-list">
+          <div class="scope-item">
+            <span class="scope-icon yes">✓</span>
+            <span>Incidents officiellement déclarés dans l'API PRIM par SNCF ou RATP</span>
+          </div>
+          <div class="scope-item">
+            <span class="scope-icon yes">✓</span>
+            <span>Heures de pointe et heures creuses (répartition uniforme 6h–24h)</span>
+          </div>
+          <div class="scope-item">
+            <span class="scope-icon yes">✓</span>
+            <span>Jours ouvrés et week-ends</span>
+          </div>
+          <div class="scope-item">
+            <span class="scope-icon yes">✓</span>
+            <span>Tous types : NO_SERVICE, SIGNIFICANT_DELAYS, REDUCED_SERVICE, MODIFIED_SERVICE</span>
+          </div>
+        </div>
+      </div>
+      <div class="scope-col">
+        <div class="scope-col-title no">✗ Non compté</div>
+        <div class="scope-list">
+          <div class="scope-item">
+            <span class="scope-icon no">✗</span>
+            <span>Retards inférieurs à 5 minutes non déclarés officiellement</span>
+          </div>
+          <div class="scope-item">
+            <span class="scope-icon no">✗</span>
+            <span>Incidents non déclarés dans l'API (retards masqués)</span>
+          </div>
+          <div class="scope-item">
+            <span class="scope-icon no">✗</span>
+            <span>Coûts indirects : rendez-vous manqués, productivité perdue, stress</span>
+          </div>
+          <div class="scope-item">
+            <span class="scope-icon no">✗</span>
+            <span>Incidents sans heure de fin (pas de durée calculable)</span>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
-  <!-- 4. Formule -->
-  <section id="formule">
-    <div class="section-num">04</div>
-    <h2>Calcul des minutes-voyageurs</h2>
-    <p>
-      Les <strong>minutes-voyageurs perdues</strong> estiment l'impact humain réel :
-      combien de minutes de trajet ont été perdues par l'ensemble des usagers touchés pendant un incident.
-    </p>
-    <div class="formula">
-      minutes-voyageurs = durée_incident (min) × fréquentation_par_minute
-    </div>
-    <p>Avec :</p>
-    <div class="formula">
-      fréquentation_par_minute = voyageurs_par_jour ÷ 18h ÷ 60 min
-    </div>
-    <p>
-      On suppose une répartition uniforme sur l'amplitude horaire de service :
-      <strong>6h → 24h = 18 heures</strong>. C'est une hypothèse conservatrice
-      (les heures de pointe concentrent davantage de voyageurs).
-    </p>
-
-    <h3>Conversion en euros (SMIC)</h3>
-    <div class="formula">
-      coût = minutes-voyageurs × SMIC horaire brut (11,88 €/h) ÷ 60
-    </div>
-    <p>
-      Cette conversion exprime l'impact en unité compréhensible : le temps de travail
-      qui aurait pu être effectué au SMIC brut 2025. Ce n'est pas une perte économique
-      directe mais un indicateur d'ordre de grandeur.
-    </p>
-
-    <h3>Exemple — RER A, incident de 45 minutes</h3>
-    <div class="callout">
-      <p>
-        Fréquentation RER A : <strong>900 000 voy./jour</strong><br>
-        Fréquentation par minute : 900 000 ÷ 18 ÷ 60 = <strong>833 voy./min</strong><br>
-        Minutes-voyageurs : 45 × 833 = <strong>37 500</strong><br>
-        Coût estimé : 37 500 × 11,88 ÷ 60 = <strong>7 425 €</strong>
-      </p>
-    </div>
-  </section>
-
-  <!-- 5. Fréquentation -->
-  <section id="frequentation">
-    <div class="section-num">05</div>
-    <h2>Données de fréquentation</h2>
-    <p>
-      Les chiffres de fréquentation journalière sont issus des données annuelles publiées par
-      <strong>SNCF Voyageurs</strong> et <strong>Île-de-France Mobilités</strong>.
-      Stockés statiquement dans <code>data/frequentation.json</code>, mis à jour manuellement (~mensuel).
-    </p>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Ligne</th>
-            <th class="num">Voyageurs / jour</th>
-            <th class="num">Voy. / minute</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td><span class="tbl-badge" style="background:#E2231A;color:#fff">A</span>RER A</td><td class="num">900 000</td><td class="num">833</td></tr>
-          <tr><td><span class="tbl-badge" style="background:#5191CF;color:#fff">B</span>RER B</td><td class="num">650 000</td><td class="num">602</td></tr>
-          <tr><td><span class="tbl-badge" style="background:#C8A800;color:#000">C</span>RER C</td><td class="num">350 000</td><td class="num">324</td></tr>
-          <tr><td><span class="tbl-badge" style="background:#00814F;color:#fff">D</span>RER D</td><td class="num">530 000</td><td class="num">491</td></tr>
-          <tr><td><span class="tbl-badge" style="background:#B04191;color:#fff">E</span>RER E</td><td class="num">180 000</td><td class="num">167</td></tr>
-          <tr><td><span class="tbl-badge" style="background:#7B7B7B;color:#fff">H</span>Transilien H</td><td class="num">110 000</td><td class="num">102</td></tr>
-          <tr><td><span class="tbl-badge" style="background:#D2B464;color:#000">J</span>Transilien J</td><td class="num">130 000</td><td class="num">120</td></tr>
-          <tr><td><span class="tbl-badge" style="background:#8C4B31;color:#fff">K</span>Transilien K</td><td class="num">50 000</td><td class="num">46</td></tr>
-          <tr><td><span class="tbl-badge" style="background:#9F3E96;color:#fff">L</span>Transilien L</td><td class="num">170 000</td><td class="num">157</td></tr>
-          <tr><td><span class="tbl-badge" style="background:#333333;color:#fff">N</span>Transilien N</td><td class="num">100 000</td><td class="num">93</td></tr>
-          <tr><td><span class="tbl-badge" style="background:#E87722;color:#fff">P</span>Transilien P</td><td class="num">80 000</td><td class="num">74</td></tr>
-          <tr><td><span class="tbl-badge" style="background:#228B22;color:#fff">R</span>Transilien R</td><td class="num">70 000</td><td class="num">65</td></tr>
-          <tr><td><span class="tbl-badge" style="background:#7B0F1F;color:#fff">U</span>Transilien U</td><td class="num">40 000</td><td class="num">37</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- 6. Limites -->
+  <!-- Section 4 — LIMITES -->
   <section id="limites">
-    <div class="section-num">06</div>
-    <h2>Limites &amp; biais</h2>
-    <div class="limit-grid">
-      <div class="limit-card">
-        <h4>Dépendance aux déclarations opérateur</h4>
-        <p>Seules les perturbations officiellement déclarées dans l'API PRIM sont comptabilisées. Les retards non déclarés ne sont pas capturés.</p>
+    <div class="section-num">04</div>
+    <div class="section-header">
+      <span class="section-title">Limites</span>
+    </div>
+    <div class="limits-list">
+      <div class="limit-item">
+        <strong>Dépendance aux déclarations opérateur.</strong> Seules les perturbations officiellement déclarées dans l'API PRIM sont comptabilisées. Les retards réels sont probablement sous-estimés.
       </div>
-      <div class="limit-card">
-        <h4>Fréquentation uniforme</h4>
-        <p>La formule suppose une répartition uniforme sur 18h. En réalité, les heures de pointe (7h–9h, 17h–19h) concentrent 40–50 % du trafic.</p>
+      <div class="limit-item">
+        <strong>Fréquentation uniforme.</strong> La formule suppose une répartition sur 18h. En réalité les heures de pointe (7h–9h, 17h–19h) concentrent 40–50 % du trafic.
       </div>
-      <div class="limit-card">
-        <h4>Un incident = une ligne</h4>
-        <p>Un incident affectant plusieurs lignes est compté une fois par ligne, ce qui peut sur-estimer le nombre d'incidents distincts.</p>
+      <div class="limit-item">
+        <strong>Un incident = une ligne.</strong> Un incident affectant plusieurs lignes est compté une fois par ligne, ce qui peut sur-estimer le nombre d'incidents distincts.
       </div>
-      <div class="limit-card">
-        <h4>Durée des incidents ouverts</h4>
-        <p>Les incidents sans heure de fin ne contribuent pas au calcul de durée, pour éviter de sur-estimer les minutes perdues.</p>
+      <div class="limit-item">
+        <strong>Le SMIC n'est pas une perte économique directe.</strong> La conversion en euros au SMIC est un indicateur d'ordre de grandeur, pas une estimation économique précise.
       </div>
     </div>
   </section>
+
+  <!-- Contact -->
+  <div class="contact-block">
+    <p>Une erreur dans nos données ? Une suggestion d'amélioration ?</p>
+    <p><a href="mailto:contact@retardsidf.fr">contact@retardsidf.fr</a></p>
+  </div>
 
 </div>
 
