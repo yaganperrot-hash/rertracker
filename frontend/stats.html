@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RETARDS IDF — Statistiques</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -14,26 +14,26 @@
       --bg2:    #EDEAE4;
       --bg3:    #E2DED7;
       --border: #D4CFC7;
-      --text:   #111111;
+      --ink:    #111111;
+      --text:   #1A1A1A;
       --muted:  #999999;
       --sub:    #666666;
       --red:    #C0392B;
       --orange: #C45000;
-      --font:   'Roboto', sans-serif;
     }
 
     html { scroll-behavior: smooth; }
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: var(--font);
+      font-family: 'Roboto', sans-serif;
       font-size: 14px;
       overflow-x: hidden;
     }
 
     /* ─── TICKER ─── */
     .ticker {
-      background: var(--text);
+      background: var(--ink);
       padding: 7px 0;
       overflow: hidden;
       white-space: nowrap;
@@ -41,10 +41,10 @@
     .ticker-track {
       display: inline-block;
       animation: tick 28s linear infinite;
-      font-weight: 400;
-      font-size: 11px;
+      font-weight: 300;
+      font-size: 10px;
       letter-spacing: 1.5px;
-      color: #fff;
+      color: var(--bg);
     }
     @keyframes tick {
       from { transform: translateX(100vw); }
@@ -57,7 +57,7 @@
       top: 0;
       z-index: 100;
       background: var(--bg);
-      border-bottom: 2px solid var(--text);
+      border-bottom: 2px solid var(--ink);
       padding: 14px 32px;
       display: flex;
       align-items: center;
@@ -65,14 +65,14 @@
       gap: 24px;
     }
     .nav-logo {
-      font-weight: 700;
-      font-size: 22px;
-      letter-spacing: 4px;
+      font-weight: 900;
+      font-size: 18px;
+      letter-spacing: 5px;
       text-transform: uppercase;
       text-decoration: none;
       flex-shrink: 0;
     }
-    .nav-logo .logo-retards { color: var(--text); }
+    .nav-logo .logo-retards { color: var(--ink); }
     .nav-logo .logo-idf     { color: var(--red); }
     .nav-links {
       display: flex;
@@ -81,16 +81,15 @@
     }
     .nav-links a {
       font-weight: 400;
-      font-size: 11px;
-      letter-spacing: 2px;
+      font-size: 10px;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
       color: var(--muted);
       text-decoration: none;
       transition: color 0.15s;
     }
-    .nav-links a:hover,
-    .nav-links a.active { color: var(--text); }
-    .nav-links a.active { font-weight: 600; }
+    .nav-links a:hover  { color: var(--ink); }
+    .nav-links a.active { color: var(--ink); font-weight: 700; }
     .nav-live {
       display: flex;
       align-items: center;
@@ -113,31 +112,77 @@
       50%       { opacity: 0.15; }
     }
 
-    /* ─── PAGE ─── */
-    .page-header {
-      padding: 32px 32px 0;
+    /* ─── HERO ─── */
+    .hero {
+      position: relative;
+      padding: 40px 32px 28px;
       border-bottom: 1px solid var(--border);
-      max-width: 1100px;
-      margin: 0 auto;
+      text-align: center;
     }
-    .page-title {
-      font-weight: 700;
-      font-size: 28px;
-      letter-spacing: -0.5px;
-      margin-bottom: 20px;
+    .stamp {
+      position: absolute; top: 20px; right: 28px;
+      border: 3px solid var(--red); padding: 4px 10px;
+      color: var(--red); font-size: 9px; font-weight: 900;
+      letter-spacing: 3px; text-transform: uppercase;
+      transform: rotate(-8deg); opacity: 0.15;
+      pointer-events: none; user-select: none;
     }
-    .page-title span { color: var(--red); }
+    .hero-date {
+      font-weight: 300;
+      font-size: 9px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .hero-subtitle {
+      font-weight: 300;
+      font-size: 11px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--sub);
+      margin-bottom: 28px;
+    }
+
+    /* 3 grands chiffres */
+    .hero-kpis {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      max-width: 860px;
+      margin: 0 auto 24px;
+    }
+    .hero-kpi {
+      padding: 16px 24px;
+      border-right: 1px solid var(--border);
+    }
+    .hero-kpi:last-child { border-right: none; }
+    .hero-kpi-val {
+      font-weight: 900;
+      font-size: clamp(28px, 4vw, 48px);
+      letter-spacing: -1px;
+      line-height: 1;
+      color: var(--ink);
+      margin-bottom: 6px;
+    }
+    .hero-kpi-label {
+      font-weight: 300;
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
 
     /* Period selector */
     .period-bar {
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: 4px;
-      padding-bottom: 20px;
+      padding-top: 4px;
     }
     .period-label {
       font-weight: 300;
-      font-size: 11px;
+      font-size: 10px;
       letter-spacing: 2px;
       text-transform: uppercase;
       color: var(--muted);
@@ -147,20 +192,20 @@
       background: transparent;
       border: 1px solid var(--border);
       color: var(--muted);
-      font-family: var(--font);
+      font-family: 'Roboto', sans-serif;
       font-weight: 400;
-      font-size: 12px;
+      font-size: 11px;
       letter-spacing: 1px;
-      padding: 6px 16px;
+      padding: 5px 14px;
       cursor: pointer;
       transition: all 0.15s;
     }
-    .period-btn:hover { border-color: var(--text); color: var(--text); }
+    .period-btn:hover { border-color: var(--ink); color: var(--ink); }
     .period-btn.active {
-      background: var(--text);
-      border-color: var(--text);
+      background: var(--ink);
+      border-color: var(--ink);
       color: var(--bg);
-      font-weight: 600;
+      font-weight: 700;
     }
 
     /* ─── CONTENT ─── */
@@ -187,13 +232,13 @@
     .kpi-cell:hover { background: var(--bg3); }
     .kpi-value {
       font-weight: 700;
-      font-size: 28px;
+      font-size: 24px;
       line-height: 1;
       margin-bottom: 4px;
     }
     .kpi-label {
       font-weight: 300;
-      font-size: 10px;
+      font-size: 9px;
       letter-spacing: 2px;
       text-transform: uppercase;
       color: var(--muted);
@@ -204,7 +249,7 @@
       display: flex;
       justify-content: space-between;
       align-items: baseline;
-      border-bottom: 2px solid var(--text);
+      border-bottom: 2px solid var(--ink);
       padding-bottom: 8px;
       margin-bottom: 14px;
     }
@@ -235,56 +280,160 @@
 
     .rank-item {
       display: grid;
-      grid-template-columns: 20px 36px 1fr 70px;
+      grid-template-columns: 20px 32px 1fr 64px 52px;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       padding: 10px 12px;
       background: var(--bg2);
       cursor: pointer;
       transition: background 0.15s;
     }
     .rank-item:hover { background: var(--bg3); }
-    .rank-item.selected { background: var(--bg3); border-left: 3px solid var(--text); }
+    .rank-item.selected { background: var(--bg3); border-left: 3px solid var(--ink); }
 
     .rank-num {
       font-weight: 300;
-      font-size: 11px;
+      font-size: 10px;
       color: var(--muted);
       text-align: right;
     }
     .rank-badge {
-      width: 34px;
-      height: 34px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 700;
-      font-size: 13px;
+      font-size: 11px;
       color: #fff;
       flex-shrink: 0;
     }
     .rank-info { min-width: 0; }
     .rank-name {
       font-weight: 500;
-      font-size: 13px;
+      font-size: 12px;
     }
     .rank-val {
       font-weight: 300;
-      font-size: 11px;
+      font-size: 10px;
       color: var(--muted);
       margin-top: 2px;
     }
-    .rank-bar-wrap { }
+    .rank-evol {
+      font-weight: 700;
+      font-size: 10px;
+      text-align: right;
+    }
+    .rank-evol.up   { color: var(--red); }
+    .rank-evol.down { color: #2ECC71; }
     .rank-bar-bg {
       background: var(--border);
-      height: 4px;
+      height: 3px;
     }
     .rank-bar-fill {
       background: var(--text);
+      height: 3px;
+      transition: width 0.4s;
+    }
+
+    /* ─── CAUSES DES INCIDENTS ─── */
+    .causes-section {
+      margin-bottom: 28px;
+    }
+    .causes-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .cause-row {
+      display: grid;
+      grid-template-columns: 180px 1fr 36px;
+      align-items: center;
+      gap: 12px;
+    }
+    .cause-label {
+      font-weight: 400;
+      font-size: 12px;
+      color: var(--text);
+    }
+    .cause-track {
+      background: var(--bg3);
+      height: 4px;
+      border-radius: 0;
+    }
+    .cause-fill {
+      background: var(--red);
       height: 4px;
       transition: width 0.4s;
     }
+    .cause-pct {
+      font-weight: 700;
+      font-size: 12px;
+      color: var(--ink);
+      text-align: right;
+    }
+    .causes-note {
+      font-weight: 300;
+      font-size: 10px;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ─── COMPARAISON MOIS ─── */
+    .compare-section {
+      margin-bottom: 28px;
+    }
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+    }
+    .compare-col {
+      background: var(--bg2);
+      padding: 20px 24px;
+    }
+    .compare-col-title {
+      font-weight: 600;
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+    .compare-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .compare-row:last-child { border-bottom: none; }
+    .compare-row-label {
+      font-weight: 300;
+      font-size: 11px;
+      color: var(--sub);
+    }
+    .compare-row-val {
+      font-weight: 900;
+      font-size: 20px;
+      color: var(--ink);
+      letter-spacing: -0.5px;
+    }
+    .compare-prev-val {
+      font-weight: 400;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .compare-delta {
+      font-weight: 700;
+      font-size: 11px;
+      margin-left: 6px;
+    }
+    .delta-up   { color: var(--red); }
+    .delta-down { color: #2ECC71; }
 
     /* Chart */
     .chart-block {
@@ -306,30 +455,28 @@
       gap: 10px;
     }
     .chart-badge {
-      width: 30px;
-      height: 30px;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 700;
-      font-size: 12px;
+      font-size: 11px;
       color: #fff;
     }
     .chart-title {
       font-weight: 600;
-      font-size: 14px;
+      font-size: 13px;
     }
     .chart-kpis {
       display: flex;
       gap: 24px;
     }
-    .chart-kpi-item {
-      text-align: right;
-    }
+    .chart-kpi-item { text-align: right; }
     .chart-kpi-val {
       font-weight: 700;
-      font-size: 18px;
+      font-size: 17px;
       line-height: 1;
     }
     .chart-kpi-label {
@@ -341,15 +488,15 @@
     }
     .chart-wrap {
       position: relative;
-      height: 220px;
+      height: 200px;
     }
     .chart-placeholder {
-      height: 220px;
+      height: 200px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 300;
-      font-size: 13px;
+      font-size: 12px;
       color: var(--muted);
       letter-spacing: 1px;
     }
@@ -357,10 +504,10 @@
     /* Table */
     .table-header-row {
       display: grid;
-      grid-template-columns: 38px 1fr 80px 100px 110px 80px;
+      grid-template-columns: 36px 1fr 80px 100px 110px 80px;
       padding: 8px 12px;
       font-weight: 400;
-      font-size: 9px;
+      font-size: 7px;
       letter-spacing: 2px;
       text-transform: uppercase;
       color: var(--muted);
@@ -373,35 +520,35 @@
 
     .table-row {
       display: grid;
-      grid-template-columns: 38px 1fr 80px 100px 110px 80px;
+      grid-template-columns: 36px 1fr 80px 100px 110px 80px;
       align-items: center;
-      padding: 12px 12px;
+      padding: 11px 12px;
       background: var(--bg2);
       cursor: pointer;
       transition: background 0.15s;
     }
     .table-row:hover { background: var(--bg3); }
-    .table-row.selected { background: var(--bg3); border-left: 3px solid var(--text); }
+    .table-row.selected { background: var(--bg3); border-left: 3px solid var(--ink); }
     .table-row.rer-b { background: #FFF0EE; }
     .table-row.rer-b:hover { background: #FFE8E5; }
     .table-row.rer-b .t-val,
     .table-row.rer-b .t-name { color: var(--red); font-weight: 600; }
 
     .t-badge {
-      width: 32px;
-      height: 32px;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 700;
-      font-size: 12px;
+      font-size: 11px;
       color: #fff;
     }
-    .t-name { font-weight: 400; font-size: 13px; padding-left: 4px; }
+    .t-name { font-weight: 400; font-size: 12px; padding-left: 4px; }
     .t-val {
-      font-weight: 500;
-      font-size: 12px;
+      font-weight: 400;
+      font-size: 11px;
       text-align: right;
       color: var(--text);
     }
@@ -421,14 +568,14 @@
       padding: 24px;
       text-align: center;
       font-weight: 300;
-      font-size: 13px;
+      font-size: 12px;
       color: var(--muted);
       letter-spacing: 1px;
     }
 
     /* ─── FOOTER ─── */
     footer {
-      border-top: 2px solid var(--text);
+      border-top: 2px solid var(--ink);
       padding: 18px 32px;
       display: flex;
       justify-content: space-between;
@@ -448,18 +595,25 @@
       margin-left: 14px;
       transition: color 0.15s;
     }
-    .footer-right a:hover { color: var(--text); }
+    .footer-right a:hover { color: var(--ink); }
 
     /* ─── RESPONSIVE ─── */
     @media (max-width: 768px) {
       nav { padding: 12px 16px; }
       .nav-links { display: none; }
-      .page-header, .content { padding-left: 16px; padding-right: 16px; }
+      .hero { padding: 28px 16px 20px; }
+      .hero-kpis { grid-template-columns: 1fr; }
+      .hero-kpi { border-right: none; border-bottom: 1px solid var(--border); }
+      .hero-kpi:last-child { border-bottom: none; }
+      .content { padding-left: 16px; padding-right: 16px; }
       .kpi-row { grid-template-columns: 1fr 1fr; }
-      .table-header-row { grid-template-columns: 38px 1fr 80px 100px; }
-      .table-row          { grid-template-columns: 38px 1fr 80px 100px; }
+      .table-header-row { grid-template-columns: 32px 1fr 70px 90px; }
+      .table-row          { grid-template-columns: 32px 1fr 70px 90px; }
       .col-hide { display: none; }
       footer { flex-direction: column; align-items: flex-start; padding: 14px 16px; }
+      .chart-wrap { height: 120px; }
+      .compare-grid { grid-template-columns: 1fr; }
+      .cause-row { grid-template-columns: 120px 1fr 32px; }
     }
   </style>
 </head>
@@ -500,9 +654,27 @@
   </div>
 </nav>
 
-<!-- PAGE HEADER -->
-<div class="page-header">
-  <div class="page-title">Statistiques — <span>toutes les lignes</span></div>
+<!-- HERO -->
+<div class="hero">
+  <span class="stamp">RETARDS IDF</span>
+  <div class="hero-date">MARS 2026</div>
+  <div class="hero-subtitle">Bilan mensuel — toutes lignes confondues</div>
+
+  <div class="hero-kpis">
+    <div class="hero-kpi">
+      <div class="hero-kpi-val">487</div>
+      <div class="hero-kpi-label">Incidents</div>
+    </div>
+    <div class="hero-kpi">
+      <div class="hero-kpi-val">23&thinsp;842&thinsp;320</div>
+      <div class="hero-kpi-label">Min-voyageurs perdues</div>
+    </div>
+    <div class="hero-kpi">
+      <div class="hero-kpi-val">4&thinsp;722&thinsp;580 €</div>
+      <div class="hero-kpi-label">Coût estimé SMIC</div>
+    </div>
+  </div>
+
   <div class="period-bar">
     <span class="period-label">Période</span>
     <button class="period-btn" data-days="7">7 jours</button>
@@ -514,7 +686,7 @@
 <!-- CONTENT -->
 <div class="content">
 
-  <!-- KPI Row -->
+  <!-- KPI Row dynamique -->
   <div class="kpi-row" id="kpi-row">
     <div class="kpi-cell skel" style="height:76px"></div>
     <div class="kpi-cell skel" style="height:76px"></div>
@@ -530,9 +702,9 @@
         <span class="section-sub">cliquer pour détail</span>
       </div>
       <div class="rank-list" id="rank-incidents">
-        <div class="skel" style="height:56px;margin-bottom:1px"></div>
-        <div class="skel" style="height:56px;margin-bottom:1px"></div>
-        <div class="skel" style="height:56px"></div>
+        <div class="skel" style="height:52px;margin-bottom:1px"></div>
+        <div class="skel" style="height:52px;margin-bottom:1px"></div>
+        <div class="skel" style="height:52px"></div>
       </div>
     </div>
     <div>
@@ -541,9 +713,102 @@
         <span class="section-sub">impact humain</span>
       </div>
       <div class="rank-list" id="rank-mv">
-        <div class="skel" style="height:56px;margin-bottom:1px"></div>
-        <div class="skel" style="height:56px;margin-bottom:1px"></div>
-        <div class="skel" style="height:56px"></div>
+        <div class="skel" style="height:52px;margin-bottom:1px"></div>
+        <div class="skel" style="height:52px;margin-bottom:1px"></div>
+        <div class="skel" style="height:52px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CAUSES DES INCIDENTS -->
+  <div class="causes-section">
+    <div class="section-header">
+      <span class="section-title">Causes des incidents</span>
+      <span class="section-sub">mars 2026</span>
+    </div>
+    <div class="causes-list">
+      <div class="cause-row">
+        <span class="cause-label">Défaut signalisation</span>
+        <div class="cause-track"><div class="cause-fill" style="width:42%"></div></div>
+        <span class="cause-pct">42%</span>
+      </div>
+      <div class="cause-row">
+        <span class="cause-label">Incident voyageur</span>
+        <div class="cause-track"><div class="cause-fill" style="width:21%"></div></div>
+        <span class="cause-pct">21%</span>
+      </div>
+      <div class="cause-row">
+        <span class="cause-label">Panne matériel</span>
+        <div class="cause-track"><div class="cause-fill" style="width:18%"></div></div>
+        <span class="cause-pct">18%</span>
+      </div>
+      <div class="cause-row">
+        <span class="cause-label">Travaux</span>
+        <div class="cause-track"><div class="cause-fill" style="width:13%"></div></div>
+        <span class="cause-pct">13%</span>
+      </div>
+      <div class="cause-row">
+        <span class="cause-label">Autre / inconnu</span>
+        <div class="cause-track"><div class="cause-fill" style="width:6%"></div></div>
+        <span class="cause-pct">6%</span>
+      </div>
+    </div>
+    <p class="causes-note">Responsabilité SNCF / RATP selon déclaration opérateur</p>
+  </div>
+
+  <!-- MARS 2026 VS FÉVRIER 2026 -->
+  <div class="compare-section">
+    <div class="section-header">
+      <span class="section-title">Mars 2026 vs Février 2026</span>
+      <span class="section-sub">évolution mensuelle</span>
+    </div>
+    <div class="compare-grid">
+      <div class="compare-col">
+        <div class="compare-col-title">Mars 2026</div>
+        <div class="compare-row">
+          <span class="compare-row-label">Incidents</span>
+          <span class="compare-row-val">487</span>
+        </div>
+        <div class="compare-row">
+          <span class="compare-row-label">Min-voyageurs</span>
+          <span class="compare-row-val">23,8 M</span>
+        </div>
+        <div class="compare-row">
+          <span class="compare-row-label">Coût estimé</span>
+          <span class="compare-row-val">4,7 M€</span>
+        </div>
+        <div class="compare-row">
+          <span class="compare-row-label">Ligne la + touchée</span>
+          <span class="compare-row-val" style="font-size:16px">RER B</span>
+        </div>
+      </div>
+      <div class="compare-col">
+        <div class="compare-col-title">Février 2026</div>
+        <div class="compare-row">
+          <span class="compare-row-label">Incidents</span>
+          <div>
+            <span class="compare-prev-val">412</span>
+            <span class="compare-delta delta-up">+18%</span>
+          </div>
+        </div>
+        <div class="compare-row">
+          <span class="compare-row-label">Min-voyageurs</span>
+          <div>
+            <span class="compare-prev-val">19,1 M</span>
+            <span class="compare-delta delta-up">+25%</span>
+          </div>
+        </div>
+        <div class="compare-row">
+          <span class="compare-row-label">Coût estimé</span>
+          <div>
+            <span class="compare-prev-val">3,8 M€</span>
+            <span class="compare-delta delta-up">+24%</span>
+          </div>
+        </div>
+        <div class="compare-row">
+          <span class="compare-row-label">Ligne la + touchée</span>
+          <span class="compare-prev-val">RER B</span>
+        </div>
       </div>
     </div>
   </div>
@@ -551,7 +816,7 @@
   <!-- Chart detail -->
   <div class="chart-block">
     <div class="section-header">
-      <span class="section-title">Détail par ligne</span>
+      <span class="section-title">Détail par ligne — 30 jours</span>
     </div>
     <div class="chart-meta" id="chart-meta">
       <div class="chart-line-info">
@@ -586,9 +851,9 @@
     <span class="col-hide">Durée</span>
   </div>
   <div class="table-rows" id="table-rows">
-    <div class="skel" style="height:56px;margin-bottom:1px"></div>
-    <div class="skel" style="height:56px;margin-bottom:1px"></div>
-    <div class="skel" style="height:56px"></div>
+    <div class="skel" style="height:52px;margin-bottom:1px"></div>
+    <div class="skel" style="height:52px;margin-bottom:1px"></div>
+    <div class="skel" style="height:52px"></div>
   </div>
 
 </div>
@@ -618,6 +883,13 @@ const LINE_COLORS = {
   'TRANSILIEN_P': { bg: '#E87722', fg: '#fff' },
   'TRANSILIEN_R': { bg: '#228B22', fg: '#fff' },
   'TRANSILIEN_U': { bg: '#7B0F1F', fg: '#fff' },
+};
+
+const EVOL_MOCK = {
+  'RER_A': '-3%', 'RER_B': '+12%', 'RER_C': '+5%', 'RER_D': '-8%', 'RER_E': '+2%',
+  'TRANSILIEN_H': '-1%', 'TRANSILIEN_J': '+7%', 'TRANSILIEN_K': '-4%',
+  'TRANSILIEN_L': '+9%', 'TRANSILIEN_N': '-2%', 'TRANSILIEN_P': '+3%',
+  'TRANSILIEN_R': '-6%', 'TRANSILIEN_U': '+1%',
 };
 
 const ALL_LINES = Object.keys(LINE_COLORS);
@@ -710,6 +982,8 @@ function renderRankings(data) {
       const c = LINE_COLORS[item.id];
       const pct = Math.round((item.val / max) * 100);
       const sel = item.id === selectedLine ? 'selected' : '';
+      const evol = EVOL_MOCK[item.id] || '';
+      const evolClass = evol.startsWith('+') ? 'up' : 'down';
       return `
         <div class="rank-item ${sel}" onclick="selectLine('${item.id}')">
           <span class="rank-num">${i + 1}</span>
@@ -718,9 +992,8 @@ function renderRankings(data) {
             <div class="rank-name">${lineShort(item.id)}</div>
             <div class="rank-val">${labelFn(item.val)}</div>
           </div>
-          <div class="rank-bar-wrap">
-            <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${pct}%"></div></div>
-          </div>
+          <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${pct}%"></div></div>
+          <span class="rank-evol ${evolClass}">${evol}</span>
         </div>`;
     }).join('');
   }
@@ -804,6 +1077,8 @@ function selectLine(lineId) {
     return dt.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
   });
   const values = data.daily.map(d => d.nb_incidents);
+  const avg = values.reduce((s, v) => s + v, 0) / (values.length || 1);
+  const avgLine = values.map(() => Math.round(avg * 10) / 10);
 
   const ctx = document.getElementById('chart-canvas').getContext('2d');
   if (chart) chart.destroy();
@@ -811,13 +1086,25 @@ function selectLine(lineId) {
     type: 'bar',
     data: {
       labels,
-      datasets: [{
-        label: 'Incidents',
-        data: values,
-        backgroundColor: c.bg + 'bb',
-        borderColor: c.bg,
-        borderWidth: 1,
-      }]
+      datasets: [
+        {
+          label: 'Incidents',
+          data: values,
+          backgroundColor: c.bg + 'b3',
+          borderColor: c.bg,
+          borderWidth: 1,
+        },
+        {
+          label: 'Moyenne',
+          data: avgLine,
+          type: 'line',
+          borderColor: '#C45000',
+          borderWidth: 1,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          fill: false,
+        }
+      ]
     },
     options: {
       responsive: true,
@@ -829,17 +1116,17 @@ function selectLine(lineId) {
           titleColor: '#fff',
           bodyColor: '#ccc',
           callbacks: {
-            label: item => ` ${item.raw} incident${item.raw > 1 ? 's' : ''}`,
+            label: item => ` ${item.raw} ${item.dataset.label === 'Moyenne' ? '(moy.)' : 'incident' + (item.raw > 1 ? 's' : '')}`,
           }
         }
       },
       scales: {
         x: {
-          ticks: { color: '#999', font: { size: 10, family: 'Roboto' }, maxRotation: 45 },
+          ticks: { color: '#999', font: { size: 8, family: 'Roboto' }, maxRotation: 45 },
           grid: { color: '#D4CFC7' },
         },
         y: {
-          ticks: { color: '#999', font: { size: 10, family: 'Roboto' }, stepSize: 1 },
+          ticks: { color: '#999', font: { size: 8, family: 'Roboto' }, stepSize: 1 },
           grid: { color: '#D4CFC7' },
           beginAtZero: true,
         },
@@ -853,11 +1140,11 @@ async function load(days) {
   document.getElementById('kpi-row').innerHTML =
     '<div class="kpi-cell skel" style="height:76px"></div>'.repeat(4);
   document.getElementById('rank-incidents').innerHTML =
-    '<div class="skel" style="height:56px;margin-bottom:1px"></div>'.repeat(3);
+    '<div class="skel" style="height:52px;margin-bottom:1px"></div>'.repeat(3);
   document.getElementById('rank-mv').innerHTML =
-    '<div class="skel" style="height:56px;margin-bottom:1px"></div>'.repeat(3);
+    '<div class="skel" style="height:52px;margin-bottom:1px"></div>'.repeat(3);
   document.getElementById('table-rows').innerHTML =
-    '<div class="skel" style="height:56px;margin-bottom:1px"></div>'.repeat(3);
+    '<div class="skel" style="height:52px;margin-bottom:1px"></div>'.repeat(3);
 
   try {
     allData = await fetchAll(days);
