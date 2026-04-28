@@ -1,7 +1,8 @@
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import or_
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,9 +28,13 @@ async def stats_line(line_id: str, db: DbDep, period: int = Query(default=30, ge
 
 @router.get("/incidents/current")
 async def incidents_current(db: DbDep):
+    now = datetime.now(timezone.utc)
     stmt = (
         select(Incident)
-        .where(Incident.heure_fin.is_(None))
+        .where(
+            Incident.heure_debut <= now,
+            or_(Incident.heure_fin >= now, Incident.heure_fin.is_(None)),
+        )
         .order_by(Incident.heure_debut.desc())
     )
     rows = (await db.execute(stmt)).scalars().all()

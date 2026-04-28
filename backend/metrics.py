@@ -1,9 +1,10 @@
 import json
 import logging
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timezone, timedelta
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,14 +40,23 @@ async def compute_daily_metrics(target_date: date | None = None, db: AsyncSessio
         target_date = date.today()
 
     async def _run(session: AsyncSession) -> None:
-        # Fetch all closed incidents for this date
+        # Durée effective : heure_fin si connue, sinon NOW() pour les incidents ouverts
+        duree_expr = func.coalesce(
+            func.extract("epoch", Incident.heure_fin - Incident.heure_debut) / 60,
+            func.extract("epoch", func.now() - Incident.heure_debut) / 60,
+        )
+        paris = ZoneInfo("Europe/Paris")
+        # Fenêtre 07h00 Paris → maintenant
+        day_07h = datetime.combine(target_date, time(7, 0), tzinfo=paris).astimezone(timezone.utc)
+        now_utc = datetime.now(timezone.utc)
+
         stmt = select(
             Incident.line_id,
             func.count(Incident.id).label("nb_incidents"),
-            func.coalesce(func.sum(Incident.duree_minutes), 0).label("duree_totale_min"),
+            func.coalesce(func.sum(duree_expr), 0).label("duree_totale_min"),
         ).where(
-            func.date(Incident.heure_debut) == target_date,
-            Incident.duree_minutes.isnot(None),
+            Incident.heure_debut >= day_07h,   # commencé après 07h Paris
+            Incident.heure_debut <= now_utc,   # déjà commencé
         ).group_by(Incident.line_id)
 
         rows = (await session.execute(stmt)).all()

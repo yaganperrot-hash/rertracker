@@ -559,7 +559,7 @@
     <span class="col-coutmonth">Coût / mois</span>
   </div>
 
-  <!-- TODO: remplacer mockLines par fetch API Google Sheets -->
+  <!-- Données chargées via /api/stats/line/{id}?period=1 -->
   <div class="lines-list" id="lines-list"></div>
 </div>
 
@@ -587,81 +587,44 @@
       ligne: "B", color: "#5191CF", severity: "critical",
       desc: "Panne de signalisation — Gare du Nord",
       cause: "Responsabilité SNCF · Démarré à 08h14",
-      duree: "47 min", cout: "+9 300 €"
+      duree: "47 min", dureeMin: 47
     },
     {
       ligne: "D", color: "#00814F", severity: "warning",
       desc: "Ralentissement — Châtelet Les Halles",
       cause: "Incident voyageur · Démarré à 09h02",
-      duree: "12 min", cout: "+1 850 €"
+      duree: "12 min", dureeMin: 12
     },
     {
       ligne: "E", color: "#B04191", severity: "minor",
       desc: "Retard — matériel roulant défaillant",
       cause: "Responsabilité SNCF · Démarré à 09h18",
-      duree: "8 min", cout: "+780 €"
+      duree: "8 min", dureeMin: 8
     }
   ];
 
-  /* ── Données mock ──────────────────────────────────────────
-     TODO: remplacer mockLines par fetch API Google Sheets
-  ─────────────────────────────────────────────────────────── */
-  const mockLines = [
-    {
-      id: "A", color: "#E2231A", name: "RER A", status: "ok",
-      incidents: "2", minDay: "124 500",
-      coutDay: "24 651 €", coutMonth: "689 000 €"
-    },
-    {
-      id: "B", color: "#5191CF", name: "RER B", status: "critical",
-      incidents: "8", minDay: "847 340",
-      coutDay: "167 774 €", coutMonth: "4 700 000 €"
-    },
-    {
-      id: "C", color: "#C8A800", name: "RER C", status: "warning",
-      incidents: "4", minDay: "312 000",
-      coutDay: "61 776 €", coutMonth: "1 729 000 €"
-    },
-    {
-      id: "D", color: "#00814F", name: "RER D", status: "warning",
-      incidents: "5", minDay: "421 000",
-      coutDay: "83 358 €", coutMonth: "2 334 000 €"
-    },
-    {
-      id: "E", color: "#B04191", name: "RER E", status: "ok",
-      incidents: "1", minDay: "89 000",
-      coutDay: "17 622 €", coutMonth: "493 000 €"
-    }
-  ];
-
-  /* ── Render dynamique ────────────────────────────────────── */
+  /* ── Render dynamique — Incidents (mock) ─────────────────── */
   document.getElementById('incidents-list').innerHTML =
-    mockIncidents.map(inc => `
-      <div class="incident ${inc.severity}">
-        <div class="incident-badge" style="background:${inc.color}">${inc.ligne}</div>
-        <div class="incident-info">
-          <div class="incident-desc">${inc.desc}</div>
-          <div class="incident-cause">${inc.cause}</div>
+    mockIncidents.map(inc => {
+      // Coût estimé (approximation sans minutes_voyageurs réelles)
+      const cout = '+' + fmt(Math.floor(inc.dureeMin * 0.198 * 1000)) + ' €';
+      return `
+        <div class="incident ${inc.severity}">
+          <div class="incident-badge" style="background:${inc.color}">${inc.ligne}</div>
+          <div class="incident-info">
+            <div class="incident-desc">${inc.desc}</div>
+            <div class="incident-cause">${inc.cause}</div>
+          </div>
+          <div class="incident-duree">${inc.duree}</div>
+          <div class="incident-cout">${cout}</div>
         </div>
-        <div class="incident-duree">${inc.duree}</div>
-        <div class="incident-cout">${inc.cout}</div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
-  document.getElementById('lines-list').innerHTML =
-    mockLines.map(line => `
-      <div class="line-row${line.id === 'B' ? ' rer-b-row' : ''}">
-        <div class="line-badge" style="background:${line.color}">${line.id}</div>
-        <div class="line-name-wrap">
-          <span class="line-name">${line.name}</span>
-          <span class="status-dot status-${line.status}"></span>
-        </div>
-        <div class="line-value line-incidents">${line.incidents}</div>
-        <div class="line-value">${line.minDay}</div>
-        <div class="line-value col-coutday">${line.coutDay}</div>
-        <div class="line-value col-coutmonth">${line.coutMonth}</div>
-      </div>
-    `).join('');
+  /* ── Lignes : remplace mockLines par appel API réel ─────── */
+  const linesContainer = document.getElementById('lines-list');
+  linesContainer.innerHTML =
+    '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;letter-spacing:1px">Chargement des données…</div>';
 
   /* ── 1. Compteur — € principal, minutes secondaire ──────── */
   let minutes = 2847340;
@@ -671,7 +634,7 @@
   }
 
   function updateCounters() {
-    const euros = Math.floor(minutes * 0.198 / 60);
+    const euros = Math.floor(minutes * 0.198);
     const salaires = Math.floor(euros / 90); // SMIC journalier brut ≈ 90 €
     document.getElementById('ctr-eur').textContent = fmt(euros) + ' €';
     document.getElementById('ctr-min').textContent = fmt(minutes);
@@ -720,6 +683,13 @@
     return 'minor';
   }
 
+  const FREQ = {
+    RER_A:900000, RER_B:650000, RER_C:350000, RER_D:530000, RER_E:180000,
+    TRANSILIEN_H:110000, TRANSILIEN_J:130000, TRANSILIEN_K:50000,
+    TRANSILIEN_L:170000, TRANSILIEN_N:100000, TRANSILIEN_P:80000,
+    TRANSILIEN_R:70000, TRANSILIEN_U:40000
+  };
+
   /* ── Fetch API backend (remplace les mocks si dispo) ────── */
   async function fetchLiveData() {
     try {
@@ -742,6 +712,9 @@
 
       if (incRes && incRes.ok) {
         const incidents = await incRes.json();
+        // "En cours" = incidents ouverts en ce moment (source directe, pas daily metrics)
+        const vals = document.querySelectorAll('.stat-cell .stat-value');
+        if (vals[1]) vals[1].textContent = incidents.length;
         if (incidents.length > 0) {
           const liveInc = incidents.slice(0, 5).map(inc => {
             const meta = LINE_META[inc.line_id] || { short: '?', color: '#999', name: inc.line_id };
@@ -756,7 +729,7 @@
               desc: inc.cause || `Incident — ${meta.name}`,
               cause: `${inc.type_incident} · Démarré à ${debutStr}`,
               duree: dureeMin > 0 ? dureeMin + ' min' : 'En cours',
-              cout: '+' + fmt(Math.floor(dureeMin * 0.198 / 60 * 1000)) + ' €',
+              cout: (() => { const vpm = (FREQ[inc.line_id] || 0) / 1080; return vpm > 0 ? '+' + fmt(Math.floor(dureeMin * vpm * 0.198)) + ' €' : ''; })(),
             };
           });
           document.getElementById('incidents-list').innerHTML =
@@ -776,7 +749,60 @@
     } catch (_) { /* fallback silencieux vers mock data */ }
   }
 
+  /* ── 3. Lignes — remplace mockLines par appels API ──────── */
+  async function fetchLinesStats() {
+    const entries = Object.entries(LINE_META);
+    try {
+      const results = await Promise.allSettled(
+        entries.map(([id]) =>
+          fetch(`/api/stats/line/${id}?period=1`)
+            .then(r => r.ok ? r.json() : null)
+        )
+      );
+
+      const lines = [];
+      results.forEach((res, i) => {
+        const [lineId, meta] = entries[i];
+        if (res.status === 'fulfilled' && res.value) {
+          const d = res.value;
+          lines.push({
+            id:       meta.short,
+            color:    meta.color,
+            name:     meta.name,
+            status:   d.jours_perturbes > 0 ? 'warning' : 'ok',
+            incidents: String(d.total_incidents || 0),
+            minDay:   d.total_minutes_voyageurs,
+          });
+        }
+      });
+
+      if (lines.length > 0) {
+        document.getElementById('lines-list').innerHTML =
+          lines.map(line => {
+            const mv = line.minDay;
+            const coutDay   = fmt(Math.floor(mv * 0.198)) + ' €';
+            const coutMonth = fmt(Math.floor(mv * 0.198 * 28)) + ' €';
+            return `
+              <div class="line-row${line.id === 'B' ? ' rer-b-row' : ''}">
+                <div class="line-badge" style="background:${line.color}">${line.id}</div>
+                <div class="line-name-wrap">
+                  <span class="line-name">${line.name}</span>
+                  <span class="status-dot status-${line.status}"></span>
+                </div>
+                <div class="line-value line-incidents">${line.incidents}</div>
+                <div class="line-value">${fmt(mv)}</div>
+                <div class="line-value col-coutday">${coutDay}</div>
+                <div class="line-value col-coutmonth">${coutMonth}</div>
+              </div>
+            `;
+          }).join('');
+      }
+    } catch (_) { /* fallback silencieux */ }
+  }
+
+  /* ── Initialisation ──────────────────────────────────────── */
   fetchLiveData();
+  fetchLinesStats();
 
   /* ── Date/heure màj ─────────────────────────────────────── */
   function updateDate() {

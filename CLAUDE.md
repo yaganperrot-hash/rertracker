@@ -23,7 +23,7 @@ sur les lignes RER et Transilien d'Île-de-France.
 
 ## Source de données
 - **API PRIM IDF Mobilités** : polling toutes les 5 min
-- Endpoint : `https://prim.iledefrance-mobilites.fr/marketplace/`
+- Endpoint : `https://prim.iledefrance-mobilites.fr/marketplace/v2/navitia/line_reports`
 - Auth : header `apikey: {PRIM_API_KEY}`
 - Quota : 20 000 req/jour (polling 5 min ≈ 288 req/jour ✅)
 - **Fréquentation** : `data/frequentation.json` (statique, màj mensuelle)
@@ -120,3 +120,20 @@ docker-compose logs -f backend
 
 ## Prochaine étape à reprendre
 **Projet terminé.** Seule action restante : renseigner les clés API dans `.env` (PRIM + Twitter/X).
+
+---
+
+## Workflow multi-agents
+
+### Rôles
+| Agent | Rôle |
+|-------|------|
+| **Claude Code** | Analyse le code, lit les fichiers, crée et attribue les tâches |
+| **Deepseek** | Implémente les tâches — écriture de code uniquement |
+
+### Règles strictes
+- **Claude Code crée toutes les tâches** avant que Deepseek commence à coder.
+- **Deepseek ne lance jamais de commande terminal** (pas de `docker`, `pytest`, `pip`, `git`, etc.).
+- Deepseek lit les fichiers, écrit du code, c'est tout.
+- Toute vérification (tests, lint, docker) est faite par Claude Code ou l'utilisateur.
+- Les tâches sont décrites dans `.claude/TASKS.md` avec fichier cible, contexte et critères d'acceptation.
