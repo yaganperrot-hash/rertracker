@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_db
 from backend.models import Incident, DailyMetric
 from backend.metrics import get_today_stats, get_line_stats, compute_daily_metrics
-from backend.collector import collect_disruptions
+from backend.collector import collect_disruptions, collect_rt_delays
 
 router = APIRouter(prefix="/api")
 
@@ -46,7 +46,8 @@ async def incidents_current(db: DbDep):
             "type_incident": r.type_incident,
             "cause": r.cause,
             "heure_debut": r.heure_debut.isoformat(),
-            "heure_fin": None,
+            "heure_fin": r.heure_fin.isoformat() if r.heure_fin else None,
+            "duree_minutes": r.duree_minutes,
         }
         for r in rows
     ]
@@ -87,5 +88,6 @@ async def incidents_history(
 @router.post("/admin/collect")
 async def admin_collect():
     await collect_disruptions()
+    await collect_rt_delays()
     await compute_daily_metrics()
     return {"status": "ok"}

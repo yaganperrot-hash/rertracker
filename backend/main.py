@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.config import get_settings
 from backend.database import init_db
-from backend.collector import collect_disruptions
+from backend.collector import collect_disruptions, collect_rt_delays
 from backend.metrics import compute_daily_metrics
 from backend.api import router
 from backend.bot import post_daily_recap
@@ -33,6 +33,12 @@ async def lifespan(app: FastAPI):
         "interval",
         minutes=settings.polling_interval_minutes,
         id="collect_disruptions",
+    )
+    scheduler.add_job(
+        collect_rt_delays,
+        "interval",
+        minutes=settings.polling_interval_minutes,
+        id="collect_rt_delays",
     )
     scheduler.add_job(
         compute_daily_metrics,

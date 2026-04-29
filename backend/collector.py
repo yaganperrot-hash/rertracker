@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -24,9 +24,9 @@ LIGNES_CIBLES: dict[str, str] = {
     "line:IDFM:C01737": "TRANSILIEN_H",
     "line:IDFM:C01730": "TRANSILIEN_J",
     "line:IDFM:C01731": "TRANSILIEN_K",
-    "line:IDFM:C01732": "TRANSILIEN_L",
-    "line:IDFM:C01733": "TRANSILIEN_N",
-    "line:IDFM:C01734": "TRANSILIEN_P",
+    "line:IDFM:C02142": "TRANSILIEN_L",
+    "line:IDFM:C02629": "TRANSILIEN_N",
+    "line:IDFM:C02152": "TRANSILIEN_P",
     "line:IDFM:C01735": "TRANSILIEN_R",
     "line:IDFM:C01736": "TRANSILIEN_U",
 }
@@ -75,7 +75,7 @@ async def collect_disruptions() -> None:
                 resp.raise_for_status()
                 data = resp.json()
                 for d in data.get("disruptions", []):
-                    if d.get("status") == "active":
+                    if d.get("status") in ("active", "future"):
                         all_disruptions.append((line_id, d))
             except httpx.HTTPError as exc:
                 logger.error("PRIM API error for %s: %s", line_id, exc)
@@ -146,3 +146,92 @@ async def collect_disruptions() -> None:
         await session.commit()
 
     logger.info("Upserted %d incidents for tracked lines", inserted)
+
+
+PRIM_NAVITIA_BASE = "https://prim.iledefrance-mobilites.fr/marketplace/v2/navitia"
+MIN_DELAY_MINUTES = 2  # retard minimum pour être enregistré
+
+
+async def collect_rt_delays() -> None:
+    """Collecte les retards temps réel via l'endpoint /departures."""
+    settings = get_settings()
+    if not settings.prim_api_key:
+        logger.warning("PRIM_API_KEY not set — skipping RT collection")
+        return
+
+    headers = {"apikey": settings.prim_api_key}
+    all_delays: list[tuple[str, str, str, int]] = []
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        for navitia_id, line_id in LIGNES_CIBLES.items():
+            url = f"{PRIM_NAVITIA_BASE}/lines/{navitia_id}/departures"
+            try:
+                resp = await client.get(url, headers=headers, params={
+                    "count": 50,
+                    "disable_geojson": "true",
+                    "data_freshness": "realtime",
+                })
+                resp.raise_for_status()
+                data = resp.json()
+                for dep in data.get("departures", []):
+                    sdt = dep.get("stop_date_time", {})
+                    if sdt.get("data_freshness") != "realtime":
+                        continue
+                    base_s = sdt.get("base_departure_date_time")
+                    rt_s   = sdt.get("departure_date_time")
+                    if not base_s or not rt_s:
+                        continue
+                    base_dt = datetime.strptime(base_s, "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
+                    rt_dt   = datetime.strptime(rt_s,   "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
+                    delay_min = int((rt_dt - base_dt).total_seconds() / 60)
+                    if delay_min < MIN_DELAY_MINUTES:
+                        continue
+                    vj_id = next(
+                        (l["id"] for l in dep.get("links", []) if l.get("type") == "vehicle_journey"),
+                        None,
+                    )
+                    if not vj_id:
+                        continue
+                    uid = f"rt_{vj_id}_{base_s}"
+                    all_delays.append((line_id, uid, base_s, delay_min))
+            except httpx.HTTPError as exc:
+                logger.error("PRIM RT error for %s: %s", line_id, exc)
+            except Exception as exc:
+                logger.error("Unexpected RT error for %s: %s", line_id, exc)
+
+    logger.info("Fetched %d RT delays from PRIM", len(all_delays))
+
+    now = datetime.now(timezone.utc)
+    inserted = 0
+    async with AsyncSessionLocal() as session:
+        for line_id, uid, base_s, delay_min in all_delays:
+            # heure_debut = moment d'observation du retard (now) pour que
+            # compute_daily_metrics le comptabilise dans la journée en cours
+            heure_fin = now + timedelta(minutes=delay_min)
+            stmt = (
+                insert(Incident)
+                .values(
+                    navitia_id=uid,
+                    line_id=line_id,
+                    type_incident="DELAY_REALTIME",
+                    cause=f"Retard de {delay_min} min (temps réel)",
+                    heure_debut=now,
+                    heure_fin=heure_fin,
+                    duree_minutes=delay_min,
+                    created_at=now,
+                    updated_at=now,
+                )
+                .on_conflict_do_update(
+                    index_elements=["navitia_id"],
+                    set_={
+                        "duree_minutes": delay_min,
+                        "heure_fin": heure_fin,
+                        "updated_at": now,
+                    },
+                )
+            )
+            await session.execute(stmt)
+            inserted += 1
+        await session.commit()
+
+    logger.info("Upserted %d RT delays", inserted)
