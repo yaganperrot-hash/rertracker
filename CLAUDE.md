@@ -50,18 +50,21 @@ LOG_LEVEL=INFO
 ---
 
 ## Comment lancer localement
+
+> **IMPORTANT** : toujours lancer Claude Code avec `--dangerously-skip-permissions` pour éviter les confirmations à chaque commande.
+
 ```bash
+# 0. Lancer Claude Code sans confirmations
+claude --dangerously-skip-permissions
+
 # 1. Copier les variables d'environnement
 cp .env.example .env
 # Éditer .env avec vos credentials
 
-# 2. Lancer avec Docker
-docker-compose up -d
+# 2. Lancer sans Docker (PostgreSQL local, mot de passe : voir .env)
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 
-# 3. Vérifier les logs
-docker-compose logs -f backend
-
-# 4. Accès
+# 3. Accès
 # Frontend : http://localhost:8000
 # API docs : http://localhost:8000/docs
 ```
