@@ -21,6 +21,9 @@ class Incident(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    source: Mapped[str | None] = mapped_column(String(20), nullable=True, index=True)
+    heure_theorique: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_cancelled: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
@@ -35,6 +38,9 @@ class DailyMetric(Base):
     nb_incidents: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     duree_totale_min: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     minutes_voyageurs: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
+    nb_rt_delays: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    nb_disruptions: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    nb_cancelled: Mapped[int | None] = mapped_column(Integer, nullable=True)
     est_jour_perturbe: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     computed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

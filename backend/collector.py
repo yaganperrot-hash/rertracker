@@ -128,6 +128,7 @@ async def collect_disruptions() -> None:
                     heure_debut=heure_debut,
                     heure_fin=heure_fin,
                     duree_minutes=duree_minutes,
+                    source="disruption",
                     created_at=now,
                     updated_at=now,
                 )
@@ -136,6 +137,7 @@ async def collect_disruptions() -> None:
                     set_={
                         "heure_fin": heure_fin,
                         "duree_minutes": duree_minutes,
+                        "source": "disruption",
                         "updated_at": now,
                     },
                 )
@@ -152,6 +154,9 @@ PRIM_NAVITIA_BASE = "https://prim.iledefrance-mobilites.fr/marketplace/v2/naviti
 MIN_DELAY_MINUTES = 2  # retard minimum pour être enregistré
 
 
+CANCEL_DEFAULT_IMPACT_MIN = 5  # default impact for cancelled trains
+
+
 async def collect_rt_delays() -> None:
     """Collecte les retards temps réel via l'endpoint /departures."""
     settings = get_settings()
@@ -160,11 +165,15 @@ async def collect_rt_delays() -> None:
         return
 
     headers = {"apikey": settings.prim_api_key}
-    all_delays: list[tuple[str, str, str, int]] = []
+    # (line_id, uid, base_s, delay_min, base_dt)
+    all_delays: list[tuple[str, str, str, int, datetime]] = []
+    # Track fetched navitia_ids per line for cancellation detection
+    fetched_ids_by_line: dict[str, set[str]] = {}
 
     async with httpx.AsyncClient(timeout=30) as client:
         for navitia_id, line_id in LIGNES_CIBLES.items():
             url = f"{PRIM_NAVITIA_BASE}/lines/{navitia_id}/departures"
+            fetched_ids_by_line[line_id] = set()
             try:
                 resp = await client.get(url, headers=headers, params={
                     "count": 50,
@@ -184,8 +193,6 @@ async def collect_rt_delays() -> None:
                     base_dt = datetime.strptime(base_s, "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
                     rt_dt   = datetime.strptime(rt_s,   "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
                     delay_min = int((rt_dt - base_dt).total_seconds() / 60)
-                    if delay_min < MIN_DELAY_MINUTES:
-                        continue
                     vj_id = next(
                         (l["id"] for l in dep.get("links", []) if l.get("type") == "vehicle_journey"),
                         None,
@@ -193,20 +200,27 @@ async def collect_rt_delays() -> None:
                     if not vj_id:
                         continue
                     uid = f"rt_{vj_id}_{base_s}"
-                    all_delays.append((line_id, uid, base_s, delay_min))
+                    fetched_ids_by_line[line_id].add(uid)
+                    if delay_min < MIN_DELAY_MINUTES:
+                        continue
+                    all_delays.append((line_id, uid, base_s, delay_min, base_dt))
             except httpx.HTTPError as exc:
                 logger.error("PRIM RT error for %s: %s", line_id, exc)
+                # Don't detect cancellations for lines with fetch errors
+                fetched_ids_by_line.pop(line_id, None)
             except Exception as exc:
                 logger.error("Unexpected RT error for %s: %s", line_id, exc)
+                fetched_ids_by_line.pop(line_id, None)
 
     logger.info("Fetched %d RT delays from PRIM", len(all_delays))
 
     now = datetime.now(timezone.utc)
     inserted = 0
+    cancelled = 0
+    cancel_impact = getattr(settings, "cancel_default_impact_minutes", CANCEL_DEFAULT_IMPACT_MIN)
+
     async with AsyncSessionLocal() as session:
-        for line_id, uid, base_s, delay_min in all_delays:
-            # heure_debut = moment d'observation du retard (now) pour que
-            # compute_daily_metrics le comptabilise dans la journée en cours
+        for line_id, uid, base_s, delay_min, base_dt in all_delays:
             heure_fin = now + timedelta(minutes=delay_min)
             stmt = (
                 insert(Incident)
@@ -218,6 +232,9 @@ async def collect_rt_delays() -> None:
                     heure_debut=now,
                     heure_fin=heure_fin,
                     duree_minutes=delay_min,
+                    source="realtime",
+                    heure_theorique=base_dt,
+                    is_cancelled=False,
                     created_at=now,
                     updated_at=now,
                 )
@@ -226,12 +243,44 @@ async def collect_rt_delays() -> None:
                     set_={
                         "duree_minutes": delay_min,
                         "heure_fin": heure_fin,
+                        "source": "realtime",
+                        "heure_theorique": base_dt,
                         "updated_at": now,
                     },
                 )
             )
             await session.execute(stmt)
             inserted += 1
+
+        # --- Cancellation detection ---
+        # For each line where fetch succeeded, find RT incidents in DB
+        # whose navitia_id is no longer in the fetched set and whose
+        # heure_theorique is in the past → mark as cancelled
+        lookback = now - timedelta(hours=2)
+        for line_id, fetched_ids in fetched_ids_by_line.items():
+            if not fetched_ids:
+                continue  # no departures fetched, skip
+            stmt_recent = (
+                select(Incident)
+                .where(
+                    Incident.line_id == line_id,
+                    Incident.source == "realtime",
+                    Incident.is_cancelled.isnot(True),
+                    Incident.heure_theorique.isnot(None),
+                    Incident.heure_theorique >= lookback,
+                    Incident.heure_theorique <= now,
+                )
+            )
+            rows = (await session.execute(stmt_recent)).scalars().all()
+            for row in rows:
+                if row.navitia_id not in fetched_ids:
+                    row.is_cancelled = True
+                    row.duree_minutes = cancel_impact
+                    row.type_incident = "CANCELLED"
+                    row.cause = "Train supprimé (disparu du flux temps réel)"
+                    row.updated_at = now
+                    cancelled += 1
+
         await session.commit()
 
-    logger.info("Upserted %d RT delays", inserted)
+    logger.info("Upserted %d RT delays, marked %d cancelled", inserted, cancelled)

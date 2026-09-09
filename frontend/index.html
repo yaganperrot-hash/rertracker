@@ -264,9 +264,21 @@
       transition: background 0.15s;
     }
     .incident:hover { background: var(--bg3); }
-    .incident.critical { border-left-color: var(--red); }
-    .incident.warning  { border-left-color: var(--orange); }
-    .incident.minor    { border-left-color: #C8A800; }
+    .incident.critical  { border-left-color: var(--red); }
+    .incident.warning   { border-left-color: var(--orange); }
+    .incident.minor     { border-left-color: #C8A800; }
+    .incident.cancelled { border-left-color: #333; background: #f0ece5; }
+    .cancelled-tag {
+      display: inline-block;
+      background: #333;
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 2px 6px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
 
     .incident-badge {
       width: 36px;
@@ -591,10 +603,11 @@
 
   updateCounters();
 
+  // Real polling every 5 minutes to update counters (no fake random increments)
   setInterval(() => {
-    minutes += Math.floor(Math.random() * 45) + 10;
-    updateCounters();
-  }, 2800);
+    fetchLiveData();
+    fetchLinesStats();
+  }, 300000);
 
   /* ── 2. Countdown actualisation ─────────────────────────── */
   let t = 292;
@@ -672,20 +685,22 @@
 
           const liveInc = incidents.slice(0, 8).map(inc => {
             const meta = LINE_META[inc.line_id] || { short: '?', color: '#999', name: inc.line_id };
-            const severity = severityFromType(inc.type_incident);
+            const isCancelled = inc.is_cancelled === true;
+            const severity = isCancelled ? 'cancelled' : severityFromType(inc.type_incident);
             const dureeMin = inc.duree_minutes || 0;
             const debut = inc.heure_debut ? new Date(inc.heure_debut) : null;
             const debutStr = debut ? debut.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
             const vpm = (FREQ[inc.line_id] || 0) / 1080;
             const cout = vpm > 0 ? '+' + fmt(Math.floor(dureeMin * vpm * 0.198)) + ' €' : '';
+            const cancelTag = isCancelled ? '<span class="cancelled-tag">SUPPRIMÉ</span>' : '';
             return `
               <div class="incident ${severity}">
                 <div class="incident-badge" style="background:${meta.color}">${meta.short}</div>
                 <div class="incident-info">
-                  <div class="incident-desc">${inc.cause || 'Incident — ' + meta.name}</div>
+                  <div class="incident-desc">${inc.cause || 'Incident — ' + meta.name}${cancelTag}</div>
                   <div class="incident-cause">${inc.type_incident}${debutStr ? ' · à ' + debutStr : ''}</div>
                 </div>
-                <div class="incident-duree">${dureeMin > 0 ? dureeMin + ' min' : 'En cours'}</div>
+                <div class="incident-duree">${isCancelled ? 'SUPPRIMÉ' : (dureeMin > 0 ? dureeMin + ' min' : 'En cours')}</div>
                 <div class="incident-cout">${cout}</div>
               </div>`;
           });

@@ -27,7 +27,7 @@ async def stats_line(line_id: str, db: DbDep, period: int = Query(default=30, ge
 
 
 @router.get("/incidents/current")
-async def incidents_current(db: DbDep):
+async def incidents_current(db: DbDep, source: str | None = Query(default=None)):
     now = datetime.now(timezone.utc)
     stmt = (
         select(Incident)
@@ -37,6 +37,8 @@ async def incidents_current(db: DbDep):
         )
         .order_by(Incident.heure_debut.desc())
     )
+    if source:
+        stmt = stmt.where(Incident.source == source)
     rows = (await db.execute(stmt)).scalars().all()
     return [
         {
@@ -48,6 +50,9 @@ async def incidents_current(db: DbDep):
             "heure_debut": r.heure_debut.isoformat(),
             "heure_fin": r.heure_fin.isoformat() if r.heure_fin else None,
             "duree_minutes": r.duree_minutes,
+            "source": r.source,
+            "heure_theorique": r.heure_theorique.isoformat() if r.heure_theorique else None,
+            "is_cancelled": r.is_cancelled,
         }
         for r in rows
     ]
@@ -80,6 +85,9 @@ async def incidents_history(
             "heure_debut": r.heure_debut.isoformat(),
             "heure_fin": r.heure_fin.isoformat() if r.heure_fin else None,
             "duree_minutes": r.duree_minutes,
+            "source": r.source,
+            "heure_theorique": r.heure_theorique.isoformat() if r.heure_theorique else None,
+            "is_cancelled": r.is_cancelled,
         }
         for r in rows
     ]
