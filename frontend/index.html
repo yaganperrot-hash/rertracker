@@ -240,20 +240,78 @@
       letter-spacing: 1px;
     }
 
-    /* ─── 5. INCIDENTS EN COURS ─── */
-    .incidents-list { display: flex; flex-direction: column; gap: 1px; }
+    /* ─── 5. INCIDENTS EN COURS — regroupés par ligne, détail au survol ─── */
+    .inc-groups { display: flex; flex-wrap: wrap; gap: 8px; }
+    .inc-groups .empty-msg { flex: 1; }
+    .inc-group  { position: relative; }
+    .inc-chip {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 8px 16px 8px 8px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      font: inherit;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .inc-group:hover .inc-chip,
+    .inc-group.open .inc-chip,
+    .inc-chip:focus-visible { background: var(--bg3); border-color: var(--ink); }
+    .chip-count { font-weight: 500; font-size: 14px; color: var(--sub); white-space: nowrap; }
+    .chip-cout  { font-weight: 700; font-size: 20px; color: var(--red); white-space: nowrap; }
+    .chip-chevron { display: none; }
+
+    /* Popover : le padding-top sert de pont pour ne pas perdre le survol */
+    .inc-pop {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      z-index: 50;
+      width: min(460px, calc(100vw - 32px));
+      padding-top: 6px;
+    }
+    .inc-group.align-right .inc-pop { left: auto; right: 0; }
+    @media (hover: hover) {
+      .inc-group:hover .inc-pop,
+      .inc-group:focus-within .inc-pop { display: block; }
+    }
+    .inc-group.open .inc-pop { display: block; }
+    .pop-inner {
+      background: var(--bg);
+      border: 1px solid var(--ink);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+    .pop-title {
+      padding: 10px 12px;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+    .hint-touch { display: none; }
+    @media (hover: none) {
+      .hint-hover { display: none; }
+      .hint-touch { display: inline; }
+    }
 
     .incident {
       display: grid;
-      grid-template-columns: 36px minmax(0, 1fr) auto auto;
+      grid-template-columns: minmax(0, 1fr) auto auto;
       align-items: center;
       gap: 12px;
-      padding: 11px 14px;
-      background: var(--bg2);
+      padding: 9px 12px;
       border-left: 3px solid transparent;
-      transition: background 0.15s;
+      border-bottom: 1px solid var(--border);
     }
-    .incident:hover     { background: var(--bg3); }
+    .incident:last-child { border-bottom: 0; }
     .incident.critical  { border-left-color: var(--red); }
     .incident.cancelled { border-left-color: var(--ink); }
     .cancelled-tag {
@@ -283,7 +341,7 @@
     .incident-info { min-width: 0; }
     .incident-desc {
       font-weight: 500;
-      font-size: 15px;
+      font-size: 14px;
       color: var(--text);
       white-space: nowrap;
       overflow: hidden;
@@ -304,26 +362,10 @@
     .incident-duree-m { display: none; }
     .incident-cout {
       font-weight: 700;
-      font-size: 20px;
+      font-size: 15px;
       color: var(--red);
       text-align: right;
-      min-width: 90px;
       white-space: nowrap;
-    }
-
-    .link-btn {
-      background: none;
-      border: 0;
-      font: inherit;
-      font-weight: 500;
-      font-size: 12px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: var(--ink);
-      text-decoration: underline;
-      text-underline-offset: 3px;
-      cursor: pointer;
-      padding: 12px 0 0;
     }
 
     /* ─── 6. TABLEAU PAR LIGNE — fenêtre unique : aujourd'hui ─── */
@@ -476,11 +518,18 @@
       footer { padding: 14px 16px; flex-direction: column; align-items: flex-start; }
       .footer-right a:first-child { margin-left: 0; }
 
-      /* Incidents : durée repliée sous la gare, coût toujours visible */
-      .incident { grid-template-columns: 32px minmax(0, 1fr) auto; gap: 10px; padding: 10px 12px; }
+      /* Incidents : une rangée par ligne, détail déplié au toucher */
+      .inc-groups { flex-direction: column; gap: 1px; }
+      .inc-chip { border: 0; padding: 10px 12px; }
+      .chip-cout { margin-left: auto; font-size: 17px; }
+      .chip-chevron { display: block; font-size: 14px; color: var(--sub); transition: transform 0.15s; }
+      .inc-group.open .chip-chevron { transform: rotate(180deg); }
+      .inc-pop { position: static; width: auto; padding-top: 0; }
+      .pop-inner { border: 0; border-top: 1px solid var(--border); box-shadow: none; max-height: none; }
+      .pop-title { display: none; }
+      .incident { grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
       .incident-duree { display: none; }
       .incident-duree-m { display: inline; }
-      .incident-cout { font-size: 17px; min-width: 0; }
 
       /* Table : repli 2 colonnes (Ligne + Coût du jour), détail au tap */
       .table-header-row,
@@ -569,12 +618,12 @@
 <div class="section-wrap">
   <div class="section-header">
     <span class="section-title">Incidents en cours</span>
-    <span class="section-meta">coût estimé par train, au SMIC brut</span>
+    <span class="section-meta">coût en cours estimé au SMIC brut ·
+      <span class="hint-hover">détail au survol</span><span class="hint-touch">détail au toucher</span></span>
   </div>
-  <div class="incidents-list" id="incidents-list">
+  <div class="inc-groups" id="incidents-list">
     <div class="empty-msg">Chargement…</div>
   </div>
-  <button type="button" class="link-btn" id="incidents-more" hidden></button>
 </div>
 
 <!-- ════════════════════════════════════════════════════════
@@ -622,7 +671,6 @@
   const SMIC_HORAIRE = 11.88;             // € brut 2025
   const EUR_PAR_MIN  = SMIC_HORAIRE / 60;
   const SALAIRE_JOUR = 90;                // salaire journalier SMIC brut ≈ 90 €
-  const INCIDENTS_VISIBLES = 1;           // le plus coûteux ; les autres au clic
 
   const LINE_META = {
     'RER_A':        { short: 'A', name: 'RER A',        color: '#E2231A' },
@@ -677,16 +725,19 @@
     } catch (_) { /* on garde les placeholders « — » */ }
   }
 
-  /* ════════ 2. INCIDENTS EN COURS (/api/incidents/current) ════════ */
-  let incidentsOuverts = false;
+  /* ════════ 2. INCIDENTS EN COURS — regroupés par ligne (/api/incidents/current) ════════
+     Une pastille par ligne (nombre + coût en cours) ; le détail apparaît au survol
+     (ou au focus clavier), et au toucher sur les écrans sans survol.              */
+  const groupesOuverts = new Set();
+  const survol = window.matchMedia('(hover: hover)');
 
   function coutIncident(inc) {
     const vpm = (FREQ[inc.line_id] || 0) / 1080;                 // voyageurs / minute (18 h de service)
     return vpm > 0 ? (inc.duree_minutes || 0) * vpm * EUR_PAR_MIN : null;
   }
 
-  function renderIncident(inc, i) {
-    const meta = LINE_META[inc.line_id] || { short: '?', color: '#999', name: inc.line_id };
+  function renderIncident(inc) {
+    const meta = LINE_META[inc.line_id] || { name: inc.line_id };
     const isCancelled = inc.is_cancelled === true;
     const severity = isCancelled ? 'cancelled'
       : (['NO_SERVICE', 'SIGNIFICANT_DELAYS'].includes(inc.type_incident) ? 'critical' : '');
@@ -704,8 +755,7 @@
       heureStr ? (inc.heure_theorique ? 'départ prévu ' : 'à ') + heureStr : '',
     ].filter(Boolean).join(' · ');
     return `
-      <div class="incident ${severity}"${i >= INCIDENTS_VISIBLES && !incidentsOuverts ? ' hidden' : ''}>
-        <div class="incident-badge" style="background:${meta.color}">${meta.short}</div>
+      <div class="incident ${severity}">
         <div class="incident-info">
           <div class="incident-desc" title="${esc(inc.cause)}">${desc}${isCancelled ? '<span class="cancelled-tag">SUPPRIMÉ</span>' : ''}</div>
           <div class="incident-cause">${sub}<span class="incident-duree-m"> · ${dureeTxt}</span></div>
@@ -715,18 +765,50 @@
       </div>`;
   }
 
+  // « 3 retards · 1 supprimé » — les perturbations (source disruption) à part
+  function libelleCompte(incs) {
+    const supp = incs.filter(i => i.is_cancelled === true).length;
+    const pert = incs.filter(i => i.is_cancelled !== true && i.source === 'disruption').length;
+    const ret  = incs.length - supp - pert;
+    return [
+      ret  ? ret  + ' retard'       + (ret  > 1 ? 's' : '') : '',
+      supp ? supp + ' supprimé'     + (supp > 1 ? 's' : '') : '',
+      pert ? pert + ' perturbation' + (pert > 1 ? 's' : '') : '',
+    ].filter(Boolean).join(' · ');
+  }
+
+  function renderGroupe(g) {
+    const open = groupesOuverts.has(g.key);
+    const compte = libelleCompte(g.incs);
+    const cout = g.cout === null ? '—' : '+' + fmt(Math.floor(g.cout)) + ' €';
+    return `
+      <div class="inc-group${open ? ' open' : ''}" data-key="${g.key}">
+        <button type="button" class="inc-chip" aria-expanded="${open}" aria-controls="pop-${g.key}"
+                aria-label="${g.meta.name} : ${compte}, ${cout} en cours">
+          <span class="incident-badge" style="background:${g.meta.color}">${g.meta.short}</span>
+          <span class="chip-count">${compte}</span>
+          <span class="chip-cout">${cout}</span>
+          <span class="chip-chevron" aria-hidden="true">▾</span>
+        </button>
+        <div class="inc-pop" id="pop-${g.key}">
+          <div class="pop-inner">
+            <div class="pop-title">${g.meta.name} — ${compte} en cours</div>
+            ${g.incs.map(renderIncident).join('')}
+          </div>
+        </div>
+      </div>`;
+  }
+
   async function fetchIncidents() {
     try {
       const res = await fetch('/api/incidents/current');
       if (!res.ok) return;
       const incidents = await res.json();
       const list = document.getElementById('incidents-list');
-      const more = document.getElementById('incidents-more');
 
       if (incidents.length === 0) {
         list.innerHTML = '<div class="empty-msg">Aucun incident en cours ✓</div>';
         document.getElementById('ticker-track').textContent = 'Aucun incident en cours sur le réseau RER et Transilien';
-        more.hidden = true;
         return;
       }
 
@@ -738,21 +820,46 @@
       }).join('  &nbsp;•&nbsp;  ');
       document.getElementById('ticker-track').innerHTML = tickerText + '  &nbsp;&nbsp;&nbsp;  ' + tickerText;
 
-      // Le plus coûteux d'abord ; seuls les premiers restent visibles
-      const tries = incidents.slice().sort((a, b) => (coutIncident(b) || 0) - (coutIncident(a) || 0));
-      list.innerHTML = tries.map(renderIncident).join('');
-      more.hidden = tries.length <= INCIDENTS_VISIBLES;
-      more.textContent = incidentsOuverts ? 'Réduire' : 'Voir tous les incidents en cours';
+      // Regroupement par ligne ; lignes et trains triés par coût décroissant
+      const parLigne = new Map();
+      incidents.forEach(inc => {
+        if (!parLigne.has(inc.line_id)) parLigne.set(inc.line_id, []);
+        parLigne.get(inc.line_id).push(inc);
+      });
+      const groupes = [...parLigne].map(([key, incs]) => {
+        incs.sort((a, b) => (coutIncident(b) || 0) - (coutIncident(a) || 0));
+        const couts = incs.map(coutIncident).filter(c => c !== null);
+        return {
+          key, incs,
+          meta: LINE_META[key] || { short: '?', color: '#999', name: key },
+          cout: couts.length ? couts.reduce((s, c) => s + c, 0) : null,
+        };
+      }).sort((a, b) => (b.cout || 0) - (a.cout || 0) || b.incs.length - a.incs.length);
+
+      list.innerHTML = groupes.map(renderGroupe).join('');
     } catch (_) { /* on garde l'état précédent */ }
   }
 
-  document.getElementById('incidents-more').addEventListener('click', () => {
-    incidentsOuverts = !incidentsOuverts;
-    document.querySelectorAll('#incidents-list .incident').forEach((el, i) => {
-      el.hidden = i >= INCIDENTS_VISIBLES && !incidentsOuverts;
-    });
-    document.getElementById('incidents-more').textContent =
-      incidentsOuverts ? 'Réduire' : 'Voir tous les incidents en cours';
+  const incList = document.getElementById('incidents-list');
+
+  // Popover aligné à droite s'il déborderait de l'écran
+  function placerPopover(e) {
+    const g = e.target.closest('.inc-group');
+    if (!g) return;
+    const largeur = Math.min(460, window.innerWidth - 32);
+    g.classList.toggle('align-right', g.getBoundingClientRect().left + largeur > window.innerWidth - 16);
+  }
+  incList.addEventListener('mouseover', placerPopover);
+  incList.addEventListener('focusin', placerPopover);
+
+  // Écrans sans survol (tactile) : toucher = déplier / replier
+  incList.addEventListener('click', e => {
+    const btn = e.target.closest('.inc-chip');
+    if (!btn || survol.matches) return;
+    const g = btn.parentElement;
+    const open = g.classList.toggle('open');
+    btn.setAttribute('aria-expanded', open);
+    if (open) groupesOuverts.add(g.dataset.key); else groupesOuverts.delete(g.dataset.key);
   });
 
   /* ════════ 3. LIGNES — aujourd'hui (/api/stats/line/{id}?period=1) ════════ */

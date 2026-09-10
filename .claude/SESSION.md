@@ -166,6 +166,16 @@ Seul `frontend/index.html` est touché (ni `stats.html`, ni `methode.html`, ni l
 - **Tester un tap mobile en headless** : copie de la page dans le scratchpad avec `<base href="http://127.0.0.1:8000/">`
   + un script qui clique (l'API autorise CORS `*`), chargée dans une iframe de 390 px.
 
+### Suite de session — incidents en cours regroupés par ligne
+- **Demande utilisateur** : une pastille par ligne (rond RER A, B, C… + nombre de retards + coût en cours),
+  détail au survol. Remplace « un seul incident + Voir tous ».
+- Pastilles triées par coût en cours décroissant ; libellé « 3 retards · 1 supprimé · 1 perturbation ».
+- Détail : popover au survol (`@media (hover: hover)`) et au focus clavier, trains triés par coût, aligné à droite
+  près du bord ; écrans tactiles (`hover: none`) → rangées empilées dépliées au toucher.
+- Vérifié en captures (44 incidents sur 9 lignes) : bureau au pli, popover aligné à droite, mobile déplié.
+  **Non vérifié** : le toucher réel sur téléphone (Chrome headless se déclare « hover »).
+- Le nombre d'incidents en cours réapparaît (par ligne) — demandé explicitement, lève la contrainte du brief initial.
+
 ---
 
 ## Session du 2026-09-09 (terminée)
