@@ -1,9 +1,10 @@
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import case, func, select
 from sqlalchemy.dialects.postgresql import insert
 
 from backend.config import get_settings
@@ -155,6 +156,8 @@ MIN_DELAY_MINUTES = 2  # retard minimum pour être enregistré
 
 
 CANCEL_DEFAULT_IMPACT_MIN = 5  # default impact for cancelled trains
+CANCEL_MARGIN_MIN = 2  # marge avant le départ attendu pour considérer une disparition comme suppression
+PARIS_TZ = ZoneInfo("Europe/Paris")
 
 
 async def collect_rt_delays() -> None:
@@ -165,8 +168,8 @@ async def collect_rt_delays() -> None:
         return
 
     headers = {"apikey": settings.prim_api_key}
-    # (line_id, uid, base_s, delay_min, base_dt)
-    all_delays: list[tuple[str, str, str, int, datetime]] = []
+    # uid → (line_id, delay_min, base_dt, gare, direction, mission) : pire retard du train dans ce relevé
+    all_delays: dict[str, tuple[str, int, datetime, str | None, str | None, str | None]] = {}
     # Track fetched navitia_ids per line for cancellation detection
     fetched_ids_by_line: dict[str, set[str]] = {}
 
@@ -190,8 +193,9 @@ async def collect_rt_delays() -> None:
                     rt_s   = sdt.get("departure_date_time")
                     if not base_s or not rt_s:
                         continue
-                    base_dt = datetime.strptime(base_s, "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
-                    rt_dt   = datetime.strptime(rt_s,   "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
+                    # Navitia renvoie les heures en heure locale de Paris
+                    base_dt = datetime.strptime(base_s, "%Y%m%dT%H%M%S").replace(tzinfo=PARIS_TZ).astimezone(timezone.utc)
+                    rt_dt   = datetime.strptime(rt_s,   "%Y%m%dT%H%M%S").replace(tzinfo=PARIS_TZ).astimezone(timezone.utc)
                     delay_min = int((rt_dt - base_dt).total_seconds() / 60)
                     vj_id = next(
                         (l["id"] for l in dep.get("links", []) if l.get("type") == "vehicle_journey"),
@@ -199,11 +203,22 @@ async def collect_rt_delays() -> None:
                     )
                     if not vj_id:
                         continue
-                    uid = f"rt_{vj_id}_{base_s}"
+                    # Un incident par train et par jour, pas un par gare desservie.
+                    # Le suffixe ":RealTime:<uuid>" change à chaque mise à jour temps réel :
+                    # on garde l'identifiant de base du train.
+                    train_id = vj_id.split(":RealTime:")[0]
+                    uid = f"rt_{train_id}_{base_s[:8]}"
                     fetched_ids_by_line[line_id].add(uid)
                     if delay_min < MIN_DELAY_MINUTES:
                         continue
-                    all_delays.append((line_id, uid, base_s, delay_min, base_dt))
+                    gare = dep.get("stop_point", {}).get("name") or None
+                    infos = dep.get("display_informations", {})
+                    # "Corbeil-Essonnes (Corbeil-Essonnes)" → "Corbeil-Essonnes"
+                    direction = re.sub(r"\s*\([^)]*\)$", "", infos.get("direction") or "") or None
+                    mission = infos.get("headsign") or None
+                    prev = all_delays.get(uid)
+                    if prev is None or delay_min > prev[1]:
+                        all_delays[uid] = (line_id, delay_min, base_dt, gare, direction, mission)
             except httpx.HTTPError as exc:
                 logger.error("PRIM RT error for %s: %s", line_id, exc)
                 # Don't detect cancellations for lines with fetch errors
@@ -220,43 +235,54 @@ async def collect_rt_delays() -> None:
     cancel_impact = getattr(settings, "cancel_default_impact_minutes", CANCEL_DEFAULT_IMPACT_MIN)
 
     async with AsyncSessionLocal() as session:
-        for line_id, uid, base_s, delay_min, base_dt in all_delays:
+        for uid, (line_id, delay_min, base_dt, gare, direction, mission) in all_delays.items():
             heure_fin = now + timedelta(minutes=delay_min)
-            stmt = (
-                insert(Incident)
-                .values(
+            cause = f"Retard de {delay_min} min à {gare}" if gare else f"Retard de {delay_min} min (temps réel)"
+            stmt = insert(Incident).values(
                     navitia_id=uid,
                     line_id=line_id,
                     type_incident="DELAY_REALTIME",
-                    cause=f"Retard de {delay_min} min (temps réel)",
+                    cause=cause,
                     heure_debut=now,
                     heure_fin=heure_fin,
                     duree_minutes=delay_min,
                     source="realtime",
                     heure_theorique=base_dt,
                     is_cancelled=False,
+                    gare=gare,
+                    direction=direction,
+                    mission=mission,
                     created_at=now,
                     updated_at=now,
-                )
-                .on_conflict_do_update(
-                    index_elements=["navitia_id"],
-                    set_={
-                        "duree_minutes": delay_min,
-                        "heure_fin": heure_fin,
-                        "source": "realtime",
-                        "heure_theorique": base_dt,
-                        "updated_at": now,
-                    },
-                )
+            )
+            # Garder le pire retard observé du train sur l'ensemble des relevés
+            worse = stmt.excluded.duree_minutes >= Incident.duree_minutes
+            stmt = stmt.on_conflict_do_update(
+                index_elements=["navitia_id"],
+                set_={
+                    "duree_minutes": func.greatest(Incident.duree_minutes, stmt.excluded.duree_minutes),
+                    "cause": case((worse, stmt.excluded.cause), else_=Incident.cause),
+                    "heure_theorique": case((worse, stmt.excluded.heure_theorique), else_=Incident.heure_theorique),
+                    "gare": case((worse, stmt.excluded.gare), else_=Incident.gare),
+                    "direction": case((worse, stmt.excluded.direction), else_=Incident.direction),
+                    "mission": case((worse, stmt.excluded.mission), else_=Incident.mission),
+                    "heure_fin": heure_fin,
+                    "source": "realtime",
+                    # Un train revenu dans le flux n'était pas supprimé
+                    "type_incident": "DELAY_REALTIME",
+                    "is_cancelled": False,
+                    "updated_at": now,
+                },
             )
             await session.execute(stmt)
             inserted += 1
 
         # --- Cancellation detection ---
-        # For each line where fetch succeeded, find RT incidents in DB
-        # whose navitia_id is no longer in the fetched set and whose
-        # heure_theorique is in the past → mark as cancelled
+        # Un train qui disparaît du flux AVANT son départ attendu (heure prévue + retard)
+        # à la gare enregistrée a été supprimé. Disparaître après ce départ est normal :
+        # le train est parti ou arrivé au terminus.
         lookback = now - timedelta(hours=2)
+        margin = timedelta(minutes=CANCEL_MARGIN_MIN)
         for line_id, fetched_ids in fetched_ids_by_line.items():
             if not fetched_ids:
                 continue  # no departures fetched, skip
@@ -268,12 +294,12 @@ async def collect_rt_delays() -> None:
                     Incident.is_cancelled.isnot(True),
                     Incident.heure_theorique.isnot(None),
                     Incident.heure_theorique >= lookback,
-                    Incident.heure_theorique <= now,
                 )
             )
             rows = (await session.execute(stmt_recent)).scalars().all()
             for row in rows:
-                if row.navitia_id not in fetched_ids:
+                depart_attendu = row.heure_theorique + timedelta(minutes=row.duree_minutes or 0)
+                if row.navitia_id not in fetched_ids and depart_attendu > now + margin:
                     row.is_cancelled = True
                     row.duree_minutes = cancel_impact
                     row.type_incident = "CANCELLED"

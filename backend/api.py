@@ -16,6 +16,25 @@ router = APIRouter(prefix="/api")
 DbDep = Annotated[AsyncSession, Depends(get_db)]
 
 
+def _serialize_incident(r: Incident) -> dict:
+    return {
+        "id": r.id,
+        "navitia_id": r.navitia_id,
+        "line_id": r.line_id,
+        "type_incident": r.type_incident,
+        "cause": r.cause,
+        "heure_debut": r.heure_debut.isoformat(),
+        "heure_fin": r.heure_fin.isoformat() if r.heure_fin else None,
+        "duree_minutes": r.duree_minutes,
+        "source": r.source,
+        "heure_theorique": r.heure_theorique.isoformat() if r.heure_theorique else None,
+        "is_cancelled": r.is_cancelled,
+        "gare": r.gare,
+        "direction": r.direction,
+        "mission": r.mission,
+    }
+
+
 @router.get("/stats/today")
 async def stats_today(db: DbDep):
     return await get_today_stats(db)
@@ -40,22 +59,7 @@ async def incidents_current(db: DbDep, source: str | None = Query(default=None))
     if source:
         stmt = stmt.where(Incident.source == source)
     rows = (await db.execute(stmt)).scalars().all()
-    return [
-        {
-            "id": r.id,
-            "navitia_id": r.navitia_id,
-            "line_id": r.line_id,
-            "type_incident": r.type_incident,
-            "cause": r.cause,
-            "heure_debut": r.heure_debut.isoformat(),
-            "heure_fin": r.heure_fin.isoformat() if r.heure_fin else None,
-            "duree_minutes": r.duree_minutes,
-            "source": r.source,
-            "heure_theorique": r.heure_theorique.isoformat() if r.heure_theorique else None,
-            "is_cancelled": r.is_cancelled,
-        }
-        for r in rows
-    ]
+    return [_serialize_incident(r) for r in rows]
 
 
 @router.get("/incidents/history")
@@ -75,22 +79,7 @@ async def incidents_history(
         stmt = stmt.where(Incident.heure_debut <= to_date)
 
     rows = (await db.execute(stmt)).scalars().all()
-    return [
-        {
-            "id": r.id,
-            "navitia_id": r.navitia_id,
-            "line_id": r.line_id,
-            "type_incident": r.type_incident,
-            "cause": r.cause,
-            "heure_debut": r.heure_debut.isoformat(),
-            "heure_fin": r.heure_fin.isoformat() if r.heure_fin else None,
-            "duree_minutes": r.duree_minutes,
-            "source": r.source,
-            "heure_theorique": r.heure_theorique.isoformat() if r.heure_theorique else None,
-            "is_cancelled": r.is_cancelled,
-        }
-        for r in rows
-    ]
+    return [_serialize_incident(r) for r in rows]
 
 
 @router.post("/admin/collect")

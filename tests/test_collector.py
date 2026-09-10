@@ -320,6 +320,95 @@ class TestCollectRtDelays:
             # At least the first statement should be an insert with source=realtime
             assert len(executed_stmts) > 0, "No statements executed"
 
+    async def test_rt_delay_stores_gare_direction_mission(self):
+        """RT delays must record station, direction and mission code."""
+        from sqlalchemy.dialects import postgresql
+
+        dep = {
+            **self.MOCK_DEPARTURE,
+            "stop_point": {"name": "Vigneux-sur-Seine"},
+            "display_informations": {
+                "direction": "Corbeil-Essonnes (Corbeil-Essonnes)",
+                "headsign": "ROPE",
+            },
+        }
+        mocks = self._setup_mocks()
+        resp = MagicMock()
+        resp.json.return_value = {"departures": [dep]}
+        executed_stmts = []
+
+        async def capture_execute(stmt, *args, **kwargs):
+            executed_stmts.append(stmt)
+            mock_result = MagicMock()
+            mock_result.scalars.return_value.all.return_value = []
+            return mock_result
+
+        mocks["mock_session"].execute = AsyncMock(side_effect=capture_execute)
+
+        with (
+            patch("backend.collector.get_settings", return_value=mocks["mock_settings"]),
+            patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock) as mock_get,
+            patch("backend.collector.AsyncSessionLocal", return_value=mocks["mock_session"]),
+        ):
+            mock_get.return_value = resp
+            await collect_rt_delays()
+
+        params = executed_stmts[0].compile(dialect=postgresql.dialect()).params
+        assert params["gare"] == "Vigneux-sur-Seine"
+        assert params["direction"] == "Corbeil-Essonnes"
+        assert params["mission"] == "ROPE"
+        assert params["cause"] == "Retard de 10 min à Vigneux-sur-Seine"
+
+    async def test_rt_delay_one_incident_per_train_with_worst_delay(self):
+        """A train seen at several stations yields one incident with its worst delay."""
+        from sqlalchemy.dialects import postgresql
+        from sqlalchemy.dialects.postgresql import Insert
+
+        def dep(gare, base, rt, vj="vj:test:001"):
+            return {
+                "stop_point": {"name": gare},
+                "stop_date_time": {
+                    "data_freshness": "realtime",
+                    "base_departure_date_time": base,
+                    "departure_date_time": rt,
+                },
+                "links": [{"type": "vehicle_journey", "id": vj}],
+            }
+
+        mocks = self._setup_mocks()
+        resp = MagicMock()
+        # Même train, suffixe RealTime différent (il change à chaque mise à jour PRIM)
+        resp.json.return_value = {"departures": [
+            dep("Gare A", "20240315T080000", "20240315T080300", vj="vj:test:001:RealTime:aaa"),
+            dep("Gare B", "20240315T081000", "20240315T081600", vj="vj:test:001:RealTime:bbb"),
+        ]}
+        executed_stmts = []
+
+        async def capture_execute(stmt, *args, **kwargs):
+            executed_stmts.append(stmt)
+            mock_result = MagicMock()
+            mock_result.scalars.return_value.all.return_value = []
+            return mock_result
+
+        mocks["mock_session"].execute = AsyncMock(side_effect=capture_execute)
+
+        with (
+            patch("backend.collector.get_settings", return_value=mocks["mock_settings"]),
+            patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock) as mock_get,
+            patch("backend.collector.AsyncSessionLocal", return_value=mocks["mock_session"]),
+        ):
+            mock_get.return_value = resp
+            await collect_rt_delays()
+
+        inserts = [s for s in executed_stmts if isinstance(s, Insert)]
+        assert len(inserts) == 1
+        params = inserts[0].compile(dialect=postgresql.dialect()).params
+        assert params["navitia_id"] == "rt_vj:test:001_20240315"
+        assert params["duree_minutes"] == 6
+        assert params["gare"] == "Gare B"
+        # 08:10 heure de Paris (UTC+1 en mars) = 07:10 UTC
+        assert params["heure_theorique"] == datetime(2024, 3, 15, 7, 10, tzinfo=timezone.utc)
+
     async def test_rt_delay_has_is_cancelled_false(self):
         """RT delays must have is_cancelled=False."""
         mocks = self._setup_mocks()
@@ -359,22 +448,33 @@ class TestCancellationDetection:
     """Tests for train cancellation detection logic."""
 
     async def test_disappeared_train_marked_cancelled(self):
-        """A train that disappears from the feed with past heure_theorique should be marked cancelled."""
+        """A train that disappears from the feed before its expected departure is cancelled."""
         now = datetime.now(timezone.utc)
-        past_time = now - timedelta(minutes=30)
+        # Prévu il y a 1 min avec 10 min de retard → départ attendu dans 9 min
+        mock_incident = await self._run_with_existing(now - timedelta(minutes=1), 10)
+        assert mock_incident.is_cancelled is True, "Disappeared train should be marked as cancelled"
 
+    async def test_departed_train_not_cancelled(self):
+        """A train that disappears after its expected departure simply left — not cancelled."""
+        now = datetime.now(timezone.utc)
+        # Prévu il y a 30 min avec 5 min de retard → parti il y a 25 min
+        mock_incident = await self._run_with_existing(now - timedelta(minutes=30), 5)
+        assert mock_incident.is_cancelled is False
+
+    async def _run_with_existing(self, heure_theorique, duree_minutes):
         # Mock an existing RT incident in DB that won't appear in fetched results
         mock_incident = MagicMock()
-        mock_incident.navitia_id = "rt_vj:old:001_20240315T070000"
+        mock_incident.navitia_id = "rt_vj:old:001_20240315"
         mock_incident.line_id = "RER_A"
         mock_incident.source = "realtime"
         mock_incident.is_cancelled = False
-        mock_incident.heure_theorique = past_time
+        mock_incident.heure_theorique = heure_theorique
+        mock_incident.duree_minutes = duree_minutes
 
-        mock_resp = AsyncMock()
+        mock_resp = MagicMock()
         mock_resp.status_code = 200
-        # Empty departures — the old train is gone
-        mock_resp.json = AsyncMock(return_value={"departures": [
+        # Only another train in the feed — the old train is gone
+        mock_resp.json = MagicMock(return_value={"departures": [
             {
                 "stop_date_time": {
                     "data_freshness": "realtime",
@@ -416,5 +516,4 @@ class TestCancellationDetection:
             mock_get.return_value = mock_resp
             await collect_rt_delays()
 
-            # The mock_incident should have been modified
-            assert mock_incident.is_cancelled is True, "Disappeared train should be marked as cancelled"
+        return mock_incident

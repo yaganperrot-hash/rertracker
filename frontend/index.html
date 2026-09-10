@@ -13,10 +13,10 @@
       --bg2:    #EDEAE4;
       --bg3:    #E2DED7;
       --border: #D4CFC7;
-      --ink:    #111111;
-      --text:   #1A1A1A;
-      --muted:  #999999;
-      --sub:    #666666;
+      --ink:    #000000;
+      --text:   #000000;
+      --muted:  #555555;
+      --sub:    #333333;
       --red:    #C0392B;
       --orange: #C45000;
       --rer-a:  #E2231A;
@@ -32,7 +32,7 @@
       background: var(--bg);
       color: var(--text);
       font-family: 'Roboto', sans-serif;
-      font-size: 14px;
+      font-size: 16px;
       overflow-x: hidden;
     }
 
@@ -46,9 +46,9 @@
     .ticker-track {
       display: inline-block;
       animation: tick 28s linear infinite;
-      font-weight: 300;
-      font-size: 10px;
-      letter-spacing: 1.5px;
+      font-weight: 400;
+      font-size: 13px;
+      letter-spacing: 1px;
       color: var(--bg);
     }
     @keyframes tick {
@@ -86,9 +86,9 @@
       list-style: none;
     }
     .nav-links a {
-      font-weight: 400;
-      font-size: 10px;
-      letter-spacing: 1.5px;
+      font-weight: 500;
+      font-size: 13px;
+      letter-spacing: 1px;
       text-transform: uppercase;
       color: var(--muted);
       text-decoration: none;
@@ -101,8 +101,8 @@
       display: flex;
       align-items: center;
       gap: 7px;
-      font-weight: 600;
-      font-size: 11px;
+      font-weight: 700;
+      font-size: 13px;
       letter-spacing: 2px;
       color: var(--red);
       flex-shrink: 0;
@@ -135,20 +135,19 @@
       pointer-events: none; user-select: none;
     }
     .hero-date {
-      font-weight: 300;
-      font-size: 9px;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-    .hero-subtitle {
-      font-weight: 300;
-      font-size: 11px;
-      letter-spacing: 4px;
+      font-weight: 400;
+      font-size: 13px;
+      letter-spacing: 2px;
       text-transform: uppercase;
       color: var(--sub);
-      margin-bottom: 20px;
+      margin-bottom: 16px;
+    }
+    .hero-subtitle {
+      font-weight: 500;
+      font-size: clamp(20px, 3vw, 28px);
+      line-height: 1.3;
+      color: var(--ink);
+      margin-bottom: 18px;
     }
     .hero-counter {
       font-weight: 900;
@@ -158,11 +157,11 @@
       color: var(--ink);
     }
     .hero-unit {
-      font-weight: 300;
-      font-size: 9px;
-      letter-spacing: 2px;
+      font-weight: 400;
+      font-size: 13px;
+      letter-spacing: 1px;
       text-transform: uppercase;
-      color: var(--muted);
+      color: var(--sub);
       margin-top: 10px;
       margin-bottom: 20px;
     }
@@ -193,17 +192,17 @@
     }
     .minutes-text { text-align: left; }
     .minutes-label {
-      font-weight: 300;
-      font-size: 9px;
-      letter-spacing: 1.5px;
+      font-weight: 500;
+      font-size: 13px;
+      letter-spacing: 1px;
       text-transform: uppercase;
-      color: var(--muted);
-      line-height: 2;
+      color: var(--ink);
+      line-height: 1.8;
     }
     .minutes-note {
-      font-weight: 300;
-      font-size: 8px;
-      color: var(--border);
+      font-weight: 400;
+      font-size: 12px;
+      color: var(--sub);
     }
 
     /* ─── 4. BARRE DE STATS ─── */
@@ -221,16 +220,16 @@
     .stat-cell:last-child { border-right: none; }
     .stat-value {
       font-weight: 700;
-      font-size: 17px;
+      font-size: 22px;
       line-height: 1;
-      margin-bottom: 5px;
+      margin-bottom: 6px;
     }
     .stat-label {
-      font-weight: 300;
-      font-size: 8px;
-      letter-spacing: 1.5px;
+      font-weight: 500;
+      font-size: 12px;
+      letter-spacing: 1px;
       text-transform: uppercase;
-      color: var(--muted);
+      color: var(--sub);
     }
 
     /* ─── 5. INCIDENTS EN COURS ─── */
@@ -249,16 +248,16 @@
       margin-bottom: 12px;
     }
     .section-title {
-      font-weight: 600;
-      font-size: 16px;
+      font-weight: 700;
+      font-size: 18px;
       letter-spacing: 1px;
       text-transform: uppercase;
     }
     .section-meta {
-      font-weight: 300;
-      font-size: 9px;
-      letter-spacing: 2px;
-      color: var(--muted);
+      font-weight: 400;
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: var(--sub);
     }
 
     .incidents-list { display: flex; flex-direction: column; gap: 1px; }
@@ -282,7 +281,7 @@
       display: inline-block;
       background: #333;
       color: #fff;
-      font-size: 9px;
+      font-size: 11px;
       font-weight: 700;
       letter-spacing: 1px;
       padding: 2px 6px;
@@ -305,29 +304,28 @@
     .incident-info { min-width: 0; }
     .incident-desc {
       font-weight: 500;
-      font-size: 12px;
+      font-size: 15px;
       color: var(--text);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     .incident-cause {
-      font-weight: 300;
-      font-size: 9px;
-      letter-spacing: .5px;
-      color: var(--muted);
-      margin-top: 2px;
+      font-weight: 400;
+      font-size: 13px;
+      color: var(--sub);
+      margin-top: 3px;
     }
     .incident-duree {
       font-weight: 700;
-      font-size: 11px;
+      font-size: 15px;
       color: var(--red);
       text-align: right;
       flex-shrink: 0;
     }
     .incident-cout {
       font-weight: 700;
-      font-size: 10px;
+      font-size: 14px;
       color: var(--orange);
       text-align: right;
       flex-shrink: 0;
@@ -344,11 +342,11 @@
       display: grid;
       grid-template-columns: 36px 1fr 60px 95px 105px 105px;
       padding: 8px 14px;
-      font-weight: 400;
-      font-size: 7px;
-      letter-spacing: 2px;
+      font-weight: 500;
+      font-size: 11px;
+      letter-spacing: 1px;
       text-transform: uppercase;
-      color: var(--muted);
+      color: var(--sub);
       border-bottom: 1px solid var(--border);
     }
     .table-header-row span { text-align: right; }
@@ -390,8 +388,8 @@
       padding-left: 2px;
     }
     .line-name {
-      font-weight: 400;
-      font-size: 12px;
+      font-weight: 500;
+      font-size: 15px;
       color: var(--text);
     }
     .status-dot {
@@ -406,7 +404,7 @@
 
     .line-value {
       font-weight: 400;
-      font-size: 10px;
+      font-size: 14px;
       color: var(--text);
       text-align: right;
     }
@@ -423,19 +421,17 @@
       gap: 8px;
     }
     .footer-left {
-      font-weight: 300;
-      font-size: 9px;
-      letter-spacing: 1px;
-      color: var(--muted);
+      font-weight: 400;
+      font-size: 12px;
+      color: var(--sub);
     }
     .footer-right {
-      font-weight: 300;
-      font-size: 9px;
-      letter-spacing: 1px;
-      color: var(--muted);
+      font-weight: 400;
+      font-size: 12px;
+      color: var(--sub);
     }
     .footer-right a {
-      color: var(--muted);
+      color: var(--sub);
       text-decoration: none;
       margin-left: 14px;
       transition: color 0.15s;
@@ -447,6 +443,7 @@
       nav { padding: 12px 16px; }
       .nav-links { display: none; }
       .hero { padding: 32px 16px 24px; }
+      .stamp { display: none; }
       .minutes-block { padding: 10px 16px; gap: 10px; flex-direction: column; align-items: flex-start; }
       .section-wrap, .table-wrap { padding: 20px 16px; }
       footer { padding: 14px 16px; flex-direction: column; align-items: flex-start; }
@@ -494,7 +491,7 @@
 <section class="hero">
   <span class="stamp">RETARDS IDF</span>
   <div class="hero-date" id="hero-date">MARDI 18 MARS 2026 &nbsp;·&nbsp; MÀJ 09H43</div>
-  <div class="hero-subtitle">Temps de travail volé aujourd'hui — RER &amp; Transilien IDF</div>
+  <div class="hero-subtitle">Aujourd'hui, les retards des RER et Transiliens ont coûté</div>
   <div class="hero-counter" id="ctr-eur">9.377 €</div>
   <div class="hero-unit">au SMIC horaire brut · réseau IDF complet</div>
 
@@ -696,17 +693,25 @@
             const isCancelled = inc.is_cancelled === true;
             const severity = isCancelled ? 'cancelled' : severityFromType(inc.type_incident);
             const dureeMin = inc.duree_minutes || 0;
-            const debut = inc.heure_debut ? new Date(inc.heure_debut) : null;
-            const debutStr = debut ? debut.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
+            // Temps réel : heure de départ prévue du train ; perturbation : heure de début
+            const heureRef = inc.heure_theorique || inc.heure_debut;
+            const heureStr = heureRef ? new Date(heureRef).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
             const vpm = (FREQ[inc.line_id] || 0) / 1080;
             const cout = vpm > 0 ? '+' + fmt(Math.floor(dureeMin * vpm * 0.198)) + ' €' : '';
             const cancelTag = isCancelled ? '<span class="cancelled-tag">SUPPRIMÉ</span>' : '';
+            const desc = inc.gare
+              ? inc.gare + (inc.direction ? ' → ' + inc.direction : '')
+              : (inc.cause || 'Incident — ' + meta.name);
+            const sub = [
+              inc.mission ? 'Train ' + inc.mission : inc.type_incident,
+              heureStr ? (inc.heure_theorique ? 'départ prévu ' : 'à ') + heureStr : '',
+            ].filter(Boolean).join(' · ');
             return `
               <div class="incident ${severity}">
                 <div class="incident-badge" style="background:${meta.color}">${meta.short}</div>
                 <div class="incident-info">
-                  <div class="incident-desc">${inc.cause || 'Incident — ' + meta.name}${cancelTag}</div>
-                  <div class="incident-cause">${inc.type_incident}${debutStr ? ' · à ' + debutStr : ''}</div>
+                  <div class="incident-desc" title="${inc.cause || ''}">${desc}${cancelTag}</div>
+                  <div class="incident-cause">${sub}</div>
                 </div>
                 <div class="incident-duree">${isCancelled ? 'SUPPRIMÉ' : (dureeMin > 0 ? dureeMin + ' min' : 'En cours')}</div>
                 <div class="incident-cout">${cout}</div>

@@ -24,6 +24,9 @@ class Incident(Base):
     source: Mapped[str | None] = mapped_column(String(20), nullable=True, index=True)
     heure_theorique: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_cancelled: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    gare: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    direction: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    mission: Mapped[str | None] = mapped_column(String(20), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
