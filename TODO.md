@@ -4,8 +4,15 @@
 _(aucun)_
 
 ## À faire
-- [ ] Vérifier les IDs Navitia de Transilien L, N, P (404 sur PRIM)
-- [ ] Renseigner les clés API dans `.env` (PRIM + Twitter/X)
+- [ ] **Régénérer la clé PRIM** (en clair dans l'historique git, commit `c591442`) — urgent
+- [ ] Bug 9 — `HOURLY_WEIGHTS` somme à 19.2 → min-voyageurs surestimées de ~6,7 % (`backend/metrics.py`)
+- [ ] Bug 10 — réaligner les 5 tests collector obsolètes (`tests/test_collector.py`)
+- [ ] Bug 11 — Transilien L, N, P, R à 0 incident : logger le payload PRIM brut (les 404 ont disparu)
+- [ ] Bug 17 — vérifier le fuseau des horaires de perturbations (`_parse_dt`, probablement lus en UTC)
+- [ ] Vérifier visuellement le rendu des durées lisibles (bureau + mobile 390 px)
+- [ ] Lisibilité : appliquer la refonte typo de `index.html` à `stats.html` et `methode.html`
+- [ ] Pousser les 2 commits du 2026-09-10 sur `origin/master`
+- [ ] Renseigner les clés Twitter/X dans `.env`
 
 ## Terminé
 - [x] Étape 01 — CLAUDE.md structuré créé — 2026-03-11
@@ -24,3 +31,5 @@ _(aucun)_
 - [x] Étape 14 — README.md final — 2026-03-17
 - [x] Correctifs session 2026-04-28 — endpoint PRIM, duree_minutes, filtres, frontend
 - [x] Correctifs session 2026-09-09 — 8 bugs corrigés (double comptage, timezone, trains supprimés, pondération horaire, fake counter, etc.)
+- [x] Session 2026-09-10 — setup local Mac, retards RT (gare/train/direction), dédoublonnage par train, fuseau Paris, suppressions, lisibilité accueil
+- [x] Durées lisibles min → h → jours → ans (`frontend/duree.js`, `bot.py`, tests) — 2026-09-10

@@ -131,7 +131,7 @@ Le bot poste un résumé chaque jour à **20h00** :
 📊 Bilan RER & Transilien IDF — 16/03/2026
 
 🚨 23 incidents
-⏱ 2 847 340 min-voyageurs perdues
+⏱ 5 ans 152 jours de vie perdus collectivement
 💶 9 377 € de temps de travail volé
 
 📍 Lignes touchées : RER B · RER D · RER E

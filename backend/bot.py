@@ -33,6 +33,29 @@ def _fmt(n: int) -> str:
     return f"{n:,}".replace(",", _NNBS)
 
 
+_H, _J, _A = 60, 1440, 525_600
+
+
+def _fmt_duree(minutes: int) -> str:
+    """Minutes → minutes / heures / jours / années (même logique que frontend/duree.js)."""
+    m = max(0, int(minutes))
+    if m < 2 * _H:
+        return f"{m} minute{'s' if m >= 2 else ''}"
+    if m < 2 * _J:
+        h, r = divmod(m, _H)
+        return f"{h} h {r} min" if r else f"{h} h"
+    if m < 2 * _A:
+        j, h = m // _J, (m % _J) // _H
+        return f"{j} jours {h} h" if h else f"{j} jours"
+    a, j = m // _A, (m % _A) // _J
+    reste = f" {j} jour{'s' if j >= 2 else ''}" if j else ""
+    return f"{_fmt(a)} ans{reste}"
+
+
+def _accord_perdu(minutes: int) -> str:
+    return "perdues" if minutes < 2 * _J else "perdus"
+
+
 _JOURS = ["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"]
 
 def _compose_tweet(total_incidents: int, total_mv: int, lignes: list[str], d: date) -> str:
@@ -43,7 +66,7 @@ def _compose_tweet(total_incidents: int, total_mv: int, lignes: list[str], d: da
     lines = [
         f"🚨 {jour.capitalize()} {d.day:02d}/{d.month:02d}/{d.year} — Bilan RER & Transilien IDF",
         f"💶 {_fmt(euros)} € de temps de travail volé",
-        f"⏱ {_fmt(total_mv)} minutes de vie perdues",
+        f"⏱ {_fmt_duree(total_mv)} de vie {_accord_perdu(total_mv)} collectivement",
         f"🔴 {total_incidents} incident{'s' if total_incidents != 1 else ''}"
         + (f" — {pire} en tête" if pire else ""),
         f"Base SMIC 11,88€/h · retardsidf.fr",

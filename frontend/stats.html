@@ -666,8 +666,8 @@
       <div class="hero-kpi-label">Incidents</div>
     </div>
     <div class="hero-kpi">
-      <div class="hero-kpi-val">23&thinsp;842&thinsp;320</div>
-      <div class="hero-kpi-label">Min-voyageurs perdues</div>
+      <div class="hero-kpi-val">45 ans 132 j</div>
+      <div class="hero-kpi-label">Temps de vie perdu</div>
     </div>
     <div class="hero-kpi">
       <div class="hero-kpi-val">4&thinsp;722&thinsp;580 €</div>
@@ -709,7 +709,7 @@
     </div>
     <div>
       <div class="section-header">
-        <span class="section-title">Par min-voyageurs perdues</span>
+        <span class="section-title">Par temps de vie perdu</span>
         <span class="section-sub">impact humain</span>
       </div>
       <div class="rank-list" id="rank-mv">
@@ -770,8 +770,8 @@
           <span class="compare-row-val">487</span>
         </div>
         <div class="compare-row">
-          <span class="compare-row-label">Min-voyageurs</span>
-          <span class="compare-row-val">23,8 M</span>
+          <span class="compare-row-label">Temps perdu</span>
+          <span class="compare-row-val">45 ans 132 j</span>
         </div>
         <div class="compare-row">
           <span class="compare-row-label">Coût estimé</span>
@@ -792,9 +792,9 @@
           </div>
         </div>
         <div class="compare-row">
-          <span class="compare-row-label">Min-voyageurs</span>
+          <span class="compare-row-label">Temps perdu</span>
           <div>
-            <span class="compare-prev-val">19,1 M</span>
+            <span class="compare-prev-val">36 ans 123 j</span>
             <span class="compare-delta delta-up">+25%</span>
           </div>
         </div>
@@ -847,7 +847,7 @@
     <span style="text-align:left">Ligne</span>
     <span>Incidents</span>
     <span>Jours perturbés</span>
-    <span class="col-hide">Min-voyageurs</span>
+    <span class="col-hide">Temps perdu</span>
     <span class="col-hide">Durée</span>
   </div>
   <div class="table-rows" id="table-rows">
@@ -868,6 +868,7 @@
   </div>
 </footer>
 
+<script src="duree.js"></script>
 <script>
 const LINE_COLORS = {
   'RER_A':        { bg: '#E2231A', fg: '#fff' },
@@ -898,19 +899,6 @@ const SMIC = 11.88;
 
 function lineShort(id) {
   return id.replace('TRANSILIEN_', '').replace('RER_', 'RER ');
-}
-
-function fmtN(n) {
-  if (!n) return '0';
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace('.', ',') + ' M';
-  if (n >= 1_000)     return Math.round(n / 1_000) + ' k';
-  return String(n);
-}
-
-function fmtDur(min) {
-  if (!min) return '0 min';
-  const h = Math.floor(min / 60), m = min % 60;
-  return h > 0 ? `${h}h${m > 0 ? m + 'm' : ''}` : `${m} min`;
 }
 
 function euros(mv) {
@@ -949,8 +937,8 @@ function renderKPIs(data) {
       <div class="kpi-label">Incidents total</div>
     </div>
     <div class="kpi-cell">
-      <div class="kpi-value">${fmtN(totalMv)}</div>
-      <div class="kpi-label">Min-voyageurs perdues</div>
+      <div class="kpi-value">${formatDuree(totalMv, true)}</div>
+      <div class="kpi-label">Temps de vie perdu</div>
     </div>
     <div class="kpi-cell">
       <div class="kpi-value" style="color:var(--orange)">${totalEur.toLocaleString('fr-FR')} €</div>
@@ -1001,7 +989,7 @@ function renderRankings(data) {
   document.getElementById('rank-incidents').innerHTML =
     makeList(byInc, maxInc, v => `${v} incident${v > 1 ? 's' : ''}`);
   document.getElementById('rank-mv').innerHTML =
-    makeList(byMv, maxMv, v => `${fmtN(v)} min-voy.`);
+    makeList(byMv, maxMv, v => formatDuree(v, true));
 }
 
 /* ── Table ── */
@@ -1026,8 +1014,8 @@ function renderTable(data) {
         <div class="t-name">${lineShort(r.id)}</div>
         <div class="t-val">${r.total_incidents}</div>
         <div class="t-val">${r.jours_perturbes} j</div>
-        <div class="t-val col-hide">${fmtN(r.total_minutes_voyageurs)}</div>
-        <div class="t-val col-hide">${fmtDur(r.total_duree_min)}</div>
+        <div class="t-val col-hide">${formatDuree(r.total_minutes_voyageurs, true)}</div>
+        <div class="t-val col-hide">${formatDuree(r.total_duree_min, true)}</div>
       </div>`;
   }).join('');
 }

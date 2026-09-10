@@ -445,6 +445,7 @@
       .hero { padding: 32px 16px 24px; }
       .stamp { display: none; }
       .minutes-block { padding: 10px 16px; gap: 10px; flex-direction: column; align-items: flex-start; }
+      .minutes-value { font-size: 28px; }
       .section-wrap, .table-wrap { padding: 20px 16px; }
       footer { padding: 14px 16px; flex-direction: column; align-items: flex-start; }
       .footer-right a:first-child { margin-left: 0; }
@@ -498,9 +499,9 @@
   <!-- Bloc minutes -->
   <div class="minutes-block">
     <span class="minutes-arrow">→</span>
-    <div class="minutes-value" id="ctr-min">2.847.340</div>
+    <div class="minutes-value" id="ctr-min">—</div>
     <div class="minutes-text">
-      <div class="minutes-label">minutes de vie perdues</div>
+      <div class="minutes-label" id="ctr-min-label">de vie perdues collectivement</div>
       <div class="minutes-note">base SMIC 11,88 €/h · 2025 · <span id="smic-note">≈ 376 salaires journaliers</span></div>
     </div>
   </div>
@@ -519,7 +520,7 @@
     <div class="stat-label">En cours</div>
   </div>
   <div class="stat-cell">
-    <div class="stat-value" style="color:var(--red)" id="stat-duree">— min</div>
+    <div class="stat-value" style="color:var(--red)" id="stat-duree">—</div>
     <div class="stat-label">Durée totale retards</div>
   </div>
   <div class="stat-cell">
@@ -528,7 +529,7 @@
   </div>
   <div class="stat-cell">
     <div class="stat-value" style="color:var(--orange)" id="stat-mv">—</div>
-    <div class="stat-label">Min-voyageurs perdues</div>
+    <div class="stat-label">Temps de vie perdu</div>
   </div>
 </div>
 
@@ -556,7 +557,7 @@
     <span></span>
     <span style="text-align:left;padding-left:2px">Ligne</span>
     <span style="text-align:center">Incidents</span>
-    <span>Min perdues</span>
+    <span>Temps perdu</span>
     <span class="col-coutday">Coût / jour</span>
     <span class="col-coutmonth">Coût / mois</span>
   </div>
@@ -580,6 +581,7 @@
 <!-- ════════════════════════════════════════════════════════
      JAVASCRIPT
 ════════════════════════════════════════════════════════ -->
+<script src="duree.js"></script>
 <script>
   /* ── Liste incidents initialement vide ──────────────────── */
   document.getElementById('incidents-list').innerHTML =
@@ -601,7 +603,8 @@
     const euros = Math.floor(minutes * 0.198);
     const salaires = Math.floor(euros / 90); // SMIC journalier brut ≈ 90 €
     document.getElementById('ctr-eur').textContent = fmt(euros) + ' €';
-    document.getElementById('ctr-min').textContent = fmt(minutes);
+    document.getElementById('ctr-min').textContent = formatDuree(minutes);
+    document.getElementById('ctr-min-label').textContent = 'de vie ' + accordPerdu(minutes) + ' collectivement';
     document.getElementById('smic-note').textContent =
       '≈ ' + fmt(salaires) + ' salaires journaliers';
   }
@@ -671,8 +674,8 @@
         }
         document.getElementById('stat-incidents').textContent = stats.total_incidents || 0;
         document.getElementById('stat-lignes').textContent    = stats.nb_lignes_perturbees || 0;
-        document.getElementById('stat-duree').textContent     = fmt(stats.total_duree_min || 0) + ' min';
-        document.getElementById('stat-mv').textContent        = fmt(stats.total_minutes_voyageurs || 0);
+        document.getElementById('stat-duree').textContent     = formatDuree(stats.total_duree_min, true);
+        document.getElementById('stat-mv').textContent        = formatDuree(stats.total_minutes_voyageurs, true);
       }
 
       if (incRes && incRes.ok) {
@@ -767,7 +770,7 @@
                   <span class="status-dot status-${line.status}"></span>
                 </div>
                 <div class="line-value line-incidents">${line.incidents}</div>
-                <div class="line-value">${fmt(mv)}</div>
+                <div class="line-value">${formatDuree(mv, true)}</div>
                 <div class="line-value col-coutday">${coutDay}</div>
                 <div class="line-value col-coutmonth">${coutMonth}</div>
               </div>
