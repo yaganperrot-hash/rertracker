@@ -61,10 +61,15 @@ claude --dangerously-skip-permissions
 cp .env.example .env
 # Éditer .env avec vos credentials
 
-# 2. Lancer sans Docker (PostgreSQL local, mot de passe : voir .env)
-python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+# 2. Mac sans Docker — une seule fois : PostgreSQL 16 + venv Python 3.12
+#    (jamais le Python système 3.14 : asyncpg==0.29 n'a pas de wheel)
+brew install postgresql@16 && brew services start postgresql@16 && createdb retards_idf
+/opt/homebrew/bin/python3.12 -m venv venv && ./venv/bin/pip install -r requirements.txt
 
-# 3. Accès
+# 3. Lancer dans son propre terminal (en tâche de fond Claude Code, le process est tué)
+./venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
+
+# 4. Accès
 # Frontend : http://localhost:8000
 # API docs : http://localhost:8000/docs
 ```
@@ -110,19 +115,25 @@ python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 - Étape 11 — Bot X quotidien (`backend/bot.py`, planifié à 20h dans `main.py`)
 - Étape 14 — README.md final (`README.md`)
 - Frontend refonte complète — design light cream + Roboto, API fetch avec fallback mock
+- Accueil — refonte de la hiérarchie (2026-09-10) : coût du jour → cumul du jour → incident en cours →
+  table par ligne (aujourd'hui, triée par coût, lignes épargnées condensées), repli mobile 2 colonnes
 
-### ✅ Projet complet
+### 🔄 En maintenance — voir `TODO.md`
 
 ---
 
 ## Problèmes rencontrés & solutions
 - `pydantic-settings` ajouté à `requirements.txt` (nécessaire pour `BaseSettings` dans FastAPI moderne)
 - `DATABASE_URL` avec préfixe `postgresql://` converti automatiquement en `postgresql+asyncpg://` dans `database.py`
+- **Accueil = fenêtre unique « aujourd'hui »** (journée comptée depuis 7 h, heure de Paris) : hero, cumul et table
+  lisent les mêmes minutes-voyageurs du jour. Tout cumul pluri-jours (semaine, année) va sur une autre page —
+  décision du 2026-09-10. Charte : fond crème, Roboto, couleurs de ligne, accents noir + rouge uniquement.
 
 ---
 
 ## Prochaine étape à reprendre
-**Projet terminé.** Seule action restante : renseigner les clés API dans `.env` (PRIM + Twitter/X).
+Voir `TODO.md` et les bugs ouverts de `.claude/DEBUG.md`. Priorités : **régénérer la clé PRIM** (en clair dans
+l'historique git), puis bugs 9 / 10 / 11 / 17, taux SMIC 2026, et pousser les commits locaux sur `origin/master`.
 
 ---
 

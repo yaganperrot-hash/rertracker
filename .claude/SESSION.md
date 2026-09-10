@@ -119,6 +119,53 @@ DELAY_REALTIME · à 09:51 » — aucune info sur la gare ni le train, et beauco
   doivent afficher la même chose ; les tests Python figent les seuils.
 - **« collectivement »** évite la lecture « une personne a perdu 617 jours ».
 
+### Suite de session — refonte de la hiérarchie de l'accueil
+**Point de départ** : positionnement « observatoire froid et factuel » — l'accueil doit faire lire sans scroll
+(1) combien ça a coûté, (2) quelles lignes sont touchées, et perdre tout le bruit de process.
+Seul `frontend/index.html` est touché (ni `stats.html`, ni `methode.html`, ni le backend).
+
+#### Actions effectuées
+- **Barre de stats supprimée** (incidents du jour, en cours, durée totale, lignes perturbées, temps de vie)
+  ainsi que le compte à rebours « Actualisation dans… ». Ces chiffres ne sont réintégrés nulle part.
+- **Hero** inchangé (coût du jour) ; placeholder « — € » au lieu du « 9.377 € » de maquette.
+- **Bloc cumul, une seule occurrence**, sous le hero : « Cumul du jour · depuis 7 h » / durée en rouge /
+  « de vie perdus collectivement » / « base SMIC 11,88 €/h · ≈ N salaires journaliers ».
+  Même réponse API que le hero (`/api/stats/today`) → mêmes minutes-voyageurs.
+- **Incidents en cours** : triés par coût, seul le plus coûteux affiché + « Voir tous les incidents en cours » ;
+  coût en rouge, visible aussi sur mobile.
+- **Table par ligne** : une seule fenêtre, aujourd'hui — Ligne | Incidents (auj.) | Temps perdu (auj.) | Coût du jour.
+  Colonne « Coût / mois » (jour × 28) retirée. Tri coût décroissant, en-têtes cliquables (▼/▲). Pire ligne
+  surlignée (remplace le surlignage RER B codé en dur). Lignes à 0 incident condensées en une rangée
+  « ● N lignes épargnées aujourd'hui (L, N, P, R) — 0 incident ». Lignes dont l'API échoue signalées à part.
+- **Mobile** : repli 2 colonnes (Ligne + Coût du jour), détail incidents / temps perdu au tap (chevron accessible).
+- **Charte** : orange retiré (3ᵉ accent) → noir + rouge, plus le vert de la pastille « épargnées ».
+  Constantes `SMIC_HORAIRE` et `SALAIRE_JOUR` centralisées en tête de script.
+- **Ticker** : affiche « Aucun incident en cours… » quand la liste est vide (restait sur « Chargement… »).
+- **Vérifié** en captures Chrome headless : 1440×900 (hero + cumul + pire ligne sans scroll) et 390 px
+  (repli + tap). Somme des lignes = hero à l'arrondi près (214 412 €).
+
+#### Décisions
+- **Cumul** : d'abord demandé « depuis le 1er janvier 2026 » — impossible honnêtement : `daily_metrics` ne couvre
+  que le 2026-09-10, et les jours antérieurs n'ont que des perturbations (qui ne comptent pas dans les
+  minutes-voyageurs). Brièvement passé en hebdomadaire, puis **arbitrage utilisateur : l'accueil est un décompte
+  quotidien** ; le cumul pluri-jours ira sur une autre page.
+- **Un seul incident visible par défaut** : avec 3, la table passait sous le pli en 1440×900.
+
+#### État en fin de session
+- Commité, non poussé : `master` a 3 commits d'avance sur `origin/master`.
+- Serveur relancé en tâche de fond de la session — tué 2 fois par le système (mémoire) dans l'après-midi.
+
+#### Leçons
+- **Vérifier la couverture des données avant d'afficher une fenêtre temporelle** : `select min(date) from daily_metrics`
+  a évité d'étiqueter « depuis le 1er janvier » le chiffre d'une seule journée.
+- **Un chiffre, une source** : hero et cumul lisent la même réponse API → cohérence garantie par construction.
+- **`[hidden]` est écrasé par un `display` explicite** (`.incident { display: grid }`) → toujours poser
+  `[hidden] { display: none !important; }`.
+- **macOS n'a pas `timeout`** → `perl -e 'alarm 40; exec @ARGV' chrome …`. Chrome headless écrit bien la capture
+  mais ne rend pas la main : exit 142 (SIGALRM) avec un fichier valide.
+- **Tester un tap mobile en headless** : copie de la page dans le scratchpad avec `<base href="http://127.0.0.1:8000/">`
+  + un script qui clique (l'API autorise CORS `*`), chargée dans une iframe de 390 px.
+
 ---
 
 ## Session du 2026-09-09 (terminée)

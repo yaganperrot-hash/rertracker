@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    [hidden] { display: none !important; }
 
     :root {
       --bg:     #F7F4EF;
@@ -18,7 +19,7 @@
       --muted:  #555555;
       --sub:    #333333;
       --red:    #C0392B;
-      --orange: #C45000;
+      --ok:     #2ECC71;
       --rer-a:  #E2231A;
       --rer-b:  #5191CF;
       --rer-c:  #C8A800;
@@ -119,12 +120,11 @@
       50%       { opacity: 0.15; }
     }
 
-    /* ─── 3. HERO ─── */
+    /* ─── 3. HERO — coût du jour ─── */
     .hero {
       position: relative;
-      padding: 48px 32px 32px;
+      padding: 32px 32px 22px;
       text-align: center;
-      border-bottom: 1px solid var(--border);
     }
     .stamp {
       position: absolute; top: 20px; right: 28px;
@@ -163,76 +163,48 @@
       text-transform: uppercase;
       color: var(--sub);
       margin-top: 10px;
-      margin-bottom: 20px;
     }
 
-    /* Bloc minutes */
-    .minutes-block {
-      display: inline-flex;
-      align-items: center;
-      gap: 14px;
-      border: 1px solid var(--border);
-      background: var(--bg2);
-      padding: 10px 20px;
-      margin: 20px 0;
+    /* ─── 4. CUMUL — seule occurrence du temps cumulé ─── */
+    .cumul {
+      text-align: center;
+      padding: 0 32px 22px;
+      border-bottom: 1px solid var(--border);
     }
-    .minutes-arrow {
-      font-weight: 300;
-      font-size: 16px;
-      color: var(--sub);
-      line-height: 1;
-      flex-shrink: 0;
+    .cumul-inner {
+      display: inline-block;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+      min-width: min(420px, 100%);
     }
-    .minutes-value {
-      font-weight: 700;
-      font-size: 36px;
-      color: var(--red);
-      line-height: 1;
-      flex-shrink: 0;
-    }
-    .minutes-text { text-align: left; }
-    .minutes-label {
+    .cumul-kicker {
       font-weight: 500;
-      font-size: 13px;
-      letter-spacing: 1px;
+      font-size: 12px;
+      letter-spacing: 2px;
       text-transform: uppercase;
-      color: var(--ink);
-      line-height: 1.8;
+      color: var(--muted);
+      margin-bottom: 8px;
     }
-    .minutes-note {
+    .cumul-value {
+      font-weight: 700;
+      font-size: clamp(30px, 5vw, 44px);
+      line-height: 1.05;
+      color: var(--red);
+    }
+    .cumul-label {
+      font-weight: 500;
+      font-size: 15px;
+      color: var(--ink);
+      margin-top: 6px;
+    }
+    .cumul-note {
       font-weight: 400;
       font-size: 12px;
       color: var(--sub);
+      margin-top: 6px;
     }
 
-    /* ─── 4. BARRE DE STATS ─── */
-    .stats-bar {
-      display: flex;
-      border-bottom: 1px solid var(--border);
-      flex-wrap: wrap;
-    }
-    .stat-cell {
-      flex: 1;
-      padding: 12px 12px;
-      text-align: center;
-      border-right: 1px solid var(--border);
-    }
-    .stat-cell:last-child { border-right: none; }
-    .stat-value {
-      font-weight: 700;
-      font-size: 22px;
-      line-height: 1;
-      margin-bottom: 6px;
-    }
-    .stat-label {
-      font-weight: 500;
-      font-size: 12px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: var(--sub);
-    }
-
-    /* ─── 5. INCIDENTS EN COURS ─── */
+    /* ─── Sections ─── */
     .section-wrap {
       max-width: 1060px;
       margin: 0 auto;
@@ -243,6 +215,7 @@
       display: flex;
       justify-content: space-between;
       align-items: baseline;
+      gap: 12px;
       border-bottom: 2px solid var(--ink);
       padding-bottom: 8px;
       margin-bottom: 12px;
@@ -259,12 +232,20 @@
       letter-spacing: 1px;
       color: var(--sub);
     }
+    .empty-msg {
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 1px;
+    }
 
+    /* ─── 5. INCIDENTS EN COURS ─── */
     .incidents-list { display: flex; flex-direction: column; gap: 1px; }
 
     .incident {
       display: grid;
-      grid-template-columns: 36px 1fr auto auto;
+      grid-template-columns: 36px minmax(0, 1fr) auto auto;
       align-items: center;
       gap: 12px;
       padding: 11px 14px;
@@ -272,11 +253,9 @@
       border-left: 3px solid transparent;
       transition: background 0.15s;
     }
-    .incident:hover { background: var(--bg3); }
+    .incident:hover     { background: var(--bg3); }
     .incident.critical  { border-left-color: var(--red); }
-    .incident.warning   { border-left-color: var(--orange); }
-    .incident.minor     { border-left-color: #C8A800; }
-    .incident.cancelled { border-left-color: #333; background: #f0ece5; }
+    .incident.cancelled { border-left-color: var(--ink); }
     .cancelled-tag {
       display: inline-block;
       background: #333;
@@ -317,31 +296,53 @@
       margin-top: 3px;
     }
     .incident-duree {
-      font-weight: 700;
-      font-size: 15px;
-      color: var(--red);
+      font-weight: 500;
+      font-size: 14px;
+      color: var(--sub);
       text-align: right;
-      flex-shrink: 0;
     }
+    .incident-duree-m { display: none; }
     .incident-cout {
       font-weight: 700;
-      font-size: 14px;
-      color: var(--orange);
+      font-size: 20px;
+      color: var(--red);
       text-align: right;
-      flex-shrink: 0;
-      min-width: 76px;
+      min-width: 90px;
+      white-space: nowrap;
     }
 
-    /* ─── 6. TABLEAU TOUTES LES LIGNES ─── */
+    .link-btn {
+      background: none;
+      border: 0;
+      font: inherit;
+      font-weight: 500;
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--ink);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      cursor: pointer;
+      padding: 12px 0 0;
+    }
+
+    /* ─── 6. TABLEAU PAR LIGNE — fenêtre unique : aujourd'hui ─── */
     .table-wrap {
       max-width: 1060px;
       margin: 0 auto;
       padding: 28px 32px;
     }
-    .table-header-row {
+    .table-header-row,
+    .line-row {
       display: grid;
-      grid-template-columns: 36px 1fr 60px 95px 105px 105px;
-      padding: 8px 14px;
+      grid-template-columns: 36px minmax(0, 1fr) 120px 150px 150px;
+      align-items: center;
+      gap: 0 8px;
+      padding: 11px 14px;
+    }
+    .table-header-row {
+      padding-top: 8px;
+      padding-bottom: 8px;
       font-weight: 500;
       font-size: 11px;
       letter-spacing: 1px;
@@ -349,25 +350,36 @@
       color: var(--sub);
       border-bottom: 1px solid var(--border);
     }
-    .table-header-row span { text-align: right; }
-    .table-header-row span:nth-child(2) { text-align: left; padding-left: 2px; }
+    .th { text-align: right; }
+    .th-name { text-align: left; }
+    .sort-btn {
+      background: none;
+      border: 0;
+      font: inherit;
+      letter-spacing: inherit;
+      text-transform: inherit;
+      color: inherit;
+      cursor: pointer;
+      padding: 0;
+    }
+    .sort-btn:hover { color: var(--ink); }
+    .th[aria-sort="descending"] .sort-btn,
+    .th[aria-sort="ascending"]  .sort-btn { color: var(--ink); font-weight: 700; }
+    .th[aria-sort="descending"] .sort-btn::after { content: ' ▼'; }
+    .th[aria-sort="ascending"]  .sort-btn::after { content: ' ▲'; }
 
     .lines-list { display: flex; flex-direction: column; gap: 1px; margin-top: 1px; }
 
     .line-row {
-      display: grid;
-      grid-template-columns: 36px 1fr 60px 95px 105px 105px;
-      align-items: center;
-      padding: 11px 14px;
       background: var(--bg2);
       transition: background 0.15s;
     }
     .line-row:hover { background: var(--bg3); }
 
-    .line-row.rer-b-row             { background: #FFF0EE; }
-    .line-row.rer-b-row:hover       { background: #FFE8E5; }
-    .line-row.rer-b-row .line-name  { color: var(--red); font-weight: 600; }
-    .line-row.rer-b-row .line-value { color: var(--red); font-weight: 600; }
+    /* Pire ligne du jour */
+    .line-row.worst { background: var(--bg3); box-shadow: inset 3px 0 0 var(--red); }
+    .line-row.worst .line-name,
+    .line-row.worst .line-value { color: var(--red); font-weight: 700; }
 
     .line-badge {
       width: 28px;
@@ -381,34 +393,47 @@
       color: #fff;
       flex-shrink: 0;
     }
-    .line-name-wrap {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding-left: 2px;
-    }
     .line-name {
       font-weight: 500;
       font-size: 15px;
       color: var(--text);
+      padding-left: 2px;
     }
-    .status-dot {
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    .status-ok       { background: #2ECC71; }
-    .status-warning  { background: var(--orange); animation: blink 2s ease-in-out infinite; }
-    .status-critical { background: var(--red);    animation: blink 1s ease-in-out infinite; }
-
     .line-value {
       font-weight: 400;
       font-size: 14px;
       color: var(--text);
       text-align: right;
     }
-    .line-incidents { text-align: center; }
+    .line-cout { font-weight: 700; font-size: 15px; }
+
+    /* Détail au tap : mobile uniquement */
+    .line-toggle, .th-toggle, .line-detail { display: none; }
+
+    /* Lignes épargnées : une seule rangée de synthèse */
+    .line-spared {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      margin-top: 1px;
+      border-top: 1px solid var(--border);
+      font-size: 14px;
+      color: var(--sub);
+    }
+    .spared-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--ok);
+      flex-shrink: 0;
+    }
+    .line-spared strong { color: var(--ink); font-weight: 500; }
+    .line-missing {
+      padding: 8px 14px;
+      font-size: 12px;
+      color: var(--muted);
+    }
 
     /* ─── 7. FOOTER ─── */
     footer {
@@ -442,19 +467,48 @@
     @media (max-width: 768px) {
       nav { padding: 12px 16px; }
       .nav-links { display: none; }
-      .hero { padding: 32px 16px 24px; }
+      .hero { padding: 28px 16px 20px; }
       .stamp { display: none; }
-      .minutes-block { padding: 10px 16px; gap: 10px; flex-direction: column; align-items: flex-start; }
-      .minutes-value { font-size: 28px; }
+      .cumul { padding: 0 16px 22px; }
+      .cumul-value { font-size: 28px; }
       .section-wrap, .table-wrap { padding: 20px 16px; }
+      .section-header { flex-direction: column; gap: 2px; }
       footer { padding: 14px 16px; flex-direction: column; align-items: flex-start; }
       .footer-right a:first-child { margin-left: 0; }
 
-      .table-header-row { grid-template-columns: 28px 1fr 50px 80px; }
-      .line-row          { grid-template-columns: 28px 1fr 50px 80px; }
-      .col-coutday, .col-coutmonth { display: none; }
-      .incident-cout { display: none; }
-      .incident { grid-template-columns: 32px 1fr auto; }
+      /* Incidents : durée repliée sous la gare, coût toujours visible */
+      .incident { grid-template-columns: 32px minmax(0, 1fr) auto; gap: 10px; padding: 10px 12px; }
+      .incident-duree { display: none; }
+      .incident-duree-m { display: inline; }
+      .incident-cout { font-size: 17px; min-width: 0; }
+
+      /* Table : repli 2 colonnes (Ligne + Coût du jour), détail au tap */
+      .table-header-row,
+      .line-row { grid-template-columns: 28px minmax(0, 1fr) auto 28px; padding: 11px 12px; }
+      .col-inc, .col-temps { display: none; }
+      .th-toggle { display: block; }
+      .line-row { cursor: pointer; }
+      .line-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        background: none;
+        border: 0;
+        font-size: 14px;
+        color: var(--sub);
+        cursor: pointer;
+        transition: transform 0.15s;
+      }
+      .line-row.open .line-toggle { transform: rotate(180deg); }
+      .line-row.open .line-detail {
+        display: block;
+        grid-column: 2 / -1;
+        padding: 6px 0 0 2px;
+        font-size: 13px;
+        color: var(--sub);
+      }
     }
   </style>
 </head>
@@ -487,51 +541,27 @@
 </nav>
 
 <!-- ════════════════════════════════════════════════════════
-     3. HERO — COMPTEUR CENTRAL
+     3. HERO — COÛT DU JOUR
 ════════════════════════════════════════════════════════ -->
 <section class="hero">
   <span class="stamp">RETARDS IDF</span>
-  <div class="hero-date" id="hero-date">MARDI 18 MARS 2026 &nbsp;·&nbsp; MÀJ 09H43</div>
+  <div class="hero-date" id="hero-date">&nbsp;</div>
   <div class="hero-subtitle">Aujourd'hui, les retards des RER et Transiliens ont coûté</div>
-  <div class="hero-counter" id="ctr-eur">9.377 €</div>
+  <div class="hero-counter" id="ctr-eur">— €</div>
   <div class="hero-unit">au SMIC horaire brut · réseau IDF complet</div>
-
-  <!-- Bloc minutes -->
-  <div class="minutes-block">
-    <span class="minutes-arrow">→</span>
-    <div class="minutes-value" id="ctr-min">—</div>
-    <div class="minutes-text">
-      <div class="minutes-label" id="ctr-min-label">de vie perdues collectivement</div>
-      <div class="minutes-note">base SMIC 11,88 €/h · 2025 · <span id="smic-note">≈ 376 salaires journaliers</span></div>
-    </div>
-  </div>
 </section>
 
 <!-- ════════════════════════════════════════════════════════
-     4. BARRE DE STATS
+     4. CUMUL — seule occurrence du temps cumulé sur la page
 ════════════════════════════════════════════════════════ -->
-<div class="stats-bar">
-  <div class="stat-cell">
-    <div class="stat-value" style="color:var(--red)" id="stat-incidents">—</div>
-    <div class="stat-label">Incidents ce jour</div>
+<section class="cumul">
+  <div class="cumul-inner">
+    <div class="cumul-kicker">Cumul du jour · depuis 7 h</div>
+    <div class="cumul-value" id="cumul-value">—</div>
+    <div class="cumul-label" id="cumul-label">de vie perdus collectivement</div>
+    <div class="cumul-note" id="cumul-note">base SMIC — €/h · ≈ — salaires journaliers</div>
   </div>
-  <div class="stat-cell">
-    <div class="stat-value" style="color:var(--orange)" id="stat-encours">—</div>
-    <div class="stat-label">En cours</div>
-  </div>
-  <div class="stat-cell">
-    <div class="stat-value" style="color:var(--red)" id="stat-duree">—</div>
-    <div class="stat-label">Durée totale retards</div>
-  </div>
-  <div class="stat-cell">
-    <div class="stat-value" style="color:var(--text)" id="stat-lignes">—</div>
-    <div class="stat-label">Lignes perturbées</div>
-  </div>
-  <div class="stat-cell">
-    <div class="stat-value" style="color:var(--orange)" id="stat-mv">—</div>
-    <div class="stat-label">Temps de vie perdu</div>
-  </div>
-</div>
+</section>
 
 <!-- ════════════════════════════════════════════════════════
      5. INCIDENTS EN COURS
@@ -539,31 +569,36 @@
 <div class="section-wrap">
   <div class="section-header">
     <span class="section-title">Incidents en cours</span>
-    <span class="section-meta" id="tmr">Actualisation dans 4 min 52 sec</span>
+    <span class="section-meta">coût estimé par train, au SMIC brut</span>
   </div>
-  <div class="incidents-list" id="incidents-list"></div>
+  <div class="incidents-list" id="incidents-list">
+    <div class="empty-msg">Chargement…</div>
+  </div>
+  <button type="button" class="link-btn" id="incidents-more" hidden></button>
 </div>
 
 <!-- ════════════════════════════════════════════════════════
-     6. TABLEAU TOUTES LES LIGNES
+     6. TABLEAU PAR LIGNE — aujourd'hui uniquement
 ════════════════════════════════════════════════════════ -->
 <div class="table-wrap" id="lignes">
   <div class="section-header">
-    <span class="section-title">Toutes les lignes — aujourd'hui</span>
-    <span class="section-meta">coût estimé au SMIC brut 2025</span>
+    <span class="section-title">Par ligne — aujourd'hui</span>
+    <span class="section-meta">coût estimé au SMIC brut</span>
   </div>
 
-  <div class="table-header-row">
+  <div class="table-header-row" id="table-head">
     <span></span>
-    <span style="text-align:left;padding-left:2px">Ligne</span>
-    <span style="text-align:center">Incidents</span>
-    <span>Temps perdu</span>
-    <span class="col-coutday">Coût / jour</span>
-    <span class="col-coutmonth">Coût / mois</span>
+    <span class="th th-name" data-sort="name"><button type="button" class="sort-btn">Ligne</button></span>
+    <span class="th col-inc" data-sort="inc"><button type="button" class="sort-btn">Incidents (auj.)</button></span>
+    <span class="th col-temps" data-sort="temps"><button type="button" class="sort-btn">Temps perdu (auj.)</button></span>
+    <span class="th" data-sort="cout"><button type="button" class="sort-btn">Coût du jour</button></span>
+    <span class="th-toggle"></span>
   </div>
 
-  <!-- Données chargées via /api/stats/line/{id}?period=1 -->
-  <div class="lines-list" id="lines-list"></div>
+  <!-- Données : /api/stats/line/{id}?period=1 -->
+  <div class="lines-list" id="lines-list">
+    <div class="empty-msg">Chargement des données…</div>
+  </div>
 </div>
 
 <!-- ════════════════════════════════════════════════════════
@@ -583,52 +618,12 @@
 ════════════════════════════════════════════════════════ -->
 <script src="duree.js"></script>
 <script>
-  /* ── Liste incidents initialement vide ──────────────────── */
-  document.getElementById('incidents-list').innerHTML =
-    '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;letter-spacing:1px">Chargement…</div>';
+  /* ── Constantes de calcul (identiques à bot.py / stats.html) ── */
+  const SMIC_HORAIRE = 11.88;             // € brut 2025
+  const EUR_PAR_MIN  = SMIC_HORAIRE / 60;
+  const SALAIRE_JOUR = 90;                // salaire journalier SMIC brut ≈ 90 €
+  const INCIDENTS_VISIBLES = 1;           // le plus coûteux ; les autres au clic
 
-  /* ── Lignes : remplace mockLines par appel API réel ─────── */
-  const linesContainer = document.getElementById('lines-list');
-  linesContainer.innerHTML =
-    '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;letter-spacing:1px">Chargement des données…</div>';
-
-  /* ── 1. Compteur — € principal, minutes secondaire ──────── */
-  let minutes = 0;
-
-  function fmt(n) {
-    return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  }
-
-  function updateCounters() {
-    const euros = Math.floor(minutes * 0.198);
-    const salaires = Math.floor(euros / 90); // SMIC journalier brut ≈ 90 €
-    document.getElementById('ctr-eur').textContent = fmt(euros) + ' €';
-    document.getElementById('ctr-min').textContent = formatDuree(minutes);
-    document.getElementById('ctr-min-label').textContent = 'de vie ' + accordPerdu(minutes) + ' collectivement';
-    document.getElementById('smic-note').textContent =
-      '≈ ' + fmt(salaires) + ' salaires journaliers';
-  }
-
-  updateCounters();
-
-  // Real polling every 5 minutes to update counters (no fake random increments)
-  setInterval(() => {
-    fetchLiveData();
-    fetchLinesStats();
-  }, 300000);
-
-  /* ── 2. Countdown actualisation ─────────────────────────── */
-  let t = 292;
-  setInterval(() => {
-    t--;
-    if (t < 0) t = 300;
-    const mn = Math.floor(t / 60);
-    const sc = String(t % 60).padStart(2, '0');
-    document.getElementById('tmr').textContent =
-      'Actualisation dans ' + mn + ' min ' + sc + ' sec';
-  }, 1000);
-
-  /* ── Mapping lignes (pour fetch API backend) ────────────── */
   const LINE_META = {
     'RER_A':        { short: 'A', name: 'RER A',        color: '#E2231A' },
     'RER_B':        { short: 'B', name: 'RER B',        color: '#5191CF' },
@@ -645,12 +640,6 @@
     'TRANSILIEN_U': { short: 'U', name: 'Transilien U', color: '#7B0F1F' },
   };
 
-  function severityFromType(type) {
-    if (['NO_SERVICE', 'SIGNIFICANT_DELAYS'].includes(type)) return 'critical';
-    if (['REDUCED_SERVICE', 'MODIFIED_SERVICE'].includes(type)) return 'warning';
-    return 'minor';
-  }
-
   const FREQ = {
     RER_A:900000, RER_B:650000, RER_C:350000, RER_D:530000, RER_E:180000,
     TRANSILIEN_H:110000, TRANSILIEN_J:130000, TRANSILIEN_K:50000,
@@ -658,131 +647,228 @@
     TRANSILIEN_R:70000, TRANSILIEN_U:40000
   };
 
-  /* ── Fetch API backend (remplace les mocks si dispo) ────── */
-  async function fetchLiveData() {
-    try {
-      const [statsRes, incRes] = await Promise.all([
-        fetch('/api/stats/today').catch(() => null),
-        fetch('/api/incidents/current').catch(() => null),
-      ]);
-
-      if (statsRes && statsRes.ok) {
-        const stats = await statsRes.json();
-        if (stats.total_minutes_voyageurs > 0) {
-          minutes = stats.total_minutes_voyageurs;
-          updateCounters();
-        }
-        document.getElementById('stat-incidents').textContent = stats.total_incidents || 0;
-        document.getElementById('stat-lignes').textContent    = stats.nb_lignes_perturbees || 0;
-        document.getElementById('stat-duree').textContent     = formatDuree(stats.total_duree_min, true);
-        document.getElementById('stat-mv').textContent        = formatDuree(stats.total_minutes_voyageurs, true);
-      }
-
-      if (incRes && incRes.ok) {
-        const incidents = await incRes.json();
-        document.getElementById('stat-encours').textContent = incidents.length;
-
-        if (incidents.length > 0) {
-          // Ticker dynamique
-          const tickerText = incidents.slice(0, 8).map(inc => {
-            const meta = LINE_META[inc.line_id] || { short: '?', name: inc.line_id };
-            const dureeMin = inc.duree_minutes || 0;
-            return `⚠ ${meta.name} — ${inc.cause || inc.type_incident}${dureeMin > 0 ? ' — ' + dureeMin + ' min' : ''}`;
-          }).join('  &nbsp;•&nbsp;  ');
-          document.getElementById('ticker-track').innerHTML = tickerText + '  &nbsp;&nbsp;&nbsp;  ' + tickerText;
-
-          const liveInc = incidents.slice(0, 8).map(inc => {
-            const meta = LINE_META[inc.line_id] || { short: '?', color: '#999', name: inc.line_id };
-            const isCancelled = inc.is_cancelled === true;
-            const severity = isCancelled ? 'cancelled' : severityFromType(inc.type_incident);
-            const dureeMin = inc.duree_minutes || 0;
-            // Temps réel : heure de départ prévue du train ; perturbation : heure de début
-            const heureRef = inc.heure_theorique || inc.heure_debut;
-            const heureStr = heureRef ? new Date(heureRef).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
-            const vpm = (FREQ[inc.line_id] || 0) / 1080;
-            const cout = vpm > 0 ? '+' + fmt(Math.floor(dureeMin * vpm * 0.198)) + ' €' : '';
-            const cancelTag = isCancelled ? '<span class="cancelled-tag">SUPPRIMÉ</span>' : '';
-            const desc = inc.gare
-              ? inc.gare + (inc.direction ? ' → ' + inc.direction : '')
-              : (inc.cause || 'Incident — ' + meta.name);
-            const sub = [
-              inc.mission ? 'Train ' + inc.mission : inc.type_incident,
-              heureStr ? (inc.heure_theorique ? 'départ prévu ' : 'à ') + heureStr : '',
-            ].filter(Boolean).join(' · ');
-            return `
-              <div class="incident ${severity}">
-                <div class="incident-badge" style="background:${meta.color}">${meta.short}</div>
-                <div class="incident-info">
-                  <div class="incident-desc" title="${inc.cause || ''}">${desc}${cancelTag}</div>
-                  <div class="incident-cause">${sub}</div>
-                </div>
-                <div class="incident-duree">${isCancelled ? 'SUPPRIMÉ' : (dureeMin > 0 ? dureeMin + ' min' : 'En cours')}</div>
-                <div class="incident-cout">${cout}</div>
-              </div>`;
-          });
-          document.getElementById('incidents-list').innerHTML = liveInc.join('');
-        } else {
-          document.getElementById('incidents-list').innerHTML =
-            '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;letter-spacing:1px">Aucun incident en cours ✓</div>';
-        }
-      }
-    } catch (_) { /* fallback silencieux */ }
+  function fmt(n) {
+    return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+  function euros(mv) { return Math.floor(mv * EUR_PAR_MIN); }
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
   }
 
-  /* ── 3. Lignes — remplace mockLines par appels API ──────── */
-  async function fetchLinesStats() {
+  /* ════════ 1. HERO (coût du jour) + CUMUL (temps du jour) ════════
+     Même source, /api/stats/today : les deux chiffres portent sur la
+     même fenêtre (journée comptée à partir de 7 h, heure de Paris).  */
+  function renderCumul(mv) {
+    document.getElementById('cumul-value').textContent = formatDuree(mv);
+    document.getElementById('cumul-label').textContent = 'de vie ' + accordPerdu(mv) + ' collectivement';
+    document.getElementById('cumul-note').textContent =
+      'base SMIC ' + SMIC_HORAIRE.toLocaleString('fr-FR') + ' €/h · ≈ ' +
+      fmt(Math.floor(euros(mv) / SALAIRE_JOUR)) + ' salaires journaliers';
+  }
+
+  async function fetchToday() {
+    try {
+      const res = await fetch('/api/stats/today');
+      if (!res.ok) return;
+      const stats = await res.json();
+      const mv = stats.total_minutes_voyageurs || 0;
+      document.getElementById('ctr-eur').textContent = fmt(euros(mv)) + ' €';
+      renderCumul(mv);
+    } catch (_) { /* on garde les placeholders « — » */ }
+  }
+
+  /* ════════ 2. INCIDENTS EN COURS (/api/incidents/current) ════════ */
+  let incidentsOuverts = false;
+
+  function coutIncident(inc) {
+    const vpm = (FREQ[inc.line_id] || 0) / 1080;                 // voyageurs / minute (18 h de service)
+    return vpm > 0 ? (inc.duree_minutes || 0) * vpm * EUR_PAR_MIN : null;
+  }
+
+  function renderIncident(inc, i) {
+    const meta = LINE_META[inc.line_id] || { short: '?', color: '#999', name: inc.line_id };
+    const isCancelled = inc.is_cancelled === true;
+    const severity = isCancelled ? 'cancelled'
+      : (['NO_SERVICE', 'SIGNIFICANT_DELAYS'].includes(inc.type_incident) ? 'critical' : '');
+    const dureeMin = inc.duree_minutes || 0;
+    const dureeTxt = isCancelled ? 'Supprimé' : (dureeMin > 0 ? dureeMin + ' min' : 'En cours');
+    // Temps réel : heure de départ prévue du train ; perturbation : heure de début
+    const heureRef = inc.heure_theorique || inc.heure_debut;
+    const heureStr = heureRef ? new Date(heureRef).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
+    const cout = coutIncident(inc);
+    const desc = inc.gare
+      ? esc(inc.gare) + (inc.direction ? ' → ' + esc(inc.direction) : '')
+      : esc(inc.cause || 'Incident — ' + meta.name);
+    const sub = [
+      inc.mission ? 'Train ' + esc(inc.mission) : esc(inc.type_incident),
+      heureStr ? (inc.heure_theorique ? 'départ prévu ' : 'à ') + heureStr : '',
+    ].filter(Boolean).join(' · ');
+    return `
+      <div class="incident ${severity}"${i >= INCIDENTS_VISIBLES && !incidentsOuverts ? ' hidden' : ''}>
+        <div class="incident-badge" style="background:${meta.color}">${meta.short}</div>
+        <div class="incident-info">
+          <div class="incident-desc" title="${esc(inc.cause)}">${desc}${isCancelled ? '<span class="cancelled-tag">SUPPRIMÉ</span>' : ''}</div>
+          <div class="incident-cause">${sub}<span class="incident-duree-m"> · ${dureeTxt}</span></div>
+        </div>
+        <div class="incident-duree">${dureeTxt}</div>
+        <div class="incident-cout">${cout === null ? '—' : '+' + fmt(Math.floor(cout)) + ' €'}</div>
+      </div>`;
+  }
+
+  async function fetchIncidents() {
+    try {
+      const res = await fetch('/api/incidents/current');
+      if (!res.ok) return;
+      const incidents = await res.json();
+      const list = document.getElementById('incidents-list');
+      const more = document.getElementById('incidents-more');
+
+      if (incidents.length === 0) {
+        list.innerHTML = '<div class="empty-msg">Aucun incident en cours ✓</div>';
+        document.getElementById('ticker-track').textContent = 'Aucun incident en cours sur le réseau RER et Transilien';
+        more.hidden = true;
+        return;
+      }
+
+      // Ticker dynamique
+      const tickerText = incidents.slice(0, 8).map(inc => {
+        const meta = LINE_META[inc.line_id] || { name: inc.line_id };
+        const dureeMin = inc.duree_minutes || 0;
+        return `⚠ ${meta.name} — ${esc(inc.cause || inc.type_incident)}${dureeMin > 0 ? ' — ' + dureeMin + ' min' : ''}`;
+      }).join('  &nbsp;•&nbsp;  ');
+      document.getElementById('ticker-track').innerHTML = tickerText + '  &nbsp;&nbsp;&nbsp;  ' + tickerText;
+
+      // Le plus coûteux d'abord ; seuls les premiers restent visibles
+      const tries = incidents.slice().sort((a, b) => (coutIncident(b) || 0) - (coutIncident(a) || 0));
+      list.innerHTML = tries.map(renderIncident).join('');
+      more.hidden = tries.length <= INCIDENTS_VISIBLES;
+      more.textContent = incidentsOuverts ? 'Réduire' : 'Voir tous les incidents en cours';
+    } catch (_) { /* on garde l'état précédent */ }
+  }
+
+  document.getElementById('incidents-more').addEventListener('click', () => {
+    incidentsOuverts = !incidentsOuverts;
+    document.querySelectorAll('#incidents-list .incident').forEach((el, i) => {
+      el.hidden = i >= INCIDENTS_VISIBLES && !incidentsOuverts;
+    });
+    document.getElementById('incidents-more').textContent =
+      incidentsOuverts ? 'Réduire' : 'Voir tous les incidents en cours';
+  });
+
+  /* ════════ 3. LIGNES — aujourd'hui (/api/stats/line/{id}?period=1) ════════ */
+  let lignes = [];          // [{ key, order, short, name, color, inc, mv }]
+  let manquantes = [];      // lignes dont l'API n'a pas répondu
+  let sortKey = 'cout', sortDir = -1;
+  const lignesOuvertes = new Set();
+  const mobile = window.matchMedia('(max-width: 768px)');
+
+  const SORTS = {
+    name:  l => l.order,
+    inc:   l => l.inc,
+    temps: l => l.mv,
+    cout:  l => l.mv,       // coût = temps × SMIC : même ordre, colonne cliquable quand même
+  };
+
+  function renderLines() {
+    const list = document.getElementById('lines-list');
+    const touchees = lignes.filter(l => l.inc > 0);
+    const epargnees = lignes.filter(l => l.inc === 0);
+    const pire = touchees.reduce((p, l) => (l.mv > (p ? p.mv : 0) ? l : p), null);
+
+    touchees.sort((a, b) => (SORTS[sortKey](a) - SORTS[sortKey](b)) * sortDir || a.order - b.order);
+
+    document.querySelectorAll('#table-head .th').forEach(th => {
+      th.setAttribute('aria-sort', th.dataset.sort === sortKey ? (sortDir < 0 ? 'descending' : 'ascending') : 'none');
+    });
+
+    let html = touchees.map(l => {
+      const open = lignesOuvertes.has(l.key);
+      const temps = formatDuree(l.mv, true);
+      return `
+        <div class="line-row${l === pire ? ' worst' : ''}${open ? ' open' : ''}" data-key="${l.key}">
+          <div class="line-badge" style="background:${l.color}">${l.short}</div>
+          <div class="line-name">${l.name}</div>
+          <div class="line-value col-inc">${fmt(l.inc)}</div>
+          <div class="line-value col-temps">${temps}</div>
+          <div class="line-value line-cout">${fmt(euros(l.mv))} €</div>
+          <button type="button" class="line-toggle" aria-expanded="${open}" aria-label="Détail ${l.name}">▾</button>
+          <div class="line-detail">${fmt(l.inc)} incident${l.inc > 1 ? 's' : ''} aujourd'hui · ${temps} de temps perdu</div>
+        </div>`;
+    }).join('');
+
+    if (epargnees.length > 0) {
+      const n = epargnees.length;
+      html += `
+        <div class="line-spared">
+          <span class="spared-dot"></span>
+          <span><strong>${n} ligne${n > 1 ? 's' : ''} épargnée${n > 1 ? 's' : ''} aujourd'hui</strong>
+          (${epargnees.map(l => l.short).join(', ')}) — 0 incident</span>
+        </div>`;
+    }
+    if (manquantes.length > 0) {
+      html += `<div class="line-missing">Données indisponibles pour : ${manquantes.join(', ')}</div>`;
+    }
+    list.innerHTML = html || '<div class="empty-msg">Données indisponibles</div>';
+  }
+
+  async function fetchLines() {
     const entries = Object.entries(LINE_META);
     try {
       const results = await Promise.allSettled(
         entries.map(([id]) =>
-          fetch(`/api/stats/line/${id}?period=1`)
-            .then(r => r.ok ? r.json() : null)
+          fetch(`/api/stats/line/${id}?period=1`).then(r => r.ok ? r.json() : null)
         )
       );
 
-      const lines = [];
+      const next = [], missing = [];
       results.forEach((res, i) => {
-        const [lineId, meta] = entries[i];
-        if (res.status === 'fulfilled' && res.value) {
-          const d = res.value;
-          lines.push({
-            id:       meta.short,
-            color:    meta.color,
-            name:     meta.name,
-            status:   d.jours_perturbes > 0 ? 'warning' : 'ok',
-            incidents: String(d.total_incidents || 0),
-            minDay:   d.total_minutes_voyageurs,
-          });
-        }
+        const [key, meta] = entries[i];
+        const d = res.status === 'fulfilled' ? res.value : null;
+        if (!d) { missing.push(meta.short); return; }
+        next.push({
+          key, order: i, short: meta.short, name: meta.name, color: meta.color,
+          inc: d.total_incidents || 0,
+          mv:  d.total_minutes_voyageurs || 0,
+        });
       });
 
-      if (lines.length > 0) {
-        document.getElementById('lines-list').innerHTML =
-          lines.map(line => {
-            const mv = line.minDay;
-            const coutDay   = fmt(Math.floor(mv * 0.198)) + ' €';
-            const coutMonth = fmt(Math.floor(mv * 0.198 * 28)) + ' €';
-            return `
-              <div class="line-row${line.id === 'B' ? ' rer-b-row' : ''}">
-                <div class="line-badge" style="background:${line.color}">${line.id}</div>
-                <div class="line-name-wrap">
-                  <span class="line-name">${line.name}</span>
-                  <span class="status-dot status-${line.status}"></span>
-                </div>
-                <div class="line-value line-incidents">${line.incidents}</div>
-                <div class="line-value">${formatDuree(mv, true)}</div>
-                <div class="line-value col-coutday">${coutDay}</div>
-                <div class="line-value col-coutmonth">${coutMonth}</div>
-              </div>
-            `;
-          }).join('');
+      if (next.length === 0) throw new Error('aucune ligne');
+      lignes = next;
+      manquantes = missing;
+      renderLines();
+    } catch (_) {
+      if (lignes.length === 0) {
+        document.getElementById('lines-list').innerHTML = '<div class="empty-msg">Données indisponibles</div>';
       }
-    } catch (_) { /* fallback silencieux */ }
+    }
   }
 
-  /* ── Initialisation ──────────────────────────────────────── */
-  fetchLiveData();
-  fetchLinesStats();
+  /* ── Tri au clic sur les en-têtes ── */
+  document.getElementById('table-head').addEventListener('click', e => {
+    const th = e.target.closest('.th');
+    if (!th || !th.dataset.sort) return;
+    if (th.dataset.sort === sortKey) sortDir = -sortDir;
+    else { sortKey = th.dataset.sort; sortDir = sortKey === 'name' ? 1 : -1; }
+    renderLines();
+  });
+
+  /* ── Mobile : tap sur une ligne → détail incidents / temps perdu ── */
+  document.getElementById('lines-list').addEventListener('click', e => {
+    const row = e.target.closest('.line-row');
+    if (!row || !mobile.matches) return;
+    const open = row.classList.toggle('open');
+    row.querySelector('.line-toggle').setAttribute('aria-expanded', open);
+    if (open) lignesOuvertes.add(row.dataset.key); else lignesOuvertes.delete(row.dataset.key);
+  });
+
+  /* ── Initialisation + polling 5 min ── */
+  function refresh() {
+    fetchToday();
+    fetchIncidents();
+    fetchLines();
+  }
+  refresh();
+  setInterval(refresh, 300000);
 
   /* ── Date/heure màj ─────────────────────────────────────── */
   function updateDate() {

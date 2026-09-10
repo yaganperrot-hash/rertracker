@@ -184,15 +184,35 @@ frontend « Gare → Direction » / « Train XXXX · départ prévu HH:MM »
 **Fix** : unité adaptative composée (min → h → jours → ans, bascule à 2× l'unité suivante), accord
 perdues/perdus, libellé « de vie perdus collectivement » ; même logique JS (`formatDuree`) et Python
 (`_fmt_duree`), testée dans `tests/test_bot.py`. Stockage toujours en minutes.
-**Status** : ✅ Résolu (rendu navigateur non vérifié visuellement)
+**Status** : ✅ Résolu (rendu vérifié sur l'accueil, bureau + 390 px ; `stats.html` non vérifiée)
 
 ### [2026-09-10] Serveur local arrêté
 **Fichier(s)** : —
 **Symptôme** : http://127.0.0.1:8000 ne répond plus, aucun process uvicorn ; PostgreSQL toujours actif
-**Cause** : uvicorn tournait en tâche de fond d'une session Claude Code → meurt avec elle (ou tué par le système)
+**Cause** : uvicorn tournait en tâche de fond d'une session Claude Code → meurt avec elle (ou tué par le système).
+Récidive l'après-midi du 2026-09-10 : tué 2 fois, dont une confirmée « low memory » par Claude Code,
+alors que `memory_pressure` indiquait 29 % libre et qu'aucun process n'était anormalement gros
 **Fix** : relancé ; pour un serveur durable, le lancer dans son propre terminal
 (`./venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000`)
 **Status** : ✅ Contourné
+
+### [2026-09-10] Accueil — fenêtres temporelles mélangées et mise en avant arbitraire
+**Fichier(s)** : `frontend/index.html`
+**Symptôme** : table par ligne mêlant « Coût / jour » et « Coût / mois » (jour × 28, pure extrapolation) ; tri
+alphabétique ; RER B surligné en rouge en permanence ; temps cumulé affiché 2 fois (bloc hero + barre de stats) ;
+hero affichant « 9.377 € » de maquette avant chargement, et jamais mis à jour les jours à 0 minute-voyageur
+(`if (stats.total_minutes_voyageurs > 0)`)
+**Cause** : héritage de la maquette — surlignage codé en dur (`line.id === 'B'`), colonne mensuelle calculée côté front
+**Fix** : refonte de la hiérarchie (voir SESSION.md) — tout sur la fenêtre « aujourd'hui », tri par coût,
+pire ligne calculée, une seule occurrence du temps cumulé, placeholders « — »
+**Status** : ✅ Résolu
+
+### [2026-09-10] Ticker bloqué sur « Chargement des données en cours… »
+**Fichier(s)** : `frontend/index.html`
+**Symptôme** : bandeau figé sur le texte de chargement dès qu'aucun incident n'est en cours
+**Cause** : le ticker n'était mis à jour que dans la branche `incidents.length > 0`
+**Fix** : texte « Aucun incident en cours sur le réseau RER et Transilien » dans la branche vide
+**Status** : ✅ Résolu
 
 ---
 
@@ -260,6 +280,28 @@ partiellement la clé, donc impossible de la relire à l'arrivée
 **Fix** : supprimer `PRIM_KEY.txt` après récupération **et régénérer la clé côté portail PRIM** —
 un `git rm` ne la retire pas de l'historique (elle reste dans `c591442`)
 **Status** : ❌ Ouvert — action requise
+
+### [2026-09-10] SMIC 2025 encore utilisé en 2026
+**Fichier(s)** : `backend/bot.py` (`SMIC_HORAIRE`), `frontend/index.html` (`SMIC_HORAIRE`), `frontend/stats.html`,
+`frontend/methode.html`, `README.md`
+**Symptôme** : tous les euros sont calculés à 11,88 €/h, taux brut 2025
+**Fix** : vérifier le taux brut 2026 et le mettre à jour partout d'un coup (site, tweet, méthode, README)
+**Status** : ❌ Ouvert
+
+### [2026-09-10] « Salaires journaliers » : 90 € vs 83,16 €
+**Fichier(s)** : `frontend/index.html` (`SALAIRE_JOUR = 90`)
+**Symptôme** : l'accueil divise les euros par 90 €, alors que 7 h × 11,88 € = 83,16 € → nombre de salaires
+journaliers sous-estimé d'environ 8 %
+**Fix** : à trancher — dériver de `SMIC_HORAIRE × 7` ou documenter la source des 90 €
+**Status** : ❌ Ouvert
+
+### [2026-09-10] Coût par incident : formule front ≠ backend
+**Fichier(s)** : `frontend/index.html` (`coutIncident`, table `FREQ`)
+**Symptôme** : le montant d'un incident en cours ne correspond pas exactement à sa contribution au total de sa ligne
+**Cause** : le front calcule `FREQ / 1080 × durée × SMIC` (moyenne plate sur 18 h), le backend pondère par heure
+(`HOURLY_WEIGHTS`, lui-même faussé par le bug 9). `FREQ` duplique aussi `data/frequentation.json` en dur
+**Fix** : exposer le coût par incident depuis l'API, ou au minimum servir la fréquentation depuis le backend
+**Status** : ❌ Ouvert (mineur)
 
 ---
 
