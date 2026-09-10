@@ -3,7 +3,8 @@ bot.py — Post quotidien sur X (Twitter) à 20h00.
 Résumé des incidents et minutes-voyageurs perdues de la veille.
 """
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import tweepy
 from sqlalchemy import select
@@ -64,7 +65,7 @@ async def post_daily_recap() -> None:
         logger.warning("Clés Twitter/X non configurées — post quotidien ignoré")
         return
 
-    yesterday = date.today() - timedelta(days=1)
+    yesterday = datetime.now(ZoneInfo("Europe/Paris")).date() - timedelta(days=1)
 
     async with AsyncSessionLocal() as db:
         # Une seule requête — agrégats calculés en Python depuis les lignes

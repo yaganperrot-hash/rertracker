@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     twitter_access_secret: str = ""
     polling_interval_minutes: int = 5
     log_level: str = "INFO"
+    max_open_incident_minutes: int = 180
+    cancel_default_impact_minutes: int = 5
 
     class Config:
         env_file = ".env"

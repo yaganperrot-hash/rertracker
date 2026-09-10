@@ -1,14 +1,15 @@
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import or_
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.database import get_db
 from backend.models import Incident, DailyMetric
 from backend.metrics import get_today_stats, get_line_stats, compute_daily_metrics
-from backend.collector import collect_disruptions
+from backend.collector import collect_disruptions, collect_rt_delays
 
 router = APIRouter(prefix="/api")
 
@@ -26,12 +27,18 @@ async def stats_line(line_id: str, db: DbDep, period: int = Query(default=30, ge
 
 
 @router.get("/incidents/current")
-async def incidents_current(db: DbDep):
+async def incidents_current(db: DbDep, source: str | None = Query(default=None)):
+    now = datetime.now(timezone.utc)
     stmt = (
         select(Incident)
-        .where(Incident.heure_fin.is_(None))
+        .where(
+            Incident.heure_debut <= now,
+            or_(Incident.heure_fin >= now, Incident.heure_fin.is_(None)),
+        )
         .order_by(Incident.heure_debut.desc())
     )
+    if source:
+        stmt = stmt.where(Incident.source == source)
     rows = (await db.execute(stmt)).scalars().all()
     return [
         {
@@ -41,7 +48,11 @@ async def incidents_current(db: DbDep):
             "type_incident": r.type_incident,
             "cause": r.cause,
             "heure_debut": r.heure_debut.isoformat(),
-            "heure_fin": None,
+            "heure_fin": r.heure_fin.isoformat() if r.heure_fin else None,
+            "duree_minutes": r.duree_minutes,
+            "source": r.source,
+            "heure_theorique": r.heure_theorique.isoformat() if r.heure_theorique else None,
+            "is_cancelled": r.is_cancelled,
         }
         for r in rows
     ]
@@ -74,6 +85,9 @@ async def incidents_history(
             "heure_debut": r.heure_debut.isoformat(),
             "heure_fin": r.heure_fin.isoformat() if r.heure_fin else None,
             "duree_minutes": r.duree_minutes,
+            "source": r.source,
+            "heure_theorique": r.heure_theorique.isoformat() if r.heure_theorique else None,
+            "is_cancelled": r.is_cancelled,
         }
         for r in rows
     ]
@@ -82,5 +96,6 @@ async def incidents_history(
 @router.post("/admin/collect")
 async def admin_collect():
     await collect_disruptions()
+    await collect_rt_delays()
     await compute_daily_metrics()
     return {"status": "ok"}

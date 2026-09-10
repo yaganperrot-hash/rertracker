@@ -1,10 +1,11 @@
 # TODO — Compteur de Retards IDF
 
 ## En cours
-- [ ] Étape 11 — Bot X quotidien (20h, résumé auto)
+_(aucun)_
 
 ## À faire
-- [ ] Étape 14 — README.md final
+- [ ] Vérifier les IDs Navitia de Transilien L, N, P (404 sur PRIM)
+- [ ] Renseigner les clés API dans `.env` (PRIM + Twitter/X)
 
 ## Terminé
 - [x] Étape 01 — CLAUDE.md structuré créé — 2026-03-11
@@ -17,5 +18,9 @@
 - [x] Étape 08 — Endpoints API REST (backend/api.py, backend/main.py) — 2026-03-11
 - [x] Étape 09 — Frontend page principale (frontend/index.html) — 2026-03-17
 - [x] Étape 10 — Frontend page statistiques (frontend/stats.html) — 2026-03-17
+- [x] Étape 11 — Bot X quotidien (backend/bot.py) — 2026-03-17
 - [x] Étape 12 — Page /methode (frontend/methode.html) — 2026-03-17
 - [x] Étape 13 — Tests unitaires (tests/test_collector.py, tests/test_metrics.py) — 2026-03-17
+- [x] Étape 14 — README.md final — 2026-03-17
+- [x] Correctifs session 2026-04-28 — endpoint PRIM, duree_minutes, filtres, frontend
+- [x] Correctifs session 2026-09-09 — 8 bugs corrigés (double comptage, timezone, trains supprimés, pondération horaire, fake counter, etc.)

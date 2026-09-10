@@ -274,9 +274,21 @@
       transition: background 0.15s;
     }
     .incident:hover { background: var(--bg3); }
-    .incident.critical { border-left-color: var(--red); }
-    .incident.warning  { border-left-color: var(--orange); }
-    .incident.minor    { border-left-color: #C8A800; }
+    .incident.critical  { border-left-color: var(--red); }
+    .incident.warning   { border-left-color: var(--orange); }
+    .incident.minor     { border-left-color: #C8A800; }
+    .incident.cancelled { border-left-color: #333; background: #f0ece5; }
+    .cancelled-tag {
+      display: inline-block;
+      background: #333;
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 2px 6px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
 
     .incident-badge {
       width: 32px;
@@ -454,20 +466,7 @@
      1. TICKER
 ════════════════════════════════════════════════════════ -->
 <div class="ticker">
-  <span class="ticker-track">
-    ⚠ INCIDENT EN COURS — RER B — Panne signalisation Gare du Nord — 47 min
-    &nbsp;•&nbsp; RER A : trafic normal
-    &nbsp;•&nbsp; RER D : ralentissement Châtelet — 12 min
-    &nbsp;•&nbsp; RER E : retard matériel — 8 min
-    &nbsp;•&nbsp; Transilien J : normal
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    ⚠ INCIDENT EN COURS — RER B — Panne signalisation Gare du Nord — 47 min
-    &nbsp;•&nbsp; RER A : trafic normal
-    &nbsp;•&nbsp; RER D : ralentissement Châtelet — 12 min
-    &nbsp;•&nbsp; RER E : retard matériel — 8 min
-    &nbsp;•&nbsp; Transilien J : normal
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  </span>
+  <span class="ticker-track" id="ticker-track">Chargement des données en cours…</span>
 </div>
 
 <!-- ════════════════════════════════════════════════════════
@@ -515,24 +514,24 @@
 ════════════════════════════════════════════════════════ -->
 <div class="stats-bar">
   <div class="stat-cell">
-    <div class="stat-value" style="color:var(--red)">23</div>
+    <div class="stat-value" style="color:var(--red)" id="stat-incidents">—</div>
     <div class="stat-label">Incidents ce jour</div>
   </div>
   <div class="stat-cell">
-    <div class="stat-value" style="color:var(--orange)">3</div>
+    <div class="stat-value" style="color:var(--orange)" id="stat-encours">—</div>
     <div class="stat-label">En cours</div>
   </div>
   <div class="stat-cell">
-    <div class="stat-value" style="color:var(--red)">47 min</div>
-    <div class="stat-label">Incident le + long</div>
+    <div class="stat-value" style="color:var(--red)" id="stat-duree">— min</div>
+    <div class="stat-label">Durée totale retards</div>
   </div>
   <div class="stat-cell">
-    <div class="stat-value" style="color:var(--ink)">RER B</div>
-    <div class="stat-label">Ligne la + touchée</div>
+    <div class="stat-value" style="color:var(--text)" id="stat-lignes">—</div>
+    <div class="stat-label">Lignes perturbées</div>
   </div>
   <div class="stat-cell">
-    <div class="stat-value" style="color:var(--orange)">68%</div>
-    <div class="stat-label">Jours perturbés / mois</div>
+    <div class="stat-value" style="color:var(--orange)" id="stat-mv">—</div>
+    <div class="stat-label">Min-voyageurs perdues</div>
   </div>
 </div>
 
@@ -565,6 +564,7 @@
     <span class="col-coutmonth">Coût / mois</span>
   </div>
 
+  <!-- Données chargées via /api/stats/line/{id}?period=1 -->
   <div class="lines-list" id="lines-list"></div>
 </div>
 
@@ -584,99 +584,24 @@
      JAVASCRIPT
 ════════════════════════════════════════════════════════ -->
 <script>
-  /* ── Données mock ──────────────────────────────────────────
-     TODO: remplacer mockIncidents par fetch API Google Sheets
-  ─────────────────────────────────────────────────────────── */
-  const mockIncidents = [
-    {
-      ligne: "B", color: "#5191CF", severity: "critical",
-      desc: "Panne de signalisation — Gare du Nord",
-      cause: "Responsabilité SNCF · Démarré à 08h14",
-      duree: "47 min", cout: "+9 300 €"
-    },
-    {
-      ligne: "D", color: "#00814F", severity: "warning",
-      desc: "Ralentissement — Châtelet Les Halles",
-      cause: "Incident voyageur · Démarré à 09h02",
-      duree: "12 min", cout: "+1 850 €"
-    },
-    {
-      ligne: "E", color: "#B04191", severity: "minor",
-      desc: "Retard — matériel roulant défaillant",
-      cause: "Responsabilité SNCF · Démarré à 09h18",
-      duree: "8 min", cout: "+780 €"
-    }
-  ];
-
-  /* ── Données mock ──────────────────────────────────────────
-     TODO: remplacer mockLines par fetch API Google Sheets
-  ─────────────────────────────────────────────────────────── */
-  const mockLines = [
-    {
-      id: "A", color: "#E2231A", name: "RER A", status: "ok",
-      incidents: "2", minDay: "124 500",
-      coutDay: "24 651 €", coutMonth: "689 000 €"
-    },
-    {
-      id: "B", color: "#5191CF", name: "RER B", status: "critical",
-      incidents: "8", minDay: "847 340",
-      coutDay: "167 774 €", coutMonth: "4 700 000 €"
-    },
-    {
-      id: "C", color: "#C8A800", name: "RER C", status: "warning",
-      incidents: "4", minDay: "312 000",
-      coutDay: "61 776 €", coutMonth: "1 729 000 €"
-    },
-    {
-      id: "D", color: "#00814F", name: "RER D", status: "warning",
-      incidents: "5", minDay: "421 000",
-      coutDay: "83 358 €", coutMonth: "2 334 000 €"
-    },
-    {
-      id: "E", color: "#B04191", name: "RER E", status: "ok",
-      incidents: "1", minDay: "89 000",
-      coutDay: "17 622 €", coutMonth: "493 000 €"
-    }
-  ];
-
-  /* ── Render dynamique ────────────────────────────────────── */
+  /* ── Liste incidents initialement vide ──────────────────── */
   document.getElementById('incidents-list').innerHTML =
-    mockIncidents.map(inc => `
-      <div class="incident ${inc.severity}">
-        <div class="incident-badge" style="background:${inc.color}">${inc.ligne}</div>
-        <div class="incident-info">
-          <div class="incident-desc">${inc.desc}</div>
-          <div class="incident-cause">${inc.cause}</div>
-        </div>
-        <div class="incident-duree">${inc.duree}</div>
-        <div class="incident-cout">${inc.cout}</div>
-      </div>
-    `).join('');
+    '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;letter-spacing:1px">Chargement…</div>';
 
-  document.getElementById('lines-list').innerHTML =
-    mockLines.map(line => `
-      <div class="line-row${line.id === 'B' ? ' rer-b-row' : ''}">
-        <div class="line-badge" style="background:${line.color}">${line.id}</div>
-        <div class="line-name-wrap">
-          <span class="line-name">${line.name}</span>
-          <span class="status-dot status-${line.status}"></span>
-        </div>
-        <div class="line-value line-incidents">${line.incidents}</div>
-        <div class="line-value">${line.minDay}</div>
-        <div class="line-value col-coutday">${line.coutDay}</div>
-        <div class="line-value col-coutmonth">${line.coutMonth}</div>
-      </div>
-    `).join('');
+  /* ── Lignes : remplace mockLines par appel API réel ─────── */
+  const linesContainer = document.getElementById('lines-list');
+  linesContainer.innerHTML =
+    '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;letter-spacing:1px">Chargement des données…</div>';
 
   /* ── 1. Compteur — € principal, minutes secondaire ──────── */
-  let minutes = 2847340;
+  let minutes = 0;
 
   function fmt(n) {
     return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   }
 
   function updateCounters() {
-    const euros = Math.floor(minutes * 0.198 / 60);
+    const euros = Math.floor(minutes * 0.198);
     const salaires = Math.floor(euros / 90); // SMIC journalier brut ≈ 90 €
     document.getElementById('ctr-eur').textContent = fmt(euros) + ' €';
     document.getElementById('ctr-min').textContent = fmt(minutes);
@@ -686,10 +611,11 @@
 
   updateCounters();
 
+  // Real polling every 5 minutes to update counters (no fake random increments)
   setInterval(() => {
-    minutes += Math.floor(Math.random() * 45) + 10;
-    updateCounters();
-  }, 2800);
+    fetchLiveData();
+    fetchLinesStats();
+  }, 300000);
 
   /* ── 2. Countdown actualisation ─────────────────────────── */
   let t = 292;
@@ -725,6 +651,13 @@
     return 'minor';
   }
 
+  const FREQ = {
+    RER_A:900000, RER_B:650000, RER_C:350000, RER_D:530000, RER_E:180000,
+    TRANSILIEN_H:110000, TRANSILIEN_J:130000, TRANSILIEN_K:50000,
+    TRANSILIEN_L:170000, TRANSILIEN_N:100000, TRANSILIEN_P:80000,
+    TRANSILIEN_R:70000, TRANSILIEN_U:40000
+  };
+
   /* ── Fetch API backend (remplace les mocks si dispo) ────── */
   async function fetchLiveData() {
     try {
@@ -739,49 +672,109 @@
           minutes = stats.total_minutes_voyageurs;
           updateCounters();
         }
-        // Mise à jour barre de stats
-        const vals = document.querySelectorAll('.stat-cell .stat-value');
-        if (vals[0]) vals[0].textContent = stats.total_incidents;
-        if (vals[1]) vals[1].textContent = stats.nb_lignes_perturbees;
+        document.getElementById('stat-incidents').textContent = stats.total_incidents || 0;
+        document.getElementById('stat-lignes').textContent    = stats.nb_lignes_perturbees || 0;
+        document.getElementById('stat-duree').textContent     = fmt(stats.total_duree_min || 0) + ' min';
+        document.getElementById('stat-mv').textContent        = fmt(stats.total_minutes_voyageurs || 0);
       }
 
       if (incRes && incRes.ok) {
         const incidents = await incRes.json();
+        document.getElementById('stat-encours').textContent = incidents.length;
+
         if (incidents.length > 0) {
-          const liveInc = incidents.slice(0, 5).map(inc => {
+          // Ticker dynamique
+          const tickerText = incidents.slice(0, 8).map(inc => {
+            const meta = LINE_META[inc.line_id] || { short: '?', name: inc.line_id };
+            const dureeMin = inc.duree_minutes || 0;
+            return `⚠ ${meta.name} — ${inc.cause || inc.type_incident}${dureeMin > 0 ? ' — ' + dureeMin + ' min' : ''}`;
+          }).join('  &nbsp;•&nbsp;  ');
+          document.getElementById('ticker-track').innerHTML = tickerText + '  &nbsp;&nbsp;&nbsp;  ' + tickerText;
+
+          const liveInc = incidents.slice(0, 8).map(inc => {
             const meta = LINE_META[inc.line_id] || { short: '?', color: '#999', name: inc.line_id };
-            const severity = severityFromType(inc.type_incident);
+            const isCancelled = inc.is_cancelled === true;
+            const severity = isCancelled ? 'cancelled' : severityFromType(inc.type_incident);
+            const dureeMin = inc.duree_minutes || 0;
             const debut = inc.heure_debut ? new Date(inc.heure_debut) : null;
-            const dureeMin = debut ? Math.floor((Date.now() - debut.getTime()) / 60000) : 0;
-            const debutStr = debut
-              ? debut.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-              : '';
-            return {
-              ligne: meta.short, color: meta.color, severity,
-              desc: inc.cause || `Incident — ${meta.name}`,
-              cause: `${inc.type_incident} · Démarré à ${debutStr}`,
-              duree: dureeMin > 0 ? dureeMin + ' min' : 'En cours',
-              cout: '+' + fmt(Math.floor(dureeMin * 0.198 / 60 * 1000)) + ' €',
-            };
-          });
-          document.getElementById('incidents-list').innerHTML =
-            liveInc.map(inc => `
-              <div class="incident ${inc.severity}">
-                <div class="incident-badge" style="background:${inc.color}">${inc.ligne}</div>
+            const debutStr = debut ? debut.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
+            const vpm = (FREQ[inc.line_id] || 0) / 1080;
+            const cout = vpm > 0 ? '+' + fmt(Math.floor(dureeMin * vpm * 0.198)) + ' €' : '';
+            const cancelTag = isCancelled ? '<span class="cancelled-tag">SUPPRIMÉ</span>' : '';
+            return `
+              <div class="incident ${severity}">
+                <div class="incident-badge" style="background:${meta.color}">${meta.short}</div>
                 <div class="incident-info">
-                  <div class="incident-desc">${inc.desc}</div>
-                  <div class="incident-cause">${inc.cause}</div>
+                  <div class="incident-desc">${inc.cause || 'Incident — ' + meta.name}${cancelTag}</div>
+                  <div class="incident-cause">${inc.type_incident}${debutStr ? ' · à ' + debutStr : ''}</div>
                 </div>
-                <div class="incident-duree">${inc.duree}</div>
-                <div class="incident-cout">${inc.cout}</div>
-              </div>
-            `).join('');
+                <div class="incident-duree">${isCancelled ? 'SUPPRIMÉ' : (dureeMin > 0 ? dureeMin + ' min' : 'En cours')}</div>
+                <div class="incident-cout">${cout}</div>
+              </div>`;
+          });
+          document.getElementById('incidents-list').innerHTML = liveInc.join('');
+        } else {
+          document.getElementById('incidents-list').innerHTML =
+            '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;letter-spacing:1px">Aucun incident en cours ✓</div>';
         }
       }
-    } catch (_) { /* fallback silencieux vers mock data */ }
+    } catch (_) { /* fallback silencieux */ }
   }
 
+  /* ── 3. Lignes — remplace mockLines par appels API ──────── */
+  async function fetchLinesStats() {
+    const entries = Object.entries(LINE_META);
+    try {
+      const results = await Promise.allSettled(
+        entries.map(([id]) =>
+          fetch(`/api/stats/line/${id}?period=1`)
+            .then(r => r.ok ? r.json() : null)
+        )
+      );
+
+      const lines = [];
+      results.forEach((res, i) => {
+        const [lineId, meta] = entries[i];
+        if (res.status === 'fulfilled' && res.value) {
+          const d = res.value;
+          lines.push({
+            id:       meta.short,
+            color:    meta.color,
+            name:     meta.name,
+            status:   d.jours_perturbes > 0 ? 'warning' : 'ok',
+            incidents: String(d.total_incidents || 0),
+            minDay:   d.total_minutes_voyageurs,
+          });
+        }
+      });
+
+      if (lines.length > 0) {
+        document.getElementById('lines-list').innerHTML =
+          lines.map(line => {
+            const mv = line.minDay;
+            const coutDay   = fmt(Math.floor(mv * 0.198)) + ' €';
+            const coutMonth = fmt(Math.floor(mv * 0.198 * 28)) + ' €';
+            return `
+              <div class="line-row${line.id === 'B' ? ' rer-b-row' : ''}">
+                <div class="line-badge" style="background:${line.color}">${line.id}</div>
+                <div class="line-name-wrap">
+                  <span class="line-name">${line.name}</span>
+                  <span class="status-dot status-${line.status}"></span>
+                </div>
+                <div class="line-value line-incidents">${line.incidents}</div>
+                <div class="line-value">${fmt(mv)}</div>
+                <div class="line-value col-coutday">${coutDay}</div>
+                <div class="line-value col-coutmonth">${coutMonth}</div>
+              </div>
+            `;
+          }).join('');
+      }
+    } catch (_) { /* fallback silencieux */ }
+  }
+
+  /* ── Initialisation ──────────────────────────────────────── */
   fetchLiveData();
+  fetchLinesStats();
 
   /* ── Date/heure màj ─────────────────────────────────────── */
   function updateDate() {

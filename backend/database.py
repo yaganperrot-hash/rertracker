@@ -27,3 +27,7 @@ async def get_db():
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    # Backfill source and is_cancelled for existing data
+    from backend.migrate_source import backfill_source
+    async with AsyncSessionLocal() as session:
+        await backfill_source(session)
