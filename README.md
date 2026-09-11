@@ -96,6 +96,7 @@ docker-compose logs -f backend
 | GET | `/api/stats/line/{line_id}?period=30` | Stats d'une ligne sur N jours |
 | GET | `/api/incidents/current` | Incidents ouverts en ce moment |
 | GET | `/api/incidents/history` | Historique (filtres : ligne, dates) |
+| GET | `/api/reference` | Paramètres de calcul (SMIC, relevés, quota PRIM, fréquentation) |
 | POST | `/api/admin/collect` | Déclencher une collecte manuelle |
 
 **Exemple `line_id`** : `RER_A`, `RER_B`, `TRANSILIEN_J`, etc.
@@ -134,7 +135,8 @@ les hypothèses et les limites.
 
 ## Bot X quotidien
 
-Le bot poste un résumé chaque jour à **20h00** :
+Chaque jour à **20h00**, le bot rédige le bilan de la veille, l'enregistre dans
+`publications/AAAA-MM-JJ.txt` (date de publication) et le poste sur X si les clés sont configurées :
 
 ```
 📊 Bilan RER & Transilien IDF — 16/03/2026
@@ -148,7 +150,8 @@ Le bot poste un résumé chaque jour à **20h00** :
 retardsidf.fr · #RER #Transilien #SNCF #RATP
 ```
 
-Le bot est silencieux si les clés Twitter/X ne sont pas configurées.
+Sans clés Twitter/X, la publication est seulement enregistrée dans le projet.
+Le serveur doit tourner à 20h00 (tolérance d'1 h en cas de retard du scheduler).
 
 ---
 
@@ -177,6 +180,7 @@ Le bot est silencieux si les clés Twitter/X ne sont pas configurées.
 │   └── data/            # JSON des bilans, générés (ignorés par git)
 ├── data/
 │   └── frequentation.json  # Fréquentation par ligne (màj mensuelle)
+├── publications/        # Récaps quotidiens du bot, un fichier par jour (AAAA-MM-JJ.txt)
 ├── docs/maquettes/      # Maquettes de référence des bilans
 ├── tests/
 │   ├── test_bilans.py
@@ -206,4 +210,4 @@ pytest tests/ -v
 - **API PRIM** — Île-de-France Mobilités
 - Endpoint : `https://prim.iledefrance-mobilites.fr/marketplace/`
 - Licence : Open Data Etalab
-- Quota : 20 000 req/jour — polling 5 min ≈ 288 req/jour
+- Quota : 20 000 req/jour — polling 5 min ≈ 7 488 req/jour (13 lignes × 2 appels par relevé)

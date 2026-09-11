@@ -25,7 +25,7 @@ sur les lignes RER et Transilien d'Île-de-France.
 - **API PRIM IDF Mobilités** : polling toutes les 5 min
 - Endpoint : `https://prim.iledefrance-mobilites.fr/marketplace/v2/navitia/line_reports`
 - Auth : header `apikey: {PRIM_API_KEY}`
-- Quota : 20 000 req/jour (polling 5 min ≈ 288 req/jour ✅)
+- Quota : 20 000 req/jour (polling 5 min × 13 lignes × 2 appels ≈ 7 488 req/jour ✅)
 - **Fréquentation** : `data/frequentation.json` (statique, màj mensuelle)
 
 ---
@@ -123,6 +123,11 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb reta
 - Navigation unifiée (2026-09-11) : menu de l'accueil sur les 4 pages (`frontend/nav.css`), liens gardés sur
   mobile (2ᵉ rangée) ; menu = Aujourd'hui · Statistiques · Par ligne · Méthode ; sélecteur
   « 7 jours · 30 jours · Année » partagé par `/statistiques` et `/annee` (90 j retiré)
+- Zéro donnée en dur (2026-09-11) : coûts du jour / par ligne / par incident calculés par le backend
+  (`cout_eur`, même arrondi que les bilans), paramètres affichés servis par `/api/reference` (SMIC, relevés,
+  quota PRIM, fréquentation), bandeau des incidents réel sur toutes les pages (`frontend/ticker.js`)
+- Récap quotidien enregistré dans le projet (2026-09-11) : à 20 h, `publications/AAAA-MM-JJ.txt` (bilan de la
+  veille, montant arrondi par ligne comme le site) ; posté aussi sur X seulement si les clés sont renseignées
 
 ### 🔄 En maintenance — voir `TODO.md`
 

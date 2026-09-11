@@ -1,9 +1,12 @@
 """
-bot.py — Post quotidien sur X (Twitter) à 20h00.
-Résumé des incidents et minutes-voyageurs perdues de la veille.
+bot.py — Récap quotidien à 20h00 : bilan de la veille (incidents, minutes-voyageurs, coût).
+Toujours enregistré dans publications/AAAA-MM-JJ.txt ; posté aussi sur X (Twitter) si les clés
+sont configurées.
 """
 import logging
+import os
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import tweepy
@@ -11,6 +14,7 @@ from sqlalchemy import select
 
 from backend.config import get_settings
 from backend.database import AsyncSessionLocal
+from backend.metrics import cout_eur
 from backend.models import DailyMetric
 
 logger = logging.getLogger(__name__)
@@ -56,9 +60,12 @@ def _accord_perdu(minutes: int) -> str:
 
 _JOURS = ["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"]
 
-def _compose_tweet(total_incidents: int, total_mv: int, lignes: list[str], d: date) -> str:
+def _compose_tweet(total_incidents: int, total_mv: int, lignes: list[str], d: date,
+                   euros: int | None = None) -> str:
+    """euros : coût arrondi par ligne puis sommé (règle du site) ; à défaut, arrondi du total."""
     smic = get_settings().smic_horaire
-    euros = int(total_mv * smic / 60)
+    if euros is None:
+        euros = cout_eur(total_mv, smic)
     jour = _JOURS[d.weekday()]
     pire = LINE_DISPLAY.get(lignes[0], lignes[0]) if lignes else None
 
@@ -74,20 +81,31 @@ def _compose_tweet(total_incidents: int, total_mv: int, lignes: list[str], d: da
     return "\n".join(lines)
 
 
-async def post_daily_recap() -> None:
-    """Poster le récap quotidien sur X. Planifié à 20h00 par le scheduler dans main.py."""
+DOSSIER_PUBLICATIONS = Path(__file__).parent.parent / "publications"
+
+
+def enregistrer_publication(texte: str, jour: date, dossier: Path = DOSSIER_PUBLICATIONS) -> Path:
+    """Écrit le post dans dossier/AAAA-MM-JJ.txt (date de publication).
+
+    Écriture atomique ; relancé le même jour, le fichier est remplacé, jamais dupliqué.
+    """
+    dossier.mkdir(parents=True, exist_ok=True)
+    chemin = dossier / f"{jour.isoformat()}.txt"
+    tmp = chemin.with_suffix(".txt.tmp")
+    tmp.write_text(texte + "\n", encoding="utf-8")
+    os.replace(tmp, chemin)
+    return chemin
+
+
+async def post_daily_recap(dossier: Path = DOSSIER_PUBLICATIONS) -> None:
+    """Récap quotidien, planifié à 20h00 par le scheduler dans main.py.
+
+    Toujours enregistré dans le projet (publications/) ; posté en plus sur X quand les
+    clés sont configurées.
+    """
     settings = get_settings()
-
-    if not all([
-        settings.twitter_api_key,
-        settings.twitter_api_secret,
-        settings.twitter_access_token,
-        settings.twitter_access_secret,
-    ]):
-        logger.warning("Clés Twitter/X non configurées — post quotidien ignoré")
-        return
-
-    yesterday = datetime.now(ZoneInfo("Europe/Paris")).date() - timedelta(days=1)
+    aujourdhui = datetime.now(ZoneInfo("Europe/Paris")).date()
+    yesterday = aujourdhui - timedelta(days=1)
 
     async with AsyncSessionLocal() as db:
         # Une seule requête — agrégats calculés en Python depuis les lignes
@@ -101,13 +119,25 @@ async def post_daily_recap() -> None:
     total_inc = sum(r.nb_incidents for r in rows)
     total_mv  = sum(r.minutes_voyageurs for r in rows)
     lignes    = [r.line_id for r in rows if r.est_jour_perturbe]
+    # Arrondi par ligne puis sommé : même montant que l'accueil et les bilans
+    euros     = sum(cout_eur(r.minutes_voyageurs, settings.smic_horaire) for r in rows)
 
     if total_inc == 0:
-        logger.info("Aucun incident enregistré hier (%s) — tweet ignoré", yesterday)
+        logger.info("Aucun incident enregistré hier (%s) — pas de publication", yesterday)
         return
 
-    tweet_text = _compose_tweet(total_inc, total_mv, lignes, yesterday)
-    logger.info("Envoi du tweet quotidien :\n%s", tweet_text)
+    tweet_text = _compose_tweet(total_inc, total_mv, lignes, yesterday, euros=euros)
+    chemin = enregistrer_publication(tweet_text, aujourdhui, dossier)
+    logger.info("Publication du jour enregistrée : %s\n%s", chemin, tweet_text)
+
+    if not all([
+        settings.twitter_api_key,
+        settings.twitter_api_secret,
+        settings.twitter_access_token,
+        settings.twitter_access_secret,
+    ]):
+        logger.info("Clés Twitter/X non configurées — publication enregistrée seulement dans le projet")
+        return
 
     try:
         client = tweepy.Client(

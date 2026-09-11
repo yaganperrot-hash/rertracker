@@ -11,8 +11,6 @@ _(aucun)_
 - [ ] Bug 17 — vérifier le fuseau des horaires de perturbations (`_parse_dt`, probablement lus en UTC)
 - [ ] Vérifier visuellement le rendu des durées lisibles (bureau + mobile 390 px)
 - [ ] Lisibilité : appliquer la refonte typo de `index.html` à `methode.html`
-- [ ] Accueil : coût du jour calculé sur la somme des minutes (`index.html`), les bilans arrondissent par
-  ligne et par jour → écart de quelques euros possible entre l'accueil et `/statistiques` sur une même journée
 - [ ] Renseigner les clés Twitter/X dans `.env`
 
 ## Terminé
@@ -37,3 +35,6 @@ _(aucun)_
 - [x] Pages `/statistiques` et `/annee` (maquettes `docs/maquettes/`, TASK-02 → TASK-12) : bilans JSON
   statiques recalculés toutes les 10 min, totaux réconciliés, causes depuis les motifs opérateur, Chart.js ;
   SMIC 2026 à 12,31 €/h partout ; `stats.html` supprimée (301 vers `/statistiques`) — 2026-09-11
+- [x] Menu de l'accueil sur les 4 pages, sélecteur 7 jours · 30 jours · Année — 2026-09-11
+- [x] Zéro donnée en dur : coûts calculés par le backend, `/api/reference`, bandeau réel — 2026-09-11
+- [x] Récap quotidien de 20 h enregistré dans `publications/` sans compte X — 2026-09-11
