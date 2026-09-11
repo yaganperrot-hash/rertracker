@@ -1,11 +1,11 @@
 """
-bot.py — Récap quotidien à 20h00 : bilan de la veille (incidents, minutes-voyageurs, coût).
+bot.py — Récap quotidien à 20h00 : bilan du jour même (incidents, minutes-voyageurs, coût).
 Toujours enregistré dans publications/AAAA-MM-JJ.txt ; posté aussi sur X (Twitter) si les clés
 sont configurées.
 """
 import logging
 import os
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -105,13 +105,12 @@ async def post_daily_recap(dossier: Path = DOSSIER_PUBLICATIONS) -> None:
     """
     settings = get_settings()
     aujourdhui = datetime.now(ZoneInfo("Europe/Paris")).date()
-    yesterday = aujourdhui - timedelta(days=1)
 
     async with AsyncSessionLocal() as db:
         # Une seule requête — agrégats calculés en Python depuis les lignes
         stmt = (
             select(DailyMetric)
-            .where(DailyMetric.date == yesterday)
+            .where(DailyMetric.date == aujourdhui)
             .order_by(DailyMetric.minutes_voyageurs.desc())
         )
         rows = (await db.execute(stmt)).scalars().all()
@@ -123,10 +122,10 @@ async def post_daily_recap(dossier: Path = DOSSIER_PUBLICATIONS) -> None:
     euros     = sum(cout_eur(r.minutes_voyageurs, settings.smic_horaire) for r in rows)
 
     if total_inc == 0:
-        logger.info("Aucun incident enregistré hier (%s) — pas de publication", yesterday)
+        logger.info("Aucun incident enregistré aujourd'hui (%s) — pas de publication", aujourdhui)
         return
 
-    tweet_text = _compose_tweet(total_inc, total_mv, lignes, yesterday, euros=euros)
+    tweet_text = _compose_tweet(total_inc, total_mv, lignes, aujourdhui, euros=euros)
     chemin = enregistrer_publication(tweet_text, aujourdhui, dossier)
     logger.info("Publication du jour enregistrée : %s\n%s", chemin, tweet_text)
 

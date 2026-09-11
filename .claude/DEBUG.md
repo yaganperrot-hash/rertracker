@@ -288,14 +288,13 @@ dans les JSON de bilans. Le « 288 req/jour » était faux : 13 lignes × 2 appe
 
 ## Bugs ouverts
 
-### [2026-09-10] Bug 17 — Horaires des perturbations probablement lus en UTC
-**Fichier(s)** : `backend/collector.py` (`_parse_dt`, utilisé par `collect_disruptions`)
-**Symptôme** : non observé directement
-**Cause probable** : même erreur que le bug 14 — `_parse_dt` applique `tzinfo=timezone.utc` aux
-`application_periods` Navitia, vraisemblablement en heure de Paris. Fausserait `heure_debut`/`heure_fin`
-des perturbations et le filtre « incidents de nuit » (< 7 h)
-**Fix** : à vérifier sur un payload `line_reports` réel, puis lire en `Europe/Paris`
-**Status** : ❌ Ouvert
+### [2026-09-10 → 2026-09-11] Bug 17 — Horaires des perturbations lus en UTC au lieu de Paris
+**Fichier(s)** : `backend/collector.py` (`_parse_dt`)
+**Symptôme** : décalage de 1-2h sur `heure_debut`/`heure_fin` des disruptions, filtre < 7h faussé
+**Cause** : même erreur que le bug 14 — `_parse_dt` appliquait `tzinfo=timezone.utc` aux timestamps
+PRIM qui sont en heure locale de Paris
+**Fix** : `dt.replace(tzinfo=PARIS_TZ).astimezone(timezone.utc)` ; doublon `PARIS_TZ` supprimé
+**Status** : ✅ Résolu
 
 ### [2026-09-10 → 2026-09-11] Bug 9 — HOURLY_WEIGHTS somme à 19.2 au lieu de 18.0
 **Fichier(s)** : `backend/metrics.py:34`, `tests/test_metrics.py`
@@ -330,15 +329,14 @@ coroutine au lieu de dict ; mock disruption manquait `"status": "active"` et ava
 **Fix** : IDs corrigés par le commit `7adb7e3` — **plus aucun 404 dans les logs** au 2026-09-10
 **Status** : 🔄 En cours — à requalifier
 
-### [2026-09-10] Bug 11 — Transilien L, N, P, R remontent 0 incident
+### [2026-09-10 → 2026-09-11] Bug 11 — Transilien L, N, P, R remontent 0 incident
 **Fichier(s)** : `backend/collector.py` (LIGNES_CIBLES)
 **Symptôme** : sur la collecte du 2026-09-10, H, J, K et U remontent des incidents mais
-L, N, P et R sont à zéro (`/api/stats/line/TRANSILIEN_L?period=1` → `total_incidents: 0`)
-**Cause** : inconnue. Ce n'est plus le 404 du bug précédent (aucune erreur au log), donc soit
-c'est légitime (pas de perturbation sur ces lignes à cet instant), soit l'appel renvoie 200
-avec un payload vide. 4 lignes à zéro simultanément reste suspect.
-**Fix** : à investiguer — logger le payload brut PRIM pour ces 4 lignes et comparer à H/J/K/U
-**Status** : ❌ Ouvert
+L, N, P et R sont à zéro
+**Cause** : inconnue — probablement légitime ou payload vide
+**Fix** : logging diagnostic ajouté dans `collect_disruptions` et `collect_rt_delays` quand
+une ligne ne remonte aucun résultat. Permettra de confirmer si c'est légitime ou un bug de parsing
+**Status** : 🔄 Diagnostic en place — à surveiller dans les logs
 
 ### [2026-09-10] Clé PRIM en clair dans l'historique git
 **Fichier(s)** : `PRIM_KEY.txt` (commit `c591442`)

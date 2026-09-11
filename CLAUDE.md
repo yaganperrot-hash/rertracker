@@ -126,8 +126,8 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb reta
 - Zéro donnée en dur (2026-09-11) : coûts du jour / par ligne / par incident calculés par le backend
   (`cout_eur`, même arrondi que les bilans), paramètres affichés servis par `/api/reference` (SMIC, relevés,
   quota PRIM, fréquentation), bandeau des incidents réel sur toutes les pages (`frontend/ticker.js`)
-- Récap quotidien enregistré dans le projet (2026-09-11) : à 20 h, `publications/AAAA-MM-JJ.txt` (bilan de la
-  veille, montant arrondi par ligne comme le site) ; posté aussi sur X seulement si les clés sont renseignées
+- Récap quotidien enregistré dans le projet (2026-09-11) : à 20 h, `publications/AAAA-MM-JJ.txt` (bilan du
+  jour même, montant arrondi par ligne comme le site) ; posté aussi sur X seulement si les clés sont renseignées
 
 ### 🔄 En maintenance — voir `TODO.md`
 
@@ -166,3 +166,17 @@ l'historique git), puis bugs 9 / 10 / 11 / 17.
 - Deepseek lit les fichiers, écrit du code, c'est tout.
 - Toute vérification (tests, lint, docker) est faite par Claude Code ou l'utilisateur.
 - Les tâches sont décrites dans `.claude/TASKS.md` avec fichier cible, contexte et critères d'acceptation.
+
+---
+
+## Autorisations Claude Code
+
+Claude Code dispose de **toutes les autorisations** sur ce projet, sous deux conditions :
+1. **Périmètre** : ne toucher que les fichiers liés aux tâches en cours et rester dans ce dossier projet.
+2. **Lancement** : une fois que l'utilisateur a dit « lance-toi » (ou équivalent), Claude Code agit en autonomie totale — **aucune confirmation supplémentaire** n'est requise.
+
+Droits inclus sans demande :
+- `git add`, `git commit`, `git push` (y compris `--force` si nécessaire)
+- Création, édition, suppression de fichiers dans le projet
+- Exécution de commandes shell (`pytest`, `docker`, `pip`, `uvicorn`, etc.)
+- Création de branches, tags, PRs

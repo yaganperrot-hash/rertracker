@@ -33,16 +33,19 @@ LIGNES_CIBLES: dict[str, str] = {
 }
 
 
+PARIS_TZ = ZoneInfo("Europe/Paris")
+
+
 def _parse_dt(value: str | None) -> datetime | None:
     if not value:
         return None
     try:
-        # PRIM returns ISO 8601 e.g. "20240101T063000"
+        # PRIM returns ISO 8601 e.g. "20240101T063000" in Paris local time
         dt = datetime.strptime(value, "%Y%m%dT%H%M%S")
-        return dt.replace(tzinfo=timezone.utc)
+        return dt.replace(tzinfo=PARIS_TZ).astimezone(timezone.utc)
     except ValueError:
         try:
-            return datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
+            return datetime.fromisoformat(value).replace(tzinfo=PARIS_TZ).astimezone(timezone.utc)
         except ValueError:
             return None
 
@@ -84,6 +87,12 @@ async def collect_disruptions() -> None:
                 logger.error("Unexpected error for %s: %s", line_id, exc)
 
     logger.info("Fetched %d disruptions from PRIM", len(all_disruptions))
+
+    # Diagnostic : lignes sans aucune disruption
+    lines_with = {lid for lid, _ in all_disruptions}
+    for lid in LIGNES_CIBLES.values():
+        if lid not in lines_with:
+            logger.debug("0 disruption pour %s — vérifier le payload PRIM si persistant", lid)
 
     inserted = 0
     async with AsyncSessionLocal() as session:
@@ -160,7 +169,6 @@ GHOST_SLIDE_TOLERANCE_MIN = 3
 
 CANCEL_DEFAULT_IMPACT_MIN = 5  # default impact for cancelled trains
 CANCEL_MARGIN_MIN = 2  # marge avant le départ attendu pour considérer une disparition comme suppression
-PARIS_TZ = ZoneInfo("Europe/Paris")
 
 
 async def collect_rt_delays() -> None:
@@ -241,6 +249,12 @@ async def collect_rt_delays() -> None:
                 fetched_ids_by_line.pop(line_id, None)
 
     logger.info("Fetched %d RT delays from PRIM (%d trains fantômes écartés)", len(all_delays), ghosts)
+
+    # Diagnostic : lignes sans aucun retard RT
+    rt_lines = {info[0] for info in all_delays.values()}
+    for lid in LIGNES_CIBLES.values():
+        if lid not in rt_lines and lid in fetched_ids_by_line:
+            logger.debug("0 retard RT pour %s — vérifier le payload PRIM si persistant", lid)
 
     now = datetime.now(timezone.utc)
     inserted = 0

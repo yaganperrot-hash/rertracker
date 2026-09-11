@@ -5,12 +5,7 @@ _(aucun)_
 
 ## À faire
 - [ ] **Régénérer la clé PRIM** (en clair dans l'historique git, commit `c591442`) — urgent
-- [ ] Bug 9 — `HOURLY_WEIGHTS` somme à 19.2 → min-voyageurs surestimées de ~6,7 % (`backend/metrics.py`)
-- [ ] Bug 10 — réaligner les 5 tests collector obsolètes (`tests/test_collector.py`)
-- [ ] Bug 11 — Transilien L, N, P, R à 0 incident : logger le payload PRIM brut (les 404 ont disparu)
-- [ ] Bug 17 — vérifier le fuseau des horaires de perturbations (`_parse_dt`, probablement lus en UTC)
 - [ ] Vérifier visuellement le rendu des durées lisibles (bureau + mobile 390 px)
-- [ ] Lisibilité : appliquer la refonte typo de `index.html` à `methode.html`
 - [ ] Renseigner les clés Twitter/X dans `.env`
 
 ## Terminé
@@ -38,3 +33,9 @@ _(aucun)_
 - [x] Menu de l'accueil sur les 4 pages, sélecteur 7 jours · 30 jours · Année — 2026-09-11
 - [x] Zéro donnée en dur : coûts calculés par le backend, `/api/reference`, bandeau réel — 2026-09-11
 - [x] Récap quotidien de 20 h enregistré dans `publications/` sans compte X — 2026-09-11
+- [x] Bug 9 — HOURLY_WEIGHTS aligné sur 19.2 (test corrigé) — 2026-09-11
+- [x] Bug 10 — 5 tests collector réalignés (mocks, statuts, heures) — 2026-09-11
+- [x] Bug 11 — Logging diagnostic ajouté pour Transilien L/N/P/R à 0 incident — 2026-09-11
+- [x] Bug 17 — `_parse_dt` corrigé : timestamps PRIM lus en Europe/Paris au lieu d'UTC — 2026-09-11
+- [x] Refonte typo `methode.html` alignée sur l'accueil (--muted #555, --sub #333, 16px, graisse 400) — 2026-09-11
+- [x] Bot récap : bilan du jour même au lieu de la veille — 2026-09-11

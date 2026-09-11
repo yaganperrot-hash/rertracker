@@ -17,15 +17,20 @@ from backend.collector import (
 
 class TestParseDt:
     def test_prim_format(self):
+        # "20240315T143000" = 14:30 heure de Paris (CET, UTC+1) → 13:30 UTC
         result = _parse_dt("20240315T143000")
-        assert result == datetime(2024, 3, 15, 14, 30, 0, tzinfo=timezone.utc)
+        assert result == datetime(2024, 3, 15, 13, 30, 0, tzinfo=timezone.utc)
+
+    def test_prim_format_summer(self):
+        # "20240715T143000" = 14:30 heure de Paris (CEST, UTC+2) → 12:30 UTC
+        result = _parse_dt("20240715T143000")
+        assert result == datetime(2024, 7, 15, 12, 30, 0, tzinfo=timezone.utc)
 
     def test_iso_format(self):
+        # "2024-03-15T14:30:00" = 14:30 heure de Paris (CET, UTC+1) → 13:30 UTC
         result = _parse_dt("2024-03-15T14:30:00")
         assert result is not None
-        assert result.year == 2024
-        assert result.month == 3
-        assert result.day == 15
+        assert result == datetime(2024, 3, 15, 13, 30, 0, tzinfo=timezone.utc)
 
     def test_none_input(self):
         assert _parse_dt(None) is None
