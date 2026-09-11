@@ -54,7 +54,7 @@ TWITTER_API_SECRET=your_twitter_secret
 TWITTER_ACCESS_TOKEN=your_access_token
 TWITTER_ACCESS_SECRET=your_access_secret
 DATABASE_URL=postgresql://user:password@db:5432/retards_idf
-POLLING_INTERVAL_MINUTES=5
+POLLING_INTERVAL_MINUTES=12
 LOG_LEVEL=INFO
 # SMIC_HORAIRE=12.31            # optionnel — € brut/h, base du coût estimé
 # BILANS_INTERVAL_MINUTES=10    # optionnel — recalcul des bilans
@@ -105,9 +105,9 @@ docker-compose logs -f backend
 
 ## Lignes couvertes
 
-| RER | Transilien |
-|-----|-----------|
-| A · B · C · D · E | H · J · K · L · N · P · R · U |
+| RER | Transilien | Métro |
+|-----|-----------|-------|
+| A · B · C · D · E | H · J · K · L · N · P · R · U | 1 · 2 · 3 · 3bis · 4 · 5 · 6 · 7 · 7bis · 8 · 9 · 10 · 11 · 12 · 13 · 14 |
 
 ---
 
