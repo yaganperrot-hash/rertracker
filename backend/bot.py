@@ -15,8 +15,6 @@ from backend.models import DailyMetric
 
 logger = logging.getLogger(__name__)
 
-SMIC_HORAIRE = 11.88  # € brut 2025
-
 LINE_DISPLAY: dict[str, str] = {
     "RER_A": "RER A",        "RER_B": "RER B",        "RER_C": "RER C",
     "RER_D": "RER D",        "RER_E": "RER E",
@@ -59,7 +57,8 @@ def _accord_perdu(minutes: int) -> str:
 _JOURS = ["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"]
 
 def _compose_tweet(total_incidents: int, total_mv: int, lignes: list[str], d: date) -> str:
-    euros = int(total_mv * SMIC_HORAIRE / 60)
+    smic = get_settings().smic_horaire
+    euros = int(total_mv * smic / 60)
     jour = _JOURS[d.weekday()]
     pire = LINE_DISPLAY.get(lignes[0], lignes[0]) if lignes else None
 
@@ -69,7 +68,7 @@ def _compose_tweet(total_incidents: int, total_mv: int, lignes: list[str], d: da
         f"⏱ {_fmt_duree(total_mv)} de vie {_accord_perdu(total_mv)} collectivement",
         f"🔴 {total_incidents} incident{'s' if total_incidents != 1 else ''}"
         + (f" — {pire} en tête" if pire else ""),
-        f"Base SMIC 11,88€/h · retardsidf.fr",
+        f"Base SMIC {smic:.2f}€/h · retardsidf.fr".replace(".", ",", 1),
     ]
 
     return "\n".join(lines)

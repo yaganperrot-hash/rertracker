@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     max_open_incident_minutes: int = 180
     cancel_default_impact_minutes: int = 5
+    smic_horaire: float = 12.31           # € brut / heure, en vigueur depuis le 1er juin 2026 — base du coût estimé
+    bilans_interval_minutes: int = 10     # période de régénération des JSON de bilans
 
     class Config:
         env_file = ".env"

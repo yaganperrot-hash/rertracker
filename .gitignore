@@ -44,6 +44,9 @@ Thumbs.db
 htmlcov/
 .tox/
 
+# Bilans générés toutes les 10 min (backend/bilans.py)
+frontend/data/
+
 # Misc
 *.bak
 *.tmp

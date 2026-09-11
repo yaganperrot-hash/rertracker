@@ -1,6 +1,63 @@
 # SESSION — Dernière session de travail
 
-## Session du 2026-09-10 (en cours)
+## Session du 2026-09-11 (en cours)
+
+### Contexte au démarrage
+- Branche `master`, 4 commits locaux non poussés (session du 2026-09-10)
+- Modifications non commitées trouvées au démarrage, non documentées : écart des « trains fantômes » dans
+  `collect_rt_delays` (+ 3 tests) et rattrapage des relevés manqués par le scheduler (`coalesce`) → commitées à part
+- Demande : intégrer les maquettes « bilan mensuel » (→ `/statistiques`) et « bilan annuel » (→ `/annee`)
+
+### Actions effectuées
+- Structure de données présentée et validée avant de coder, puis tâches TASK-02 → TASK-12 écrites dans
+  `.claude/TASKS.md` ; l'utilisateur a ensuite demandé à Claude Code de les implémenter lui-même (pas Deepseek)
+- **Maquettes** copiées dans `docs/maquettes/` : layout et style repris, chiffres fictifs ignorés, couleurs de ligne
+  de l'accueil conservées
+- **Backend**
+  - `backend/bilans.py` : calculs purs (`construire_statistiques`, `construire_annee`) + `generer_bilans()` qui écrit
+    `frontend/data/statistiques-{7,30,90}.json` et `annee-AAAA.json` (écriture atomique), au démarrage puis toutes les 10 min
+  - coût arrondi par ligne `daily_metrics` (ligne × jour), en centimes entiers, puis sommé → total = Σ lignes = Σ mois
+  - fenêtres glissantes ; deltas seulement si la période précédente est entièrement couverte ; année N-1 à date équivalente
+  - `backend/causes.py` : motifs PRIM → 7 catégories. Ordre : tête du « Motif : … », motif entier, avis planifié
+    (période, dates) → travaux, puis mots-clés. `texte_lisible()` et `resume_perturbation()` pour l'affichage
+  - `main.py` : job `generer_bilans`, routes `/statistiques` et `/annee`, 301 depuis `/stats.html`, `Cache-Control` 600 s
+  - `api.py` : incidents renvoyés en texte lisible + `resume` + `categorie` (le HTML PRIM s'affichait brut sur l'accueil)
+  - `config.py` : `SMIC_HORAIRE` = 12,31 €/h (depuis le 1er juin 2026) et `BILANS_INTERVAL_MINUTES` ; le bot lit le taux
+- **Frontend** : `statistiques.html`, `annee.html` (Chart.js 4.4.0 : pic rouge et creux gris calculés, tooltip
+  mois / coût / incidents, sans axe Y), `bilan.css`, `bilan.js` (formats € / minutes, classement avec repli
+  « voir tout ») ; `stats.html` supprimée. Accueil et méthode : liens, SMIC 12,31, `SALAIRE_JOUR = SMIC × 7`,
+  section « Bilans » sur la méthode ; accueil : résumé + catégorie des perturbations au lieu du HTML brut
+- **Tests** : `tests/test_bilans.py`, `tests/test_causes.py` → suite complète **116 passent, 6 échouent**
+  (bugs 9 et 10, préexistants, fichiers non touchés)
+- **Vérifié** : invariants sur les vraies données (579 420 € = Σ classement = Σ mois), en-têtes de cache, 301,
+  captures bureau + iframes 390 / 360 px
+
+### Décisions
+- Tout suit le sélecteur 7 / 30 / 90 j ; comparaison avec la période précédente de même durée (et non « mars vs février »)
+- Deux unités à l'écran sur les bilans : € et minutes — pas de jours ni d'années
+- Couleurs de ligne de l'accueil, pas celles des maquettes ; fond crème `#F4EFE6` et rouge `#E1251B` des maquettes
+- SMIC 12,31 €/h (taux en vigueur ; 12,02 € de janvier à mai 2026)
+- Hausse ▲ rouge, baisse ▼ gris foncé (charte noir + rouge)
+
+### État en fin de session
+- Base : 2 jours de données (10-11/09) → 7, 30 et 90 j identiques ; comparaisons et « meilleure progression » en état vide
+- Serveur en tâche de fond de la session : http://127.0.0.1:8000
+- Commité en 2 commits et poussé
+
+### Leçons
+- **Lire le payload complet avant de classer du texte** : les motifs tronqués à 160 caractères cachaient le champ
+  « Motif : … » que PRIM place en fin de message — la meilleure source, trouvée seulement en affichant tout.
+- **Dans un motif, la tête de phrase prime** : « travaux sur le réseau (… de signalisation …) » sont des travaux.
+- **Les maquettes se contredisent** (587 053 € en héro vs « 4,7 M€ » en comparaison, barre rouge ≠ pire mois) :
+  n'en reprendre que la forme, calculer chaque chiffre.
+- **Arrondir au grain le plus fin puis sommer** rend « total = somme du détail » vrai par construction ;
+  en centimes entiers pour éviter les `floor(19,999…)`.
+- **Nettoyer l'affichage à la sortie de l'API** plutôt qu'en base : l'historique est couvert sans migration.
+- **Chrome headless** : un `--user-data-dir` par capture, sinon la 2ᵉ reste bloquée sur le verrou de la 1ʳᵉ.
+- **Taux réglementaires : vérifier la source officielle** — le SMIC a changé deux fois en 2026.
+- **Modifications non commitées d'origine inconnue** : les commiter à part, ne pas les noyer dans sa propre fonctionnalité.
+
+## Session du 2026-09-10 (terminée)
 
 ### Contexte au démarrage
 - Branche : `master`, arbre propre

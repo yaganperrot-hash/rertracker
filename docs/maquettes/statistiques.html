@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RETARDS IDF — refonte stats</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#e6ded0;font-family:'Roboto',-apple-system,sans-serif;color:#1a1a17;line-height:1.4;padding:32px 16px}
+.page{max-width:760px;margin:0 auto;background:#F4EFE6;border-radius:14px;padding:32px 30px}
+.eyebrow{font-size:11px;letter-spacing:1.5px;color:#8a8478}
+a{color:#8a8478}
+.head{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1.5px solid #1a1a17;padding-bottom:11px;margin-bottom:24px}
+.brand{font-weight:500;letter-spacing:1px;font-size:16px}
+.toggle{display:inline-flex;background:#e8e1d4;border-radius:8px;padding:3px;margin-bottom:22px;font-size:12px}
+.toggle span{padding:5px 15px;color:#8a8478;border-radius:6px}
+.toggle .on{background:#1a1a17;color:#F4EFE6}
+.hero{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 36px;margin-bottom:8px}
+.big{font-size:56px;font-weight:500;line-height:1;letter-spacing:-1px}
+.big small{font-size:36px}
+.sub{font-size:23px;font-weight:500;color:#4a463d}
+.sub small{font-size:15px;color:#8a8478}
+.note{font-size:12px;color:#a39c8c;margin-bottom:28px;font-style:italic}
+.card{background:#fff;border-radius:12px;padding:16px 18px}
+.worst{border-left:5px solid #5B8FD6;margin-bottom:28px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.badge{color:#fff;font-weight:500;font-size:13px;padding:4px 9px;border-radius:5px}
+.delta{font-size:13px;font-weight:500;padding:5px 11px;border-radius:6px}
+.up{background:#FCEBEB;color:#A32D2D}
+.row{display:flex;align-items:center;gap:12px;margin-bottom:11px}
+.row .lbl{width:54px;flex-shrink:0;color:#fff;font-weight:500;font-size:12px;padding:4px 0;border-radius:5px;text-align:center}
+.track{flex:1;height:24px;background:#e8e1d4;border-radius:5px;overflow:hidden}
+.fill{height:100%}
+.val{width:86px;text-align:right;font-size:13px;font-weight:500}
+.two{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+.two .card{flex:1;min-width:200px}
+.line{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid #f0ebe1;font-size:13px}
+.line:last-child{border:none}
+.line .k{color:#8a8478}
+.line .v{font-size:15px;font-weight:500}
+.mini{color:#A32D2D;font-size:12px}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="head">
+    <span class="brand">RETARDS <span style="color:#E1251B">IDF</span></span>
+    <span class="eyebrow">MARS 2026 · TOUTES LIGNES</span>
+  </div>
+
+  <div class="toggle"><span>7 j</span><span class="on">30 j</span><span>90 j</span></div>
+
+  <div class="hero">
+    <div>
+      <div class="eyebrow" style="margin-bottom:3px">COÛT ESTIMÉ · SMIC BRUT</div>
+      <div class="big">587 053 <small>€</small></div>
+    </div>
+    <div style="padding-bottom:6px">
+      <div class="sub">2 965 000 <small>minutes perdues</small></div>
+      <div style="font-size:13px;color:#8a8478">752 incidents recensés</div>
+    </div>
+  </div>
+  <div class="note">Chiffre réconcilié avec le détail par ligne ci-dessous. <a href="#">Méthode →</a></div>
+
+  <div class="card worst">
+    <div>
+      <div class="eyebrow" style="margin-bottom:7px">PIRE LIGNE DU MOIS</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="badge" style="background:#5B8FD6">RER B</span>
+        <span style="font-size:15px;color:#4a463d">644 jours cumulés · 139 incidents</span>
+      </div>
+    </div>
+    <span class="delta up">+12 %</span>
+  </div>
+
+  <div class="eyebrow" style="margin-bottom:14px">CLASSEMENT PAR TEMPS PERDU</div>
+
+  <div class="row"><span class="lbl" style="background:#5B8FD6">RER B</span><div class="track"><div class="fill" style="width:100%;background:#5B8FD6"></div></div><span class="val">183 800 €</span></div>
+  <div class="row"><span class="lbl" style="background:#F0B200;color:#5a4400">RER C</span><div class="track"><div class="fill" style="width:79%;background:#F0B200"></div></div><span class="val">144 344 €</span></div>
+  <div class="row"><span class="lbl" style="background:#E1251B">RER A</span><div class="track"><div class="fill" style="width:69%;background:#E1251B"></div></div><span class="val">127 200 €</span></div>
+  <div class="row"><span class="lbl" style="background:#148F52">RER D</span><div class="track"><div class="fill" style="width:52%;background:#148F52"></div></div><span class="val">95 400 €</span></div>
+  <div class="row"><span class="lbl" style="background:#A0006E">RER E</span><div class="track"><div class="fill" style="width:14%;background:#A0006E"></div></div><span class="val">25 800 €</span></div>
+  <div style="font-size:12px;color:#a39c8c;padding-left:66px;margin-bottom:26px">+ 8 lignes Transilien · <a href="#">voir tout</a></div>
+
+  <div class="two">
+    <div class="card">
+      <div class="eyebrow" style="margin-bottom:12px">MARS <span style="color:#c9c1b1">vs</span> FÉVRIER</div>
+      <div class="line"><span class="k">Incidents</span><span class="v">752 <span class="mini">▲ 18 %</span></span></div>
+      <div class="line"><span class="k">Coût</span><span class="v">4,7 M€ <span class="mini">▲ 24 %</span></span></div>
+      <div class="line"><span class="k">Pire ligne</span><span class="v">RER B</span></div>
+    </div>
+    <div class="card">
+      <div class="eyebrow" style="margin-bottom:12px">CAUSES</div>
+      <div class="line"><span class="k">Défaut signalisation</span><span class="v">42 %</span></div>
+      <div class="line"><span class="k">Incident voyageur</span><span class="v">21 %</span></div>
+      <div class="line"><span class="k">Panne matériel</span><span class="v">18 %</span></div>
+      <div class="line" style="color:#a39c8c"><span class="k">Travaux · autre</span><span>19 %</span></div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

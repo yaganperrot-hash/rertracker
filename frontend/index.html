@@ -579,7 +579,8 @@
   </a>
   <ul class="nav-links">
     <li><a href="#" class="active">Aujourd'hui</a></li>
-    <li><a href="stats.html">Statistiques</a></li>
+    <li><a href="/statistiques">Statistiques</a></li>
+    <li><a href="/annee">Année</a></li>
     <li><a href="#lignes">Par ligne</a></li>
     <li><a href="methode.html">Méthode</a></li>
   </ul>
@@ -667,10 +668,10 @@
 ════════════════════════════════════════════════════════ -->
 <script src="duree.js"></script>
 <script>
-  /* ── Constantes de calcul (identiques à bot.py / stats.html) ── */
-  const SMIC_HORAIRE = 11.88;             // € brut 2025
+  /* ── Constantes de calcul (identiques à bot.py / backend/config.py) ── */
+  const SMIC_HORAIRE = 12.31;             // € brut/h depuis le 1er juin 2026 — même valeur que SMIC_HORAIRE (backend/config.py)
   const EUR_PAR_MIN  = SMIC_HORAIRE / 60;
-  const SALAIRE_JOUR = 90;                // salaire journalier SMIC brut ≈ 90 €
+  const SALAIRE_JOUR = SMIC_HORAIRE * 7;  // salaire journalier SMIC brut (7 h) ≈ 86 €
 
   const LINE_META = {
     'RER_A':        { short: 'A', name: 'RER A',        color: '#E2231A' },
@@ -749,9 +750,9 @@
     const cout = coutIncident(inc);
     const desc = inc.gare
       ? esc(inc.gare) + (inc.direction ? ' → ' + esc(inc.direction) : '')
-      : esc(inc.cause || 'Incident — ' + meta.name);
+      : esc(inc.resume || inc.cause || 'Incident — ' + meta.name);
     const sub = [
-      inc.mission ? 'Train ' + esc(inc.mission) : esc(inc.type_incident),
+      inc.mission ? 'Train ' + esc(inc.mission) : esc(inc.categorie || inc.type_incident),
       heureStr ? (inc.heure_theorique ? 'départ prévu ' : 'à ') + heureStr : '',
     ].filter(Boolean).join(' · ');
     return `
@@ -816,7 +817,7 @@
       const tickerText = incidents.slice(0, 8).map(inc => {
         const meta = LINE_META[inc.line_id] || { name: inc.line_id };
         const dureeMin = inc.duree_minutes || 0;
-        return `⚠ ${meta.name} — ${esc(inc.cause || inc.type_incident)}${dureeMin > 0 ? ' — ' + dureeMin + ' min' : ''}`;
+        return `⚠ ${meta.name} — ${esc(inc.resume || inc.cause || inc.type_incident)}${dureeMin > 0 ? ' — ' + dureeMin + ' min' : ''}`;
       }).join('  &nbsp;•&nbsp;  ');
       document.getElementById('ticker-track').innerHTML = tickerText + '  &nbsp;&nbsp;&nbsp;  ' + tickerText;
 

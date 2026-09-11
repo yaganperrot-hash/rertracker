@@ -8,10 +8,13 @@ d'Île-de-France**, en temps réel.
 
 ## Aperçu
 
-- **Compteur live** : euros de temps de travail volé, calculé au SMIC brut 2025
+- **Compteur live** : euros de temps de travail volé, calculé au SMIC brut (12,31 €/h depuis le 1er juin 2026)
 - **Incidents en cours** : liste mise à jour toutes les 5 minutes depuis l'API PRIM
-- **Tableau par ligne** : incidents, minutes-voyageurs, coût jour/mois
-- **Page statistiques** : classements et graphiques par période (7 / 30 / 90 jours)
+- **Tableau par ligne** : incidents, minutes-voyageurs et coût du jour
+- **Statistiques** (`/statistiques`) : coût, minutes perdues et incidents sur 7 / 30 / 90 jours,
+  classement par ligne, comparaison avec la période précédente, causes déclarées par l'opérateur
+- **Bilan annuel** (`/annee`) : cumul des bilans mensuels, coût mois par mois, classement annuel
+- Bilans recalculés toutes les 10 minutes en fichiers JSON statiques (aucune requête base par visiteur)
 - **Bot X quotidien** : résumé automatique posté à 20h00
 
 ---
@@ -53,6 +56,8 @@ TWITTER_ACCESS_SECRET=your_access_secret
 DATABASE_URL=postgresql://user:password@db:5432/retards_idf
 POLLING_INTERVAL_MINUTES=5
 LOG_LEVEL=INFO
+# SMIC_HORAIRE=12.31            # optionnel — € brut/h, base du coût estimé
+# BILANS_INTERVAL_MINUTES=10    # optionnel — recalcul des bilans
 ```
 
 > Les clés Twitter/X sont optionnelles — le bot est ignoré si elles sont absentes.
@@ -70,7 +75,8 @@ docker-compose up -d
 | URL | Contenu |
 |-----|---------|
 | `http://localhost:8000` | Frontend (compteur live) |
-| `http://localhost:8000/stats.html` | Statistiques par ligne |
+| `http://localhost:8000/statistiques` | Bilan sur 7 / 30 / 90 jours |
+| `http://localhost:8000/annee` | Bilan annuel |
 | `http://localhost:8000/methode.html` | Méthode & transparence |
 | `http://localhost:8000/docs` | API Swagger |
 
@@ -115,8 +121,11 @@ minutes-voyageurs = durée_incident (min) × (voyageurs_par_jour ÷ 18h ÷ 60 mi
 ### Coût estimé en euros
 
 ```
-coût = minutes-voyageurs × 11,88 €/h (SMIC brut 2025) ÷ 60
+coût = minutes-voyageurs × 12,31 €/h (SMIC brut depuis le 1er juin 2026) ÷ 60
 ```
+
+Dans les bilans, le coût est arrondi à l'euro inférieur par ligne et par jour, puis additionné :
+un total affiché est toujours la somme exacte de son détail (lignes, mois).
 
 Voir la [page Méthode](http://localhost:8000/methode.html) pour le détail complet,
 les hypothèses et les limites.
@@ -148,21 +157,30 @@ Le bot est silencieux si les clés Twitter/X ne sont pas configurées.
 ```
 /
 ├── backend/
-│   ├── main.py          # FastAPI + scheduler (collect + metrics + bot)
+│   ├── main.py          # FastAPI + scheduler (collect + metrics + bilans + bot)
 │   ├── api.py           # Endpoints REST
 │   ├── collector.py     # Polling API PRIM
 │   ├── metrics.py       # Calcul agrégats quotidiens
+│   ├── bilans.py        # Bilans /statistiques et /annee → frontend/data/*.json
+│   ├── causes.py        # Motifs PRIM → catégories de causes, texte lisible
 │   ├── bot.py           # Post quotidien X (Twitter)
 │   ├── models.py        # SQLAlchemy (Incident, DailyMetric)
 │   ├── database.py      # Session async
 │   └── config.py        # Settings (pydantic-settings)
 ├── frontend/
 │   ├── index.html       # Compteur live
-│   ├── stats.html       # Statistiques & graphiques
-│   └── methode.html     # Transparence méthodologique
+│   ├── statistiques.html  # Bilan 7 / 30 / 90 jours
+│   ├── annee.html       # Bilan annuel (Chart.js)
+│   ├── bilan.css / bilan.js  # Communs aux deux bilans
+│   ├── methode.html     # Transparence méthodologique
+│   └── data/            # JSON des bilans, générés (ignorés par git)
 ├── data/
 │   └── frequentation.json  # Fréquentation par ligne (màj mensuelle)
+├── docs/maquettes/      # Maquettes de référence des bilans
 ├── tests/
+│   ├── test_bilans.py
+│   ├── test_bot.py
+│   ├── test_causes.py
 │   ├── test_collector.py
 │   └── test_metrics.py
 ├── docker-compose.yml

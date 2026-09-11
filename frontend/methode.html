@@ -392,7 +392,8 @@
   </a>
   <ul class="nav-links">
     <li><a href="index.html">Aujourd'hui</a></li>
-    <li><a href="stats.html">Statistiques</a></li>
+    <li><a href="/statistiques">Statistiques</a></li>
+    <li><a href="/annee">Année</a></li>
     <li><a href="index.html#lignes">Par ligne</a></li>
     <li><a href="methode.html" class="active">Méthode</a></li>
   </ul>
@@ -443,7 +444,7 @@
         <span class="source-dot"></span>
         <div class="source-body">
           <div class="source-name">SMIC horaire brut 2026</div>
-          <div class="source-desc">11,88 €/h · source : décret gouvernemental · utilisé comme unité de mesure de l'impact humain</div>
+          <div class="source-desc">12,31 €/h depuis le 1er juin 2026 · source : arrêté du 22 mai 2026 · utilisé comme unité de mesure de l'impact humain</div>
         </div>
       </div>
     </div>
@@ -465,14 +466,14 @@
     <div class="formula-block">
       minutes-voyageurs = durée_incident (min) × fréquentation_par_minute<br>
       fréquentation_par_minute = voyageurs_par_jour ÷ 18h ÷ 60 min<br>
-      coût = minutes-voyageurs × 11,88 €/h ÷ 60
+      coût = minutes-voyageurs × 12,31 €/h ÷ 60
       <div class="formula-note">
         Hypothèse conservative : répartition uniforme sur 6h–24h. En réalité les heures de pointe concentrent davantage de voyageurs, ce qui sous-estime l'impact réel.
       </div>
     </div>
     <p>
       <strong>Exemple — RER A, incident de 45 minutes :</strong><br>
-      900 000 voy./jour ÷ 18h ÷ 60 = 833 voy./min · 45 × 833 = 37 500 min-voy. · coût estimé = <strong>7 425 €</strong>
+      900 000 voy./jour ÷ 18h ÷ 60 = 833 voy./min · 45 × 833 = 37 500 min-voy. · coût estimé = <strong>7 693 €</strong>
     </p>
   </section>
 
@@ -528,9 +529,34 @@
     </div>
   </section>
 
-  <!-- Section 4 — LIMITES -->
-  <section id="limites">
+  <!-- Section 4 — BILANS -->
+  <section id="bilans">
     <div class="section-num">04</div>
+    <div class="section-header">
+      <span class="section-title">Bilans statistiques et annuels</span>
+    </div>
+    <div class="limits-list">
+      <div class="limit-item">
+        <strong>Recalcul toutes les 10 minutes.</strong> Les pages <a href="/statistiques">Statistiques</a> et <a href="/annee">Année</a> sont calculées à partir des métriques journalières par ligne, puis servies en fichiers statiques.
+      </div>
+      <div class="limit-item">
+        <strong>Totaux réconciliés.</strong> Le coût est arrondi à l'euro inférieur par ligne et par jour, puis additionné : le total affiché est exactement la somme du classement par ligne, et, pour l'année, la somme des mois.
+      </div>
+      <div class="limit-item">
+        <strong>Statistiques.</strong> Fenêtres glissantes de 7, 30 ou 90 jours, aujourd'hui inclus. La comparaison porte sur la période précédente de même durée, uniquement si celle-ci est entièrement couverte par les données.
+      </div>
+      <div class="limit-item">
+        <strong>Année.</strong> Cumul des bilans mensuels disponibles. La comparaison avec l'année précédente se fait à date équivalente, du 1er janvier au même jour.
+      </div>
+      <div class="limit-item">
+        <strong>Causes.</strong> Réparties à partir des motifs des perturbations déclarées par l'opérateur (messages PRIM) : le motif explicite (« Motif : … ») quand il est donné, sinon le texte du message ; un avis planifié (période, dates) est compté en travaux. Classement par mots-clés en 7 catégories : signalisation / infrastructure, panne matériel, incident voyageur, mouvement social, météo, travaux, non précisé. Les retards temps réel n'ont pas de motif et n'entrent pas dans cette répartition.
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 5 — LIMITES -->
+  <section id="limites">
+    <div class="section-num">05</div>
     <div class="section-header">
       <span class="section-title">Limites</span>
     </div>

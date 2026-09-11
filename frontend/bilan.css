@@ -1,0 +1,145 @@
+/* ── Bilans /statistiques et /annee ─────────────────────────
+   Repris des maquettes docs/maquettes/ (sans le cadre de présentation).
+   Couleurs de ligne : celles de l'accueil, définies dans bilan.js.   */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+
+:root {
+  --creme: #F4EFE6;
+  --encre: #1a1a17;
+  --brun: #4a463d;
+  --gris: #8a8478;
+  --gris-clair: #a39c8c;
+  --sable: #e8e1d4;
+  --filet: #f0ebe1;
+  --creux: #c9c1b1;
+  --rouge: #E1251B;
+  --rouge-fonce: #A32D2D;
+  --rouge-pale: #FCEBEB;
+  --blanc: #fff;
+}
+
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--creme);
+  font-family: 'Roboto', -apple-system, sans-serif;
+  color: var(--encre);
+  line-height: 1.4;
+}
+a { color: var(--gris); }
+
+.page { max-width: 760px; margin: 0 auto; padding-block: 32px; padding-inline: 16px; }
+@media (min-width: 600px) { .page { padding-inline: 30px; } }
+
+.eyebrow { font-size: 11px; letter-spacing: 1.5px; color: var(--gris); text-transform: uppercase; }
+
+/* En-tête + navigation */
+.head {
+  display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 12px;
+  border-bottom: 1.5px solid var(--encre); padding-bottom: 11px; margin-bottom: 12px;
+}
+.brand { font-weight: 500; letter-spacing: 1px; font-size: 16px; color: var(--encre); text-decoration: none; }
+.brand span { color: var(--rouge); }
+.liens { display: flex; flex-wrap: wrap; font-size: 12px; margin-bottom: 20px; }
+.liens a { color: var(--gris); text-decoration: none; }
+.liens a + a::before { content: "·"; padding: 0 8px; color: var(--creux); }
+.liens a:hover { color: var(--encre); }
+.liens a[aria-current="page"] { color: var(--encre); font-weight: 500; }
+
+/* Sélecteur de période */
+.toggle { display: inline-flex; background: var(--sable); border-radius: 8px; padding: 3px; margin-bottom: 22px; font-size: 12px; }
+.toggle button {
+  border: 0; background: none; font: inherit; cursor: pointer;
+  padding: 5px 15px; color: var(--gris); border-radius: 6px;
+}
+.toggle button:hover { color: var(--encre); }
+.toggle button[aria-pressed="true"] { background: var(--encre); color: var(--creme); }
+.toggle button:focus-visible { outline: 2px solid var(--encre); outline-offset: 1px; }
+
+/* Chiffres héros */
+.hero { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 36px; margin-bottom: 8px; }
+.big { font-size: 56px; font-weight: 500; line-height: 1; letter-spacing: -1px; }
+.big small { font-size: 36px; }
+.sub { font-size: 23px; font-weight: 500; color: var(--brun); }
+.sub small { font-size: 15px; color: var(--gris); }
+.hero-inc { font-size: 13px; color: var(--gris); }
+.note { font-size: 12px; color: var(--gris-clair); margin-bottom: 28px; font-style: italic; }
+
+/* Cartes */
+.card { background: var(--blanc); border-radius: 12px; padding: 16px 18px; }
+.worst, .best { border-left: 5px solid var(--creux); }
+.carte-pire { margin-bottom: 28px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.pire-corps { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pire-detail { font-size: 15px; color: var(--brun); }
+.badge { display: inline-block; color: #fff; font-weight: 500; font-size: 13px; padding: 4px 9px; border-radius: 5px; }
+.delta { font-size: 13px; font-weight: 500; padding: 5px 11px; border-radius: 6px; white-space: nowrap; }
+.delta.hausse { background: var(--rouge-pale); color: var(--rouge-fonce); }
+.delta.baisse { background: var(--sable); color: var(--brun); }
+.delta.nd { background: var(--sable); color: var(--gris-clair); }
+
+/* Classement */
+.classement { margin-bottom: 26px; }
+.row { display: flex; align-items: center; gap: 12px; margin-bottom: 11px; }
+.row .lbl {
+  width: 54px; flex-shrink: 0; font-weight: 500; font-size: 12px;
+  padding: 4px 0; border-radius: 5px; text-align: center;
+}
+.track { flex: 1; height: 24px; background: var(--sable); border-radius: 5px; overflow: hidden; }
+.fill { height: 100%; }
+.val { width: 92px; flex-shrink: 0; text-align: right; font-size: 13px; font-weight: 500; }
+.repli { font-size: 12px; color: var(--gris-clair); padding-left: 66px; }
+.repli button {
+  border: 0; background: none; font: inherit; color: var(--gris);
+  text-decoration: underline; cursor: pointer; padding: 0;
+}
+.vide { font-size: 13px; color: var(--gris); margin-bottom: 11px; }
+
+/* Paires de cartes */
+.two { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px; }
+.two .card { flex: 1; min-width: 200px; }
+.line {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  padding: 7px 0; border-bottom: 1px solid var(--filet); font-size: 13px;
+}
+.line:last-child { border: none; }
+.line .k { color: var(--gris); }
+.line .v { font-size: 15px; font-weight: 500; text-align: right; white-space: nowrap; }
+.line.reste, .line.reste .k { color: var(--gris-clair); }
+.line.reste .v { font-size: 13px; font-weight: 400; color: var(--gris-clair); }
+.mini { font-size: 12px; }
+.mini.hausse { color: var(--rouge-fonce); }
+.mini.baisse { color: var(--brun); }
+.mini.nd { color: var(--gris-clair); }
+.carte-note { font-size: 12px; color: var(--gris-clair); margin-top: 8px; }
+
+/* Bilan annuel */
+.chart-wrap { background: var(--blanc); border-radius: 12px; padding: 20px 20px 14px; margin-bottom: 28px; }
+.chart-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 14px; }
+.chart-legende { font-size: 11px; color: var(--gris-clair); }
+.chart-zone { position: relative; height: 210px; }
+.cartes-annee { margin-top: 0; margin-bottom: 28px; }
+.big2 { font-size: 26px; font-weight: 500; margin: 8px 0 2px; }
+.detail { font-size: 13px; color: var(--gris); }
+.progression { display: flex; align-items: center; gap: 9px; margin: 8px 0 3px; flex-wrap: wrap; }
+.progression .pct { font-size: 20px; font-weight: 500; }
+
+/* États */
+main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
+.message { font-size: 14px; color: var(--gris); padding: 24px 0; }
+.pied {
+  font-size: 11px; color: var(--gris-clair);
+  margin-top: 36px; padding-top: 12px; border-top: 1px solid var(--sable);
+}
+
+@media (max-width: 480px) {
+  .hero { gap: 8px 24px; }
+  .big { font-size: 44px; }
+  .big small { font-size: 28px; }
+  .sub { font-size: 19px; }
+  .row { gap: 8px; }
+  .row .lbl { width: 48px; }
+  .val { width: 80px; }
+  .repli { padding-left: 56px; }
+  .two .card { min-width: 100%; }
+  .chart-wrap { padding: 16px 12px 10px; }
+}

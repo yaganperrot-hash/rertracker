@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RETARDS IDF — Statistiques</title>
+<meta name="description" content="Coût estimé, minutes perdues et incidents sur les RER et Transilien d'Île-de-France, sur 7, 30 ou 90 jours.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="bilan.css?v=1">
+</head>
+<body>
+<div class="page">
+
+  <header class="head">
+    <a class="brand" href="/">RETARDS <span>IDF</span></a>
+    <span class="eyebrow" id="periode-titre">30 derniers jours · toutes lignes</span>
+  </header>
+
+  <nav class="liens" aria-label="Pages">
+    <a href="/">Aujourd'hui</a><a href="/statistiques" aria-current="page">Statistiques</a><a href="/annee">Année</a><a href="/methode.html">Méthode</a>
+  </nav>
+
+  <div class="toggle" role="group" aria-label="Période">
+    <button type="button" data-p="7" aria-pressed="false">7 j</button>
+    <button type="button" data-p="30" aria-pressed="true">30 j</button>
+    <button type="button" data-p="90" aria-pressed="false">90 j</button>
+  </div>
+
+  <main id="contenu">
+    <section class="hero" aria-label="Chiffres de la période">
+      <div>
+        <div class="eyebrow" style="margin-bottom:3px">Coût estimé · SMIC brut</div>
+        <div class="big"><span id="h-cout">—</span> <small>€</small></div>
+      </div>
+      <div style="padding-bottom:6px">
+        <div class="sub"><span id="h-min">—</span> <small id="h-min-suffixe">minutes perdues</small></div>
+        <div class="hero-inc" id="h-inc">—</div>
+      </div>
+    </section>
+    <p class="note" id="note">Somme exacte du classement par ligne ci-dessous. <a href="/methode.html#bilans">Méthode →</a></p>
+
+    <section class="card worst carte-pire" id="pire" aria-label="Pire ligne"></section>
+
+    <div class="eyebrow" style="margin-bottom:14px">Classement par temps perdu</div>
+    <div class="classement" id="classement"></div>
+
+    <div class="two">
+      <section class="card" id="comparaison" aria-label="Comparaison avec la période précédente"></section>
+      <section class="card" id="causes" aria-label="Causes"></section>
+    </div>
+  </main>
+
+  <p class="message" id="message" hidden></p>
+
+  <footer class="pied" id="pied">Données API PRIM · IDF Mobilités · recalcul toutes les 10 min</footer>
+
+</div>
+
+<script src="bilan.js?v=1"></script>
+<script>
+(function () {
+  const B = window.Bilan;
+  const PERIODES = [7, 30, 90];
+  const $ = id => document.getElementById(id);
+  const main = $('contenu');
+  let requete = 0;
+
+  function periodeURL() {
+    const p = parseInt(new URLSearchParams(location.search).get('p'), 10);
+    return PERIODES.includes(p) ? p : 30;
+  }
+
+  function renderHero(d) {
+    $('h-cout').textContent = B.fmtNombre(d.total.cout_eur);
+    const m = B.fmtMinutes(d.total.minutes);
+    $('h-min').textContent = m.valeur;
+    $('h-min-suffixe').textContent = m.suffixe;
+    const n = d.total.incidents;
+    $('h-inc').textContent = n === 0
+      ? 'Aucun incident recensé'
+      : `${B.fmtIncidents(n)} recensé${n > 1 ? 's' : ''}`;
+  }
+
+  function renderNote(d) {
+    const m = d.meta;
+    let couverture = '';
+    if (!m.debut_donnees) {
+      couverture = ' Aucune donnée collectée pour l\'instant.';
+    } else if (m.jours_couverts < m.periode_jours) {
+      couverture = ` Données disponibles depuis le ${B.fmtDate(m.debut_donnees)} (${m.jours_couverts} j sur ${m.periode_jours}).`;
+    }
+    $('note').innerHTML = 'Somme exacte du classement par ligne ci-dessous. ' +
+      '<a href="/methode.html#bilans">Méthode →</a>' + B.esc(couverture);
+  }
+
+  function renderPire(d) {
+    const el = $('pire');
+    const N = d.meta.periode_jours;
+    const p = d.pire_ligne;
+    const titre = `<div class="eyebrow" style="margin-bottom:7px">Pire ligne · ${N} j</div>`;
+    if (!p || !B.LIGNES[p.id]) {
+      el.style.borderLeftColor = '';
+      el.innerHTML = `<div>${titre}<div class="pire-detail">Aucune ligne touchée sur la période.</div></div>`;
+      return;
+    }
+    const m = B.fmtMinutes(p.minutes);
+    const delta = B.fmtDelta(p.delta_pct_minutes);
+    const info = p.delta_pct_minutes === null
+      ? 'période précédente incomplète'
+      : `minutes perdues vs ${N} jours précédents`;
+    el.style.borderLeftColor = B.LIGNES[p.id].fond;
+    el.innerHTML = `<div>${titre}<div class="pire-corps">${B.badge(p.id)}` +
+      `<span class="pire-detail">${B.esc(m.valeur)} ${B.esc(m.suffixe)} · ${B.esc(B.fmtIncidents(p.incidents))}</span></div></div>` +
+      `<span class="delta ${delta.classe}" title="${B.esc(info)}">${B.esc(delta.texte)}</span>`;
+  }
+
+  function renderComparaison(d) {
+    const N = d.meta.periode_jours;
+    const dp = d.delta_pct;
+    const mini = pct => {
+      const x = B.fmtDelta(pct);
+      return `<span class="mini ${x.classe}" title="vs ${N} jours précédents">${B.esc(x.texte)}</span>`;
+    };
+    const pire = d.pire_ligne && B.LIGNES[d.pire_ligne.id] ? B.LIGNES[d.pire_ligne.id].nom : '—';
+    $('comparaison').innerHTML =
+      `<div class="eyebrow" style="margin-bottom:12px">${N} j <span style="color:var(--creux)">vs</span> ${N} j précédents</div>` +
+      '<div>' +
+      `<div class="line"><span class="k">Incidents</span><span class="v">${B.fmtNombre(d.total.incidents)} ${mini(dp && dp.incidents)}</span></div>` +
+      `<div class="line"><span class="k">Coût</span><span class="v">${B.esc(B.fmtEurosCompact(d.total.cout_eur))} ${mini(dp && dp.cout_eur)}</span></div>` +
+      `<div class="line"><span class="k">Pire ligne</span><span class="v">${B.esc(pire)}</span></div>` +
+      '</div>' +
+      (dp ? '' : '<p class="carte-note">Période précédente incomplète : comparaison indisponible.</p>');
+  }
+
+  function renderCauses(d) {
+    const c = d.causes;
+    const titre = '<div class="eyebrow" style="margin-bottom:12px">Causes</div>';
+    if (!c.total) {
+      $('causes').innerHTML = titre + '<p class="carte-note">Aucune perturbation déclarée sur la période.</p>';
+      return;
+    }
+    const pct = v => `${v} %`;
+    const rep = c.repartition;
+    const affichees = rep.length <= 4 ? rep : rep.slice(0, 3);
+    let lignes = affichees.map(r =>
+      `<div class="line"><span class="k">${B.esc(r.categorie)}</span><span class="v">${pct(r.pct)}</span></div>`).join('');
+    if (rep.length > 4) {
+      const reste = rep.slice(3);
+      const noms = reste.slice(0, 2).map((r, i) => i ? r.categorie.toLowerCase() : r.categorie).join(' · ') +
+        (reste.length > 2 ? ' …' : '');
+      const somme = 100 - affichees.reduce((s, r) => s + r.pct, 0);
+      lignes += `<div class="line reste"><span class="k">${B.esc(noms)}</span><span class="v">${pct(somme)}</span></div>`;
+    }
+    const n = c.total;
+    $('causes').innerHTML = titre + `<div>${lignes}</div>` +
+      `<p class="carte-note">Sur ${B.fmtNombre(n)} perturbation${n > 1 ? 's' : ''} déclarée${n > 1 ? 's' : ''} par l'opérateur.</p>`;
+  }
+
+  function afficherMessage(texte) {
+    main.hidden = true;
+    main.removeAttribute('aria-busy');
+    $('message').textContent = texte;
+    $('message').hidden = false;
+  }
+
+  async function load(p) {
+    const id = ++requete;
+    document.querySelectorAll('.toggle button').forEach(b =>
+      b.setAttribute('aria-pressed', String(+b.dataset.p === p)));
+    $('periode-titre').textContent = `${p} derniers jours · toutes lignes`;
+    history.replaceState(null, '', p === 30 ? location.pathname : `?p=${p}`);
+    main.setAttribute('aria-busy', 'true');
+
+    let d;
+    try {
+      d = await B.chargerJSON(`/data/statistiques-${p}.json`);
+    } catch (e) {
+      if (id === requete) afficherMessage('Données indisponibles.');
+      return;
+    }
+    if (id !== requete) return;  // une période plus récente a été demandée entre-temps
+    if (!d) { afficherMessage('Bilan en cours de calcul, réessayer dans quelques minutes.'); return; }
+
+    $('message').hidden = true;
+    main.hidden = false;
+    renderHero(d);
+    renderNote(d);
+    renderPire(d);
+    B.renderClassement($('classement'), d.lignes);
+    renderComparaison(d);
+    renderCauses(d);
+    $('pied').textContent = B.pied(d.meta);
+    main.removeAttribute('aria-busy');
+  }
+
+  document.querySelectorAll('.toggle button').forEach(b =>
+    b.addEventListener('click', () => load(+b.dataset.p)));
+
+  load(periodeURL());
+})();
+</script>
+</body>
+</html>

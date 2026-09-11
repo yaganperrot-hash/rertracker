@@ -117,6 +117,9 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb reta
 - Frontend refonte complète — design light cream + Roboto, API fetch avec fallback mock
 - Accueil — refonte de la hiérarchie (2026-09-10) : coût du jour → cumul du jour → incident en cours →
   table par ligne (aujourd'hui, triée par coût, lignes épargnées condensées), repli mobile 2 colonnes
+- Bilans (2026-09-11) : `/statistiques` (7/30/90 j) et `/annee` d'après `docs/maquettes/` —
+  `backend/bilans.py`, `backend/causes.py`, `frontend/statistiques.html`, `frontend/annee.html`,
+  `frontend/bilan.css|js` ; `stats.html` supprimée (301) ; SMIC 2026 = 12,31 €/h (`SMIC_HORAIRE`)
 
 ### 🔄 En maintenance — voir `TODO.md`
 
@@ -128,12 +131,16 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb reta
 - **Accueil = fenêtre unique « aujourd'hui »** (journée comptée depuis 7 h, heure de Paris) : hero, cumul et table
   lisent les mêmes minutes-voyageurs du jour. Tout cumul pluri-jours (semaine, année) va sur une autre page —
   décision du 2026-09-10. Charte : fond crème, Roboto, couleurs de ligne, accents noir + rouge uniquement.
+- **Bilans = JSON statiques** (`frontend/data/`, ignoré par git) régénérés toutes les 10 min par le scheduler,
+  servis avec `Cache-Control: max-age=600`. Coût arrondi **par ligne × jour** puis sommé : un total affiché est
+  toujours la somme exacte de son détail. Deux unités à l'écran sur ces pages : € et minutes. Couleurs de
+  ligne = celles de l'accueil (pas celles des maquettes). Causes : « Motif : … » PRIM lu en priorité.
 
 ---
 
 ## Prochaine étape à reprendre
 Voir `TODO.md` et les bugs ouverts de `.claude/DEBUG.md`. Priorités : **régénérer la clé PRIM** (en clair dans
-l'historique git), puis bugs 9 / 10 / 11 / 17, taux SMIC 2026, et pousser les commits locaux sur `origin/master`.
+l'historique git), puis bugs 9 / 10 / 11 / 17, et pousser les commits locaux sur `origin/master`.
 
 ---
 

@@ -10,6 +10,7 @@ from backend.database import get_db
 from backend.models import Incident, DailyMetric
 from backend.metrics import get_today_stats, get_line_stats, compute_daily_metrics
 from backend.collector import collect_disruptions, collect_rt_delays
+from backend.causes import categoriser_cause, resume_perturbation, texte_lisible
 
 router = APIRouter(prefix="/api")
 
@@ -22,7 +23,10 @@ def _serialize_incident(r: Incident) -> dict:
         "navitia_id": r.navitia_id,
         "line_id": r.line_id,
         "type_incident": r.type_incident,
-        "cause": r.cause,
+        # Messages PRIM en HTML : texte lisible, résumé d'une ligne et cause classée pour l'affichage
+        "cause": texte_lisible(r.cause) or None,
+        "resume": resume_perturbation(r.cause) or None,
+        "categorie": categoriser_cause(r.cause) if r.source == "disruption" else None,
         "heure_debut": r.heure_debut.isoformat(),
         "heure_fin": r.heure_fin.isoformat() if r.heure_fin else None,
         "duree_minutes": r.duree_minutes,

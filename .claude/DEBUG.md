@@ -216,6 +216,65 @@ pire ligne calculée, une seule occurrence du temps cumulé, placeholders « —
 
 ---
 
+## Bugs résolus — Session 2026-09-11
+
+### [2026-09-11] Bug 18 — Statistiques : deux totaux qui se contredisent
+**Fichier(s)** : `frontend/stats.html` (supprimée) → `backend/bilans.py`, `frontend/statistiques.html`
+**Symptôme** : héro « 487 incidents · 45 ans 132 j · 4 722 580 € » contre ligne de KPI « 752 · 5 ans 233 j ·
+587 053 € » juste en dessous ; écarts par ligne vs mois précédent affichés
+**Cause** : héro et comparaison mensuelle écrits en dur (maquette), écarts inventés (`EVOL_MOCK`) ; seule la ligne
+de KPI était calculée
+**Fix** : bilans calculés côté serveur ; coût arrondi par ligne × jour puis sommé → héro = Σ classement
+(= Σ mois pour l'année), invariant testé
+**Status** : ✅ Résolu
+
+### [2026-09-11] Bug 19 — Messages PRIM affichés en HTML brut sur l'accueil
+**Fichier(s)** : `backend/api.py`, `backend/causes.py`, `frontend/index.html`
+**Symptôme** : `<p _msttexthash="…">P&#233;riode : …` affiché tel quel dans les incidents en cours et le ticker ;
+code « SIGNIFICANT_DELAYS » en sous-titre
+**Cause** : `Incident.cause` stocke le message PRIM brut (HTML, entités, parfois balises de traduction automatique) ;
+le front l'échappait et l'affichait
+**Fix** : l'API renvoie `cause` en texte lisible, `resume` (1ʳᵉ ligne informative) et `categorie` ; l'accueil
+affiche résumé + catégorie, texte complet au survol. Historique couvert sans migration
+**Status** : ✅ Résolu
+
+### [2026-09-11] Causes : avis de travaux classés « signalisation »
+**Fichier(s)** : `backend/causes.py`
+**Symptôme** : « Période : … Dates : … Motif : travaux sur le réseau ferroviaire (… de signalisation …
+l'infrastructure …) » compté en Signalisation / infrastructure
+**Cause** : catégories testées par priorité sur tout le texte ; Signalisation passe avant Travaux
+**Fix** : ordre de lecture — tête du « Motif : » (avant la parenthèse), motif entier, avis planifié → travaux,
+puis mots-clés. Message réel ajouté aux tests
+**Status** : ✅ Résolu
+
+### [2026-09-11] Trains fantômes : retard qui grossit à chaque relevé
+**Fichier(s)** : `backend/collector.py`, `tests/test_collector.py`
+**Symptôme** : train prévu il y a 166 min qui « part maintenant » à chaque relevé (train ELBA, 2026-09-11)
+**Cause** : train supprimé ou arrêté resté dans le flux PRIM : son départ estimé suit l'heure du relevé
+**Fix** : retard ≥ 60 min avec départ estimé à ± 3 min de l'heure du relevé → écarté (mais compté présent pour
+la détection des suppressions) ; 3 tests
+**Status** : ✅ Résolu (modification trouvée non commitée au début de la session, commitée à part)
+
+### [2026-09-11] Relevés sautés après une mise en veille
+**Fichier(s)** : `backend/main.py`
+**Cause** : tolérance APScheduler par défaut d'1 s → tous les relevés en retard étaient abandonnés
+**Fix** : `coalesce=True`, `misfire_grace_time=None` (une seule exécution de rattrapage) ; bot de 20 h : 1 h de
+tolérance au plus, sinon le bilan porterait sur le mauvais jour
+**Status** : ✅ Résolu (idem, trouvé non commité)
+
+### [2026-09-10 → 2026-09-11] SMIC 2025 encore utilisé en 2026
+**Fichier(s)** : `backend/config.py`, `backend/bot.py`, `frontend/index.html`, `frontend/methode.html`
+**Fix** : 12,31 €/h (en vigueur depuis le 1er juin 2026, arrêté du 22 mai 2026) — `SMIC_HORAIRE` dans la config,
+lu par les bilans et le bot ; accueil et méthode alignés (exemple recalculé : 7 693 €)
+**Status** : ✅ Résolu
+
+### [2026-09-10 → 2026-09-11] « Salaires journaliers » : 90 € en dur
+**Fichier(s)** : `frontend/index.html`
+**Fix** : `SALAIRE_JOUR = SMIC_HORAIRE × 7` (≈ 86 €)
+**Status** : ✅ Résolu
+
+---
+
 ## Bugs ouverts
 
 ### [2026-09-10] Bug 17 — Horaires des perturbations probablement lus en UTC
@@ -281,19 +340,12 @@ partiellement la clé, donc impossible de la relire à l'arrivée
 un `git rm` ne la retire pas de l'historique (elle reste dans `c591442`)
 **Status** : ❌ Ouvert — action requise
 
-### [2026-09-10] SMIC 2025 encore utilisé en 2026
-**Fichier(s)** : `backend/bot.py` (`SMIC_HORAIRE`), `frontend/index.html` (`SMIC_HORAIRE`), `frontend/stats.html`,
-`frontend/methode.html`, `README.md`
-**Symptôme** : tous les euros sont calculés à 11,88 €/h, taux brut 2025
-**Fix** : vérifier le taux brut 2026 et le mettre à jour partout d'un coup (site, tweet, méthode, README)
-**Status** : ❌ Ouvert
-
-### [2026-09-10] « Salaires journaliers » : 90 € vs 83,16 €
-**Fichier(s)** : `frontend/index.html` (`SALAIRE_JOUR = 90`)
-**Symptôme** : l'accueil divise les euros par 90 €, alors que 7 h × 11,88 € = 83,16 € → nombre de salaires
-journaliers sous-estimé d'environ 8 %
-**Fix** : à trancher — dériver de `SMIC_HORAIRE × 7` ou documenter la source des 90 €
-**Status** : ❌ Ouvert
+### [2026-09-11] Coût du jour : accueil vs bilans, écart d'arrondi
+**Fichier(s)** : `frontend/index.html`
+**Symptôme** : le coût du jour de l'accueil peut différer de quelques euros de la même journée dans `/statistiques`
+**Cause** : l'accueil calcule `floor(Σ minutes × SMIC / 60)`, les bilans arrondissent par ligne × jour puis somment
+**Fix** : servir le coût du jour depuis le backend avec la règle des bilans
+**Status** : ❌ Ouvert (mineur)
 
 ### [2026-09-10] Coût par incident : formule front ≠ backend
 **Fichier(s)** : `frontend/index.html` (`coutIncident`, table `FREQ`)

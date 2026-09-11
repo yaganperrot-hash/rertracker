@@ -10,7 +10,9 @@ _(aucun)_
 - [ ] Bug 11 — Transilien L, N, P, R à 0 incident : logger le payload PRIM brut (les 404 ont disparu)
 - [ ] Bug 17 — vérifier le fuseau des horaires de perturbations (`_parse_dt`, probablement lus en UTC)
 - [ ] Vérifier visuellement le rendu des durées lisibles (bureau + mobile 390 px)
-- [ ] Lisibilité : appliquer la refonte typo de `index.html` à `stats.html` et `methode.html`
+- [ ] Lisibilité : appliquer la refonte typo de `index.html` à `methode.html`
+- [ ] Accueil : coût du jour calculé sur la somme des minutes (`index.html`), les bilans arrondissent par
+  ligne et par jour → écart de quelques euros possible entre l'accueil et `/statistiques` sur une même journée
 - [ ] Pousser les 2 commits du 2026-09-10 sur `origin/master`
 - [ ] Renseigner les clés Twitter/X dans `.env`
 
@@ -33,3 +35,6 @@ _(aucun)_
 - [x] Correctifs session 2026-09-09 — 8 bugs corrigés (double comptage, timezone, trains supprimés, pondération horaire, fake counter, etc.)
 - [x] Session 2026-09-10 — setup local Mac, retards RT (gare/train/direction), dédoublonnage par train, fuseau Paris, suppressions, lisibilité accueil
 - [x] Durées lisibles min → h → jours → ans (`frontend/duree.js`, `bot.py`, tests) — 2026-09-10
+- [x] Pages `/statistiques` et `/annee` (maquettes `docs/maquettes/`, TASK-02 → TASK-12) : bilans JSON
+  statiques recalculés toutes les 10 min, totaux réconciliés, causes depuis les motifs opérateur, Chart.js ;
+  SMIC 2026 à 12,31 €/h partout ; `stats.html` supprimée (301 vers `/statistiques`) — 2026-09-11

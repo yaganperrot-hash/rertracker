@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RETARDS IDF — Bilan annuel</title>
+<meta name="description" content="Bilan annuel des retards RER et Transilien d'Île-de-France : coût estimé, minutes perdues, incidents, mois par mois et ligne par ligne.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="bilan.css?v=1">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="page">
+
+  <header class="head">
+    <a class="brand" href="/">RETARDS <span>IDF</span></a>
+    <span class="eyebrow" id="annee-titre">Bilan · toutes lignes</span>
+  </header>
+
+  <nav class="liens" aria-label="Pages">
+    <a href="/">Aujourd'hui</a><a href="/statistiques">Statistiques</a><a href="/annee" aria-current="page">Année</a><a href="/methode.html">Méthode</a>
+  </nav>
+
+  <main id="contenu">
+    <section class="hero" aria-label="Chiffres de l'année">
+      <div>
+        <div class="eyebrow" style="margin-bottom:3px">Coût estimé sur l'année · SMIC brut</div>
+        <div class="big"><span id="h-cout">—</span> <small>€</small></div>
+      </div>
+      <div style="padding-bottom:6px">
+        <div class="sub"><span id="h-min">—</span> <small id="h-min-suffixe">minutes perdues</small></div>
+        <div class="hero-inc" id="h-inc">—</div>
+      </div>
+    </section>
+    <p class="note" id="note">Cumul des bilans mensuels. <a href="/methode.html#bilans">Méthode →</a></p>
+
+    <section class="chart-wrap" aria-label="Coût mensuel">
+      <div class="chart-head">
+        <span class="eyebrow" id="graphe-titre">Coût mensuel · €</span>
+        <span class="chart-legende" id="graphe-legende"></span>
+      </div>
+      <div class="chart-zone"><canvas id="graphe" role="img" aria-label="Coût estimé par mois"></canvas></div>
+    </section>
+
+    <div class="two cartes-annee">
+      <section class="card worst" id="pire-mois" style="border-left-color:var(--rouge)" aria-label="Pire mois"></section>
+      <section class="card best" id="progression" aria-label="Meilleure progression"></section>
+    </div>
+
+    <div class="eyebrow" style="margin-bottom:14px">Classement annuel par temps perdu</div>
+    <div class="classement" id="classement"></div>
+  </main>
+
+  <p class="message" id="message" hidden></p>
+
+  <footer class="pied" id="pied">Données API PRIM · IDF Mobilités · recalcul toutes les 10 min</footer>
+
+</div>
+
+<script src="bilan.js?v=1"></script>
+<script>
+(function () {
+  const B = window.Bilan;
+  const $ = id => document.getElementById(id);
+  const main = $('contenu');
+  const C = { pic: '#E1251B', creux: '#c9c1b1', partiel: 'rgba(74,70,61,.45)', mois: '#4a463d',
+              gris: '#8a8478', filet: '#e2dccf', encre: '#1a1a17' };
+
+  const param = new URLSearchParams(location.search).get('annee') || '';
+  const annee = /^\d{4}$/.test(param) ? +param : new Date().getFullYear();
+  let graphe = null;
+
+  function renderHero(d) {
+    $('h-cout').textContent = B.fmtNombre(d.total.cout_eur);
+    const m = B.fmtMinutes(d.total.minutes);
+    $('h-min').textContent = m.valeur;
+    $('h-min-suffixe').textContent = m.suffixe;
+    const n = d.total.incidents;
+    $('h-inc').textContent = n === 0 ? 'Aucun incident recensé' : `${B.fmtIncidents(n)} recensé${n > 1 ? 's' : ''}`;
+  }
+
+  function renderNote(d) {
+    const renseignes = d.mois.filter(m => m.cout_eur !== null);
+    const partiels = renseignes.filter(m => m.partiel).map(m => B.MOIS[m.mois - 1]);
+    let texte;
+    if (!renseignes.length) {
+      texte = 'Aucun bilan mensuel disponible.';
+    } else if (renseignes.length === 12 && !partiels.length) {
+      texte = 'Cumul des 12 bilans mensuels.';
+    } else if (renseignes.length === 1) {
+      texte = `Cumul du seul bilan mensuel disponible : ${B.MOIS[renseignes[0].mois - 1]}` +
+        `${partiels.length ? ' (partiel)' : ''}.`;
+    } else {
+      const noms = renseignes.map(m => B.MOIS[m.mois - 1]);
+      const precision = partiels.length
+        ? ` (${partiels.join(' et ')} partiel${partiels.length > 1 ? 's' : ''})`
+        : '';
+      texte = `Cumul des ${noms.length} bilans mensuels disponibles, de ${noms[0]} à ${noms[noms.length - 1]}${precision}.`;
+    }
+    $('note').innerHTML = B.esc(texte) + ' <a href="/methode.html#bilans">Méthode →</a>';
+  }
+
+  // Étiquette au-dessus des barres : « 720 k », « 1,2 M »
+  function abrege(v) {
+    if (v >= 1e6) return (v / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' M';
+    if (v >= 1e3) return B.fmtNombre(Math.round(v / 1e3)) + ' k';
+    return B.fmtNombre(v);
+  }
+
+  function renderGraphe(d) {
+    $('graphe-titre').textContent = `Coût mensuel — ${annee} · €`;
+    const legende = [];
+    if (d.pire_mois) legende.push(`pic : ${B.MOIS_ABREV[d.pire_mois - 1]}`);
+    if (d.creux.length) legende.push(`creux : ${d.creux.map(m => B.MOIS_ABREV[m - 1]).join(', ')}`);
+    $('graphe-legende').textContent = legende.join(' · ');
+
+    const couts = d.mois.map(m => m.cout_eur);
+    const couleurs = d.mois.map(m =>
+      m.mois === d.pire_mois ? C.pic
+        : d.creux.includes(m.mois) ? C.creux
+        : m.partiel ? C.partiel
+        : C.mois);
+
+    const etiquettes = {
+      id: 'etiquettes',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const seulPic = chart.width < 420;
+        ctx.save();
+        ctx.font = '10px Roboto, sans-serif';
+        ctx.fillStyle = C.gris;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        chart.getDatasetMeta(0).data.forEach((barre, i) => {
+          const v = couts[i];
+          if (v === null || (seulPic && d.mois[i].mois !== d.pire_mois)) return;
+          ctx.fillText(abrege(v), barre.x, barre.y - 3);
+        });
+        ctx.restore();
+      },
+    };
+
+    if (graphe) graphe.destroy();
+    graphe = new Chart($('graphe'), {
+      type: 'bar',
+      data: {
+        labels: B.MOIS_COURT,
+        datasets: [{
+          data: couts,
+          backgroundColor: couleurs,
+          hoverBackgroundColor: couleurs,
+          borderRadius: { topLeft: 4, topRight: 4 },
+          borderSkipped: 'bottom',
+          maxBarThickness: 34,
+          categoryPercentage: 0.9,
+          barPercentage: 0.9,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 14 } },
+        scales: {
+          y: { display: false, beginAtZero: true, grace: '12%' },
+          x: {
+            grid: { display: false },
+            border: { color: C.filet },
+            ticks: {
+              color: C.gris,
+              font: { size: 10.5, family: 'Roboto' },
+              autoSkip: false,
+              maxRotation: 0,
+              padding: 4,
+              callback: (v, i) => B.MOIS_COURT[i].toUpperCase(),
+            },
+          },
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: C.encre,
+            displayColors: false,
+            padding: 10,
+            titleFont: { family: 'Roboto', weight: '500' },
+            bodyFont: { family: 'Roboto' },
+            filter: item => item.raw !== null,
+            callbacks: {
+              title: items => `${B.cap(B.MOIS[items[0].dataIndex])} ${annee}`,
+              label: item => {
+                const m = d.mois[item.dataIndex];
+                const lignes = [B.fmtEuros(m.cout_eur), B.fmtIncidents(m.incidents)];
+                if (m.partiel) lignes.push('mois partiel');
+                return lignes;
+              },
+            },
+          },
+        },
+      },
+      plugins: [etiquettes],
+    });
+  }
+
+  function renderPireMois(d) {
+    const titre = '<div class="eyebrow">Pire mois</div>';
+    if (!d.pire_mois) {
+      $('pire-mois').innerHTML = titre + '<div class="big2">—</div><div class="detail">Aucune donnée.</div>';
+      return;
+    }
+    const m = d.mois[d.pire_mois - 1];
+    const suite = m.cause_principale
+      ? `cause principale : ${m.cause_principale.toLowerCase()}`
+      : B.fmtIncidents(m.incidents);
+    $('pire-mois').innerHTML = titre +
+      `<div class="big2">${B.esc(B.cap(B.MOIS[m.mois - 1]))}</div>` +
+      `<div class="detail">${B.esc(B.fmtEuros(m.cout_eur))} · ${B.esc(suite)}${m.partiel ? ' (mois partiel)' : ''}</div>`;
+  }
+
+  function renderProgression(d) {
+    const el = $('progression');
+    const prec = annee - 1;
+    const titre = '<div class="eyebrow">Meilleure progression</div>';
+    const mp = d.meilleure_progression;
+    if (!mp || !B.LIGNES[mp.id]) {
+      el.style.borderLeftColor = '';
+      const texte = d.meta.annee_prec_disponible
+        ? `Aucune ligne en recul vs ${prec}.`
+        : `Pas de comparaison : données ${prec} indisponibles.`;
+      el.innerHTML = titre + `<div class="detail" style="margin-top:8px">${B.esc(texte)}</div>`;
+      return;
+    }
+    const l = B.LIGNES[mp.id];
+    const recul = mp.nb_lignes_en_recul === 1 ? 'seule ligne en recul' : `${mp.nb_lignes_en_recul} lignes en recul`;
+    el.style.borderLeftColor = l.fond;
+    el.innerHTML = titre +
+      `<div class="progression">${B.badge(mp.id)}<span class="pct" style="color:${l.encre}">${B.esc(B.fmtPctSigne(mp.delta_pct_minutes))}</span></div>` +
+      `<div class="detail">minutes perdues vs ${prec} à date équivalente · ${recul}</div>`;
+  }
+
+  function afficherMessage(texte) {
+    main.hidden = true;
+    main.removeAttribute('aria-busy');
+    $('message').textContent = texte;
+    $('message').hidden = false;
+  }
+
+  async function load() {
+    $('annee-titre').textContent = `Bilan ${annee} · toutes lignes`;
+    main.setAttribute('aria-busy', 'true');
+    let d;
+    try {
+      d = await B.chargerJSON(`/data/annee-${annee}.json`);
+    } catch (e) {
+      afficherMessage('Données indisponibles.');
+      return;
+    }
+    if (!d) { afficherMessage(`Pas de bilan pour ${annee}.`); return; }
+
+    $('annee-titre').textContent = `Bilan ${annee} · toutes lignes${d.meta.en_cours ? ' · en cours' : ''}`;
+    renderHero(d);
+    renderNote(d);
+    renderPireMois(d);
+    renderProgression(d);
+    B.renderClassement($('classement'), d.lignes);
+    $('pied').textContent = B.pied(d.meta);
+    main.removeAttribute('aria-busy');
+    renderGraphe(d);  // après affichage : Chart.js mesure la largeur du conteneur
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>
