@@ -431,6 +431,62 @@ class TestCollectRtDelays:
             await collect_rt_delays()
             assert len(executed_stmts) > 0
 
+    async def _inserts_for(self, departures):
+        """Lance collect_rt_delays sur un flux simulé et renvoie les INSERT exécutés."""
+        from sqlalchemy.dialects.postgresql import Insert
+
+        mocks = self._setup_mocks()
+        resp = MagicMock()
+        resp.json.return_value = {"departures": departures}
+        executed_stmts = []
+
+        async def capture_execute(stmt, *args, **kwargs):
+            executed_stmts.append(stmt)
+            mock_result = MagicMock()
+            mock_result.scalars.return_value.all.return_value = []
+            return mock_result
+
+        mocks["mock_session"].execute = AsyncMock(side_effect=capture_execute)
+
+        with (
+            patch("backend.collector.get_settings", return_value=mocks["mock_settings"]),
+            patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock) as mock_get,
+            patch("backend.collector.AsyncSessionLocal", return_value=mocks["mock_session"]),
+        ):
+            mock_get.return_value = resp
+            await collect_rt_delays()
+        return [s for s in executed_stmts if isinstance(s, Insert)]
+
+    @staticmethod
+    def _dep_relative(base_offset_min, rt_offset_min):
+        """Départ dont les heures prévue / estimée sont relatives à maintenant (heure de Paris)."""
+        from zoneinfo import ZoneInfo
+
+        now = datetime.now(ZoneInfo("Europe/Paris"))
+        f = "%Y%m%dT%H%M%S"
+        return {
+            "stop_point": {"name": "Gare d'Austerlitz"},
+            "stop_date_time": {
+                "data_freshness": "realtime",
+                "base_departure_date_time": (now + timedelta(minutes=base_offset_min)).strftime(f),
+                "departure_date_time": (now + timedelta(minutes=rt_offset_min)).strftime(f),
+            },
+            "links": [{"type": "vehicle_journey", "id": "vj:test:ghost"}],
+        }
+
+    async def test_ghost_train_ignored(self):
+        """Gros retard dont le départ estimé colle à l'heure du relevé : train fantôme, écarté."""
+        # Prévu il y a 166 min, « part maintenant » — cas du train ELBA le 2026-09-11
+        assert await self._inserts_for([self._dep_relative(-166, 0)]) == []
+
+    async def test_large_delay_with_future_estimate_kept(self):
+        """Un gros retard avec un départ estimé dans le futur est une vraie mesure."""
+        assert len(await self._inserts_for([self._dep_relative(-60, 30)])) == 1
+
+    async def test_held_train_below_ghost_threshold_kept(self):
+        """Un train retenu en gare (estimé = maintenant) sous le seuil reste compté."""
+        assert len(await self._inserts_for([self._dep_relative(-20, 0)])) == 1
+
     async def test_skip_si_pas_de_cle_api(self):
         """If PRIM_API_KEY is not set, collect_rt_delays does nothing."""
         mock_settings = MagicMock()

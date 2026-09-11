@@ -18,7 +18,9 @@ settings = get_settings()
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(__name__)
 
-scheduler = AsyncIOScheduler()
+# Après une mise en veille, les relevés en retard étaient tous sautés (tolérance
+# par défaut : 1 s). coalesce : une seule exécution pour tous les relevés manqués.
+scheduler = AsyncIOScheduler(job_defaults={"coalesce": True, "misfire_grace_time": None})
 
 
 @asynccontextmanager
@@ -52,6 +54,8 @@ async def lifespan(app: FastAPI):
         hour=20,
         minute=0,
         id="daily_tweet",
+        # Au-delà d'1 h de retard, on saute : le bilan porterait sur le mauvais jour
+        misfire_grace_time=3600,
     )
     scheduler.start()
 

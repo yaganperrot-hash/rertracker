@@ -153,6 +153,10 @@ async def collect_disruptions() -> None:
 
 PRIM_NAVITIA_BASE = "https://prim.iledefrance-mobilites.fr/marketplace/v2/navitia"
 MIN_DELAY_MINUTES = 2  # retard minimum pour être enregistré
+# Train fantôme : au-delà de ce retard, un départ estimé collé à l'heure du relevé
+# (à la tolérance près) glisse d'un relevé à l'autre — ce n'est pas une mesure.
+GHOST_MIN_DELAY_MINUTES = 60
+GHOST_SLIDE_TOLERANCE_MIN = 3
 
 
 CANCEL_DEFAULT_IMPACT_MIN = 5  # default impact for cancelled trains
@@ -172,6 +176,7 @@ async def collect_rt_delays() -> None:
     all_delays: dict[str, tuple[str, int, datetime, str | None, str | None, str | None]] = {}
     # Track fetched navitia_ids per line for cancellation detection
     fetched_ids_by_line: dict[str, set[str]] = {}
+    ghosts = 0
 
     async with httpx.AsyncClient(timeout=30) as client:
         for navitia_id, line_id in LIGNES_CIBLES.items():
@@ -185,6 +190,7 @@ async def collect_rt_delays() -> None:
                 })
                 resp.raise_for_status()
                 data = resp.json()
+                obs_dt = datetime.now(timezone.utc)
                 for dep in data.get("departures", []):
                     sdt = dep.get("stop_date_time", {})
                     if sdt.get("data_freshness") != "realtime":
@@ -212,6 +218,14 @@ async def collect_rt_delays() -> None:
                     if delay_min < MIN_DELAY_MINUTES:
                         continue
                     gare = dep.get("stop_point", {}).get("name") or None
+                    # Train fantôme (supprimé ou arrêté mais resté dans le flux) : son départ
+                    # estimé suit l'heure du relevé. Il reste « présent » pour la détection des
+                    # suppressions, mais son retard n'est pas enregistré.
+                    if (delay_min >= GHOST_MIN_DELAY_MINUTES
+                            and abs((rt_dt - obs_dt).total_seconds()) <= GHOST_SLIDE_TOLERANCE_MIN * 60):
+                        ghosts += 1
+                        logger.warning("Train fantôme écarté : %s %s à %s, %d min", line_id, uid, gare, delay_min)
+                        continue
                     infos = dep.get("display_informations", {})
                     # "Corbeil-Essonnes (Corbeil-Essonnes)" → "Corbeil-Essonnes"
                     direction = re.sub(r"\s*\([^)]*\)$", "", infos.get("direction") or "") or None
@@ -227,7 +241,7 @@ async def collect_rt_delays() -> None:
                 logger.error("Unexpected RT error for %s: %s", line_id, exc)
                 fetched_ids_by_line.pop(line_id, None)
 
-    logger.info("Fetched %d RT delays from PRIM", len(all_delays))
+    logger.info("Fetched %d RT delays from PRIM (%d trains fantômes écartés)", len(all_delays), ghosts)
 
     now = datetime.now(timezone.utc)
     inserted = 0
