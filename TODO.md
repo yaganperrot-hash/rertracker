@@ -13,7 +13,6 @@ _(aucun)_
 - [ ] Lisibilité : appliquer la refonte typo de `index.html` à `methode.html`
 - [ ] Accueil : coût du jour calculé sur la somme des minutes (`index.html`), les bilans arrondissent par
   ligne et par jour → écart de quelques euros possible entre l'accueil et `/statistiques` sur une même journée
-- [ ] Pousser les 2 commits du 2026-09-10 sur `origin/master`
 - [ ] Renseigner les clés Twitter/X dans `.env`
 
 ## Terminé

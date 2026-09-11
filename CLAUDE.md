@@ -140,7 +140,7 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb reta
 
 ## Prochaine étape à reprendre
 Voir `TODO.md` et les bugs ouverts de `.claude/DEBUG.md`. Priorités : **régénérer la clé PRIM** (en clair dans
-l'historique git), puis bugs 9 / 10 / 11 / 17, et pousser les commits locaux sur `origin/master`.
+l'historique git), puis bugs 9 / 10 / 11 / 17.
 
 ---
 
