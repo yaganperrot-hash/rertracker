@@ -6,10 +6,14 @@ from sqlalchemy import or_
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.config import get_settings
 from backend.database import get_db
 from backend.models import Incident, DailyMetric
-from backend.metrics import get_today_stats, get_line_stats, compute_daily_metrics
-from backend.collector import collect_disruptions, collect_rt_delays
+from backend.metrics import (
+    FREQUENTATION, compute_daily_metrics, cout_eur, get_line_stats, get_today_stats,
+    incident_minutes_voyageurs,
+)
+from backend.collector import LIGNES_CIBLES, collect_disruptions, collect_rt_delays
 from backend.causes import categoriser_cause, resume_perturbation, texte_lisible
 
 router = APIRouter(prefix="/api")
@@ -17,7 +21,21 @@ router = APIRouter(prefix="/api")
 DbDep = Annotated[AsyncSession, Depends(get_db)]
 
 
-def _serialize_incident(r: Incident) -> dict:
+def _impact(r: Incident, now_utc: datetime, smic: float) -> tuple[int | None, int | None]:
+    """(minutes-voyageurs, coût €) d'un incident, calculés comme les métriques du jour.
+
+    Seuls les retards temps réel et les trains supprimés comptent ; une perturbation
+    déclarée n'a pas de coût propre (None, None).
+    """
+    source = r.source or ("realtime" if r.type_incident == "DELAY_REALTIME" else "disruption")
+    if source != "realtime" and not r.is_cancelled:
+        return None, None
+    _, mv = incident_minutes_voyageurs(r, now_utc)
+    return mv, cout_eur(mv, smic)
+
+
+def _serialize_incident(r: Incident, now_utc: datetime, smic: float) -> dict:
+    minutes_voyageurs, cout = _impact(r, now_utc, smic)
     return {
         "id": r.id,
         "navitia_id": r.navitia_id,
@@ -30,6 +48,8 @@ def _serialize_incident(r: Incident) -> dict:
         "heure_debut": r.heure_debut.isoformat(),
         "heure_fin": r.heure_fin.isoformat() if r.heure_fin else None,
         "duree_minutes": r.duree_minutes,
+        "minutes_voyageurs": minutes_voyageurs,
+        "cout_eur": cout,
         "source": r.source,
         "heure_theorique": r.heure_theorique.isoformat() if r.heure_theorique else None,
         "is_cancelled": r.is_cancelled,
@@ -49,6 +69,23 @@ async def stats_line(line_id: str, db: DbDep, period: int = Query(default=30, ge
     return await get_line_stats(line_id, period, db)
 
 
+@router.get("/reference")
+async def reference():
+    """Paramètres de calcul affichés par les pages (méthode) : une seule source, la config."""
+    s = get_settings()
+    releves_jour = 24 * 60 // s.polling_interval_minutes
+    return {
+        "smic_horaire": s.smic_horaire,
+        "smic_source": s.smic_source,
+        "polling_interval_minutes": s.polling_interval_minutes,
+        "bilans_interval_minutes": s.bilans_interval_minutes,
+        # À chaque relevé : un appel perturbations + un appel départs temps réel par ligne
+        "requetes_prim_jour": releves_jour * 2 * len(LIGNES_CIBLES),
+        "quota_prim_jour": s.prim_quota_jour,
+        "frequentation": FREQUENTATION,
+    }
+
+
 @router.get("/incidents/current")
 async def incidents_current(db: DbDep, source: str | None = Query(default=None)):
     now = datetime.now(timezone.utc)
@@ -63,7 +100,8 @@ async def incidents_current(db: DbDep, source: str | None = Query(default=None))
     if source:
         stmt = stmt.where(Incident.source == source)
     rows = (await db.execute(stmt)).scalars().all()
-    return [_serialize_incident(r) for r in rows]
+    smic = get_settings().smic_horaire
+    return [_serialize_incident(r, now, smic) for r in rows]
 
 
 @router.get("/incidents/history")
@@ -83,7 +121,9 @@ async def incidents_history(
         stmt = stmt.where(Incident.heure_debut <= to_date)
 
     rows = (await db.execute(stmt)).scalars().all()
-    return [_serialize_incident(r) for r in rows]
+    now = datetime.now(timezone.utc)
+    smic = get_settings().smic_horaire
+    return [_serialize_incident(r, now, smic) for r in rows]
 
 
 @router.post("/admin/collect")

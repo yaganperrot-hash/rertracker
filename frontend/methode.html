@@ -309,20 +309,7 @@
 
 <!-- TICKER -->
 <div class="ticker">
-  <span class="ticker-track">
-    ⚠ INCIDENT EN COURS — RER B — Panne signalisation Gare du Nord — 47 min
-    &nbsp;•&nbsp; RER A : trafic normal
-    &nbsp;•&nbsp; RER D : ralentissement Châtelet — 12 min
-    &nbsp;•&nbsp; RER E : retard matériel — 8 min
-    &nbsp;•&nbsp; Transilien J : normal
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    ⚠ INCIDENT EN COURS — RER B — Panne signalisation Gare du Nord — 47 min
-    &nbsp;•&nbsp; RER A : trafic normal
-    &nbsp;•&nbsp; RER D : ralentissement Châtelet — 12 min
-    &nbsp;•&nbsp; RER E : retard matériel — 8 min
-    &nbsp;•&nbsp; Transilien J : normal
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  </span>
+  <span class="ticker-track" id="ticker-track">Chargement des données en cours…</span>
 </div>
 
 <!-- NAV -->
@@ -369,7 +356,7 @@
           <div class="source-name">
             <a href="https://prim.iledefrance-mobilites.fr" target="_blank" rel="noopener">API PRIM — IDF Mobilités</a>
           </div>
-          <div class="source-desc">Perturbations temps réel GTFS-RT / Navitia · polling toutes les 5 min · 288 req/jour sur 20 000 autorisées</div>
+          <div class="source-desc">Perturbations temps réel GTFS-RT / Navitia · relevé toutes les <span class="ref-polling">—</span> min · <span class="ref-req">—</span> req/jour sur <span class="ref-quota">—</span> autorisées</div>
         </div>
       </div>
       <div class="source-item">
@@ -383,7 +370,7 @@
         <span class="source-dot"></span>
         <div class="source-body">
           <div class="source-name">SMIC horaire brut 2026</div>
-          <div class="source-desc">12,31 €/h depuis le 1er juin 2026 · source : arrêté du 22 mai 2026 · utilisé comme unité de mesure de l'impact humain</div>
+          <div class="source-desc"><span class="ref-smic">—</span> €/h <span class="ref-smic-source"></span> · utilisé comme unité de mesure de l'impact humain</div>
         </div>
       </div>
     </div>
@@ -405,14 +392,14 @@
     <div class="formula-block">
       minutes-voyageurs = durée_incident (min) × fréquentation_par_minute<br>
       fréquentation_par_minute = voyageurs_par_jour ÷ 18h ÷ 60 min<br>
-      coût = minutes-voyageurs × 12,31 €/h ÷ 60
+      coût = minutes-voyageurs × <span class="ref-smic">—</span> €/h ÷ 60
       <div class="formula-note">
         Hypothèse conservative : répartition uniforme sur 6h–24h. En réalité les heures de pointe concentrent davantage de voyageurs, ce qui sous-estime l'impact réel.
       </div>
     </div>
     <p>
       <strong>Exemple — RER A, incident de 45 minutes :</strong><br>
-      900 000 voy./jour ÷ 18h ÷ 60 = 833 voy./min · 45 × 833 = 37 500 min-voy. · coût estimé = <strong>7 693 €</strong>
+      <span class="ref-exemple">—</span> <strong class="ref-exemple-cout"></strong>
     </p>
   </section>
 
@@ -533,5 +520,39 @@
   </div>
 </footer>
 
+<script src="ticker.js"></script>
+<script>
+  Ticker.charger();
+  setInterval(Ticker.charger, 300000);
+
+  /* Chiffres de la méthode lus dans la config du backend (/api/reference) : taux SMIC,
+     rythme des relevés, quota PRIM et exemple calculé sur la fréquentation réelle. */
+  (async function () {
+    try {
+      const r = await fetch('/api/reference');
+      if (!r.ok) return;
+      const ref = await r.json();
+      const n = v => v.toLocaleString('fr-FR');
+      const set = (sel, txt) => document.querySelectorAll(sel).forEach(el => { el.textContent = txt; });
+      set('.ref-smic', ref.smic_horaire.toLocaleString('fr-FR', { minimumFractionDigits: 2 }));
+      set('.ref-smic-source', ref.smic_source);
+      set('.ref-polling', n(ref.polling_interval_minutes));
+      set('.ref-req', n(ref.requetes_prim_jour));
+      set('.ref-quota', n(ref.quota_prim_jour));
+
+      // Exemple : RER A, incident de 45 min, avec la formule affichée juste au-dessus
+      const voyJour = ref.frequentation.RER_A;
+      if (voyJour) {
+        const DUREE = 45;
+        const parMin = voyJour / 18 / 60;
+        const mv = Math.round(DUREE * parMin);
+        const cout = Math.floor(mv * Math.round(ref.smic_horaire * 100) / 6000);  // arrondi du backend
+        set('.ref-exemple', `${n(voyJour)} voy./jour ÷ 18h ÷ 60 = ${n(Math.round(parMin))} voy./min · ` +
+          `${DUREE} × ${n(Math.round(parMin))} = ${n(mv)} min-voy. · coût estimé =`);
+        set('.ref-exemple-cout', `${n(cout)} €`);
+      }
+    } catch (_) { /* placeholders « — » */ }
+  })();
+</script>
 </body>
 </html>

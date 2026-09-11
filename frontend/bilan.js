@@ -101,8 +101,9 @@
 
   function pied(meta) {
     const smic = meta.smic_horaire.toLocaleString('fr-FR', { minimumFractionDigits: 2 });
+    const recalcul = meta.recalcul_minutes ? ` · recalcul toutes les ${meta.recalcul_minutes} min` : '';
     return `Données API PRIM · IDF Mobilités · mis à jour à ${fmtHeure(meta.genere_a)}` +
-      ` · recalcul toutes les 10 min · base SMIC brut ${smic}${NBSP}€/h`;
+      `${recalcul} · base SMIC brut ${smic}${NBSP}€/h`;
   }
 
   function rangee(l, maxMin) {

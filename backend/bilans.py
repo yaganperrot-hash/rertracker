@@ -23,7 +23,7 @@ from backend.causes import CATEGORIES, NON_PRECISE, categoriser_cause
 from backend.collector import LIGNES_CIBLES
 from backend.config import get_settings
 from backend.database import AsyncSessionLocal
-from backend.metrics import PARIS_TZ
+from backend.metrics import PARIS_TZ, cout_eur  # cout_eur : même arrondi que l'accueil
 from backend.models import DailyMetric, Incident
 
 logger = logging.getLogger(__name__)
@@ -39,13 +39,6 @@ _RANG_CATEGORIE = {c: i for i, c in enumerate(CATEGORIES)}
 
 
 # ── Utilitaires ────────────────────────────────────────────────
-
-def cout_eur(minutes_voyageurs: int, smic_horaire: float) -> int:
-    """floor(minutes × smic / 60). Appliqué à UNE ligne de daily_metrics, jamais à une somme.
-
-    Calcul en centimes entiers : pas d'erreur d'arrondi flottant (19,999… au lieu de 20).
-    """
-    return (minutes_voyageurs * round(smic_horaire * 100)) // 6000
 
 
 def delta_pct(actuel: int, precedent: int | None) -> float | None:
@@ -298,7 +291,13 @@ def _ecrire(dossier: Path, nom: str, contenu: dict) -> None:
 
 async def generer_bilans(db: AsyncSession | None = None, dossier: Path = DOSSIER_BILANS) -> None:
     async def _run(session: AsyncSession) -> None:
-        smic = get_settings().smic_horaire
+        settings = get_settings()
+        smic = settings.smic_horaire
+
+        def ecrire(nom: str, contenu: dict) -> None:
+            # Rythme de recalcul affiché en pied de page, lu dans la config
+            contenu["meta"]["recalcul_minutes"] = settings.bilans_interval_minutes
+            _ecrire(dossier, nom, contenu)
         genere_a = datetime.now(PARIS_TZ)
         aujourdhui = genere_a.date()
 
@@ -323,7 +322,7 @@ async def generer_bilans(db: AsyncSession | None = None, dossier: Path = DOSSIER
         for p in PERIODES:
             du = aujourdhui - timedelta(days=p - 1)
             categories = [c for j, c in perturbations if du <= j <= aujourdhui]
-            _ecrire(dossier, f"statistiques-{p}.json", construire_statistiques(
+            ecrire(f"statistiques-{p}.json", construire_statistiques(
                 p, aujourdhui, rows, categories, debut_donnees, smic, genere_a,
             ))
 
@@ -335,7 +334,7 @@ async def generer_bilans(db: AsyncSession | None = None, dossier: Path = DOSSIER
             for j, c in perturbations:
                 if j.year == annee:
                     par_mois.setdefault(j.month, []).append(c)
-            _ecrire(dossier, f"annee-{annee}.json", construire_annee(
+            ecrire(f"annee-{annee}.json", construire_annee(
                 annee, aujourdhui, rows, par_mois, debut_donnees, smic, genere_a,
             ))
 

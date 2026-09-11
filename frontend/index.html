@@ -604,11 +604,11 @@
      JAVASCRIPT
 ════════════════════════════════════════════════════════ -->
 <script src="duree.js"></script>
+<script src="ticker.js"></script>
 <script>
-  /* ── Constantes de calcul (identiques à bot.py / backend/config.py) ── */
-  const SMIC_HORAIRE = 12.31;             // € brut/h depuis le 1er juin 2026 — même valeur que SMIC_HORAIRE (backend/config.py)
-  const EUR_PAR_MIN  = SMIC_HORAIRE / 60;
-  const SALAIRE_JOUR = SMIC_HORAIRE * 7;  // salaire journalier SMIC brut (7 h) ≈ 86 €
+  /* ── Tous les chiffres (coût du jour, par ligne, par incident, taux SMIC) viennent du
+     backend, seule source de calcul : cette page ne fait que les afficher. ── */
+  const HEURES_JOUR = 7;  // salaire journalier = 7 h au SMIC
 
   const LINE_META = {
     'RER_A':        { short: 'A', name: 'RER A',        color: '#E2231A' },
@@ -626,17 +626,9 @@
     'TRANSILIEN_U': { short: 'U', name: 'Transilien U', color: '#7B0F1F' },
   };
 
-  const FREQ = {
-    RER_A:900000, RER_B:650000, RER_C:350000, RER_D:530000, RER_E:180000,
-    TRANSILIEN_H:110000, TRANSILIEN_J:130000, TRANSILIEN_K:50000,
-    TRANSILIEN_L:170000, TRANSILIEN_N:100000, TRANSILIEN_P:80000,
-    TRANSILIEN_R:70000, TRANSILIEN_U:40000
-  };
-
   function fmt(n) {
     return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   }
-  function euros(mv) { return Math.floor(mv * EUR_PAR_MIN); }
   function esc(s) {
     return String(s ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
   }
@@ -644,12 +636,12 @@
   /* ════════ 1. HERO (coût du jour) + CUMUL (temps du jour) ════════
      Même source, /api/stats/today : les deux chiffres portent sur la
      même fenêtre (journée comptée à partir de 7 h, heure de Paris).  */
-  function renderCumul(mv) {
+  function renderCumul(mv, cout, smic) {
     document.getElementById('cumul-value').textContent = formatDuree(mv);
     document.getElementById('cumul-label').textContent = 'de vie ' + accordPerdu(mv) + ' collectivement';
     document.getElementById('cumul-note').textContent =
-      'base SMIC ' + SMIC_HORAIRE.toLocaleString('fr-FR') + ' €/h · ≈ ' +
-      fmt(Math.floor(euros(mv) / SALAIRE_JOUR)) + ' salaires journaliers';
+      'base SMIC ' + smic.toLocaleString('fr-FR') + ' €/h · ≈ ' +
+      fmt(Math.floor(cout / (smic * HEURES_JOUR))) + ' salaires journaliers';
   }
 
   async function fetchToday() {
@@ -657,9 +649,9 @@
       const res = await fetch('/api/stats/today');
       if (!res.ok) return;
       const stats = await res.json();
-      const mv = stats.total_minutes_voyageurs || 0;
-      document.getElementById('ctr-eur').textContent = fmt(euros(mv)) + ' €';
-      renderCumul(mv);
+      const cout = stats.cout_eur || 0;
+      document.getElementById('ctr-eur').textContent = fmt(cout) + ' €';
+      renderCumul(stats.total_minutes_voyageurs || 0, cout, stats.smic_horaire);
     } catch (_) { /* on garde les placeholders « — » */ }
   }
 
@@ -669,9 +661,10 @@
   const groupesOuverts = new Set();
   const survol = window.matchMedia('(hover: hover)');
 
+  // Coût calculé par l'API, même formule que le total du jour ; null pour une perturbation
+  // déclarée, qui n'entre pas dans le coût
   function coutIncident(inc) {
-    const vpm = (FREQ[inc.line_id] || 0) / 1080;                 // voyageurs / minute (18 h de service)
-    return vpm > 0 ? (inc.duree_minutes || 0) * vpm * EUR_PAR_MIN : null;
+    return inc.cout_eur ?? null;
   }
 
   function renderIncident(inc) {
@@ -744,19 +737,11 @@
       const incidents = await res.json();
       const list = document.getElementById('incidents-list');
 
+      Ticker.render(incidents);
       if (incidents.length === 0) {
         list.innerHTML = '<div class="empty-msg">Aucun incident en cours ✓</div>';
-        document.getElementById('ticker-track').textContent = 'Aucun incident en cours sur le réseau RER et Transilien';
         return;
       }
-
-      // Ticker dynamique
-      const tickerText = incidents.slice(0, 8).map(inc => {
-        const meta = LINE_META[inc.line_id] || { name: inc.line_id };
-        const dureeMin = inc.duree_minutes || 0;
-        return `⚠ ${meta.name} — ${esc(inc.resume || inc.cause || inc.type_incident)}${dureeMin > 0 ? ' — ' + dureeMin + ' min' : ''}`;
-      }).join('  &nbsp;•&nbsp;  ');
-      document.getElementById('ticker-track').innerHTML = tickerText + '  &nbsp;&nbsp;&nbsp;  ' + tickerText;
 
       // Regroupement par ligne ; lignes et trains triés par coût décroissant
       const parLigne = new Map();
@@ -801,7 +786,7 @@
   });
 
   /* ════════ 3. LIGNES — aujourd'hui (/api/stats/line/{id}?period=1) ════════ */
-  let lignes = [];          // [{ key, order, short, name, color, inc, mv }]
+  let lignes = [];          // [{ key, order, short, name, color, inc, mv, cout }]
   let manquantes = [];      // lignes dont l'API n'a pas répondu
   let sortKey = 'cout', sortDir = -1;
   const lignesOuvertes = new Set();
@@ -811,7 +796,7 @@
     name:  l => l.order,
     inc:   l => l.inc,
     temps: l => l.mv,
-    cout:  l => l.mv,       // coût = temps × SMIC : même ordre, colonne cliquable quand même
+    cout:  l => l.cout,
   };
 
   function renderLines() {
@@ -835,7 +820,7 @@
           <div class="line-name">${l.name}</div>
           <div class="line-value col-inc">${fmt(l.inc)}</div>
           <div class="line-value col-temps">${temps}</div>
-          <div class="line-value line-cout">${fmt(euros(l.mv))} €</div>
+          <div class="line-value line-cout">${fmt(l.cout)} €</div>
           <button type="button" class="line-toggle" aria-expanded="${open}" aria-label="Détail ${l.name}">▾</button>
           <div class="line-detail">${fmt(l.inc)} incident${l.inc > 1 ? 's' : ''} aujourd'hui · ${temps} de temps perdu</div>
         </div>`;
@@ -874,6 +859,7 @@
           key, order: i, short: meta.short, name: meta.name, color: meta.color,
           inc: d.total_incidents || 0,
           mv:  d.total_minutes_voyageurs || 0,
+          cout: d.total_cout_eur || 0,
         });
       });
 

@@ -8,6 +8,7 @@ from sqlalchemy import select, func, or_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.config import get_settings
 from backend.database import AsyncSessionLocal
 from backend.models import Incident, DailyMetric
 
@@ -90,6 +91,24 @@ def _incident_hour_paris(incident) -> int | None:
     return incident.heure_debut.astimezone(PARIS_TZ).hour
 
 
+def incident_minutes_voyageurs(incident, now_utc: datetime) -> tuple[int, int]:
+    """(durée effective, minutes-voyageurs) d'un retard temps réel ou d'un train supprimé.
+
+    Même calcul pour les métriques du jour et pour le coût par incident servi par l'API.
+    """
+    dur = _effective_duration(incident, now_utc)
+    return dur, _minutes_voyageurs(dur, incident.line_id, hour=_incident_hour_paris(incident))
+
+
+def cout_eur(minutes_voyageurs: int, smic_horaire: float) -> int:
+    """floor(minutes × smic / 60). Appliqué à UNE ligne de daily_metrics (ou à un incident),
+    jamais à une somme : un total est la somme de ces coûts arrondis.
+
+    Calcul en centimes entiers : pas d'erreur d'arrondi flottant (19,999… au lieu de 20).
+    """
+    return (minutes_voyageurs * round(smic_horaire * 100)) // 6000
+
+
 async def compute_daily_metrics(target_date: date | None = None, db: AsyncSession | None = None) -> None:
     if target_date is None:
         target_date = datetime.now(PARIS_TZ).date()
@@ -140,18 +159,11 @@ async def compute_daily_metrics(target_date: date | None = None, db: AsyncSessio
             # Only RT incidents count for duree_totale and minutes_voyageurs
             duree_totale = 0
             total_mv = 0
-            for inc in rt_incidents:
-                dur = _effective_duration(inc, now_utc)
-                duree_totale += dur
-                hour = _incident_hour_paris(inc)
-                total_mv += _minutes_voyageurs(dur, line_id, hour=hour)
-
             # Cancelled trains also contribute
-            for inc in cancelled:
-                dur = _effective_duration(inc, now_utc)
+            for inc in rt_incidents + cancelled:
+                dur, mv = incident_minutes_voyageurs(inc, now_utc)
                 duree_totale += dur
-                hour = _incident_hour_paris(inc)
-                total_mv += _minutes_voyageurs(dur, line_id, hour=hour)
+                total_mv += mv
 
             nb_rt = len(rt_incidents)
             nb_disr = len(disruptions)
@@ -207,12 +219,16 @@ async def get_today_stats(db: AsyncSession) -> dict:
     total_duree = sum(r.duree_totale_min for r in rows)
     total_mv = sum(r.minutes_voyageurs for r in rows)
     lignes_perturbees = [r.line_id for r in rows if r.est_jour_perturbe]
+    smic = get_settings().smic_horaire
 
     return {
         "date": today.isoformat(),
         "total_incidents": total_incidents,
         "total_duree_min": total_duree,
         "total_minutes_voyageurs": total_mv,
+        # Arrondi par ligne puis sommé, comme les bilans : même coût du jour partout
+        "cout_eur": sum(cout_eur(r.minutes_voyageurs, smic) for r in rows),
+        "smic_horaire": smic,
         "lignes_perturbees": lignes_perturbees,
         "nb_lignes_perturbees": len(lignes_perturbees),
     }
@@ -228,6 +244,7 @@ async def get_line_stats(line_id: str, period: int, db: AsyncSession) -> dict:
         .order_by(DailyMetric.date)
     )
     rows = (await db.execute(stmt)).scalars().all()
+    smic = get_settings().smic_horaire
 
     return {
         "line_id": line_id,
@@ -237,6 +254,7 @@ async def get_line_stats(line_id: str, period: int, db: AsyncSession) -> dict:
         "total_incidents": sum(r.nb_incidents for r in rows),
         "total_duree_min": sum(r.duree_totale_min for r in rows),
         "total_minutes_voyageurs": sum(r.minutes_voyageurs for r in rows),
+        "total_cout_eur": sum(cout_eur(r.minutes_voyageurs, smic) for r in rows),
         "jours_perturbes": sum(1 for r in rows if r.est_jour_perturbe),
         "daily": [
             {

@@ -273,6 +273,17 @@ lu par les bilans et le bot ; accueil et méthode alignés (exemple recalculé :
 **Fix** : `SALAIRE_JOUR = SMIC_HORAIRE × 7` (≈ 86 €)
 **Status** : ✅ Résolu
 
+### [2026-09-11] Données écrites en dur dans le frontend
+**Fichier(s)** : `frontend/index.html`, `frontend/methode.html`, `frontend/bilan.js`, `backend/api.py`, `backend/metrics.py`
+**Symptôme** : faux incidents dans le bandeau de la méthode (« RER B — Panne signalisation Gare du Nord — 47 min ») ;
+table `FREQ` et taux SMIC recopiés dans l'accueil ; SMIC, exemple chiffré et « 288 req/jour » en dur dans la méthode ;
+« recalcul toutes les 10 min » en dur dans les bilans
+**Cause** : héritage des maquettes, doublons de `data/frequentation.json` et de `config.py`
+**Fix** : le backend calcule tous les coûts (`cout_eur` dans l'API : jour, ligne, incident) ; `/api/reference` sert
+SMIC, source du taux, relevés, quota, fréquentation ; `ticker.js` lit les incidents réels ; `meta.recalcul_minutes`
+dans les JSON de bilans. Le « 288 req/jour » était faux : 13 lignes × 2 appels par relevé → 7 488 req/jour
+**Status** : ✅ Résolu
+
 ---
 
 ## Bugs ouverts
@@ -344,20 +355,21 @@ un `git rm` ne la retire pas de l'historique (elle reste dans `c591442`)
 **Fichier(s)** : `frontend/index.html`
 **Symptôme** : le coût du jour de l'accueil peut différer de quelques euros de la même journée dans `/statistiques`
 **Cause** : l'accueil calcule `floor(Σ minutes × SMIC / 60)`, les bilans arrondissent par ligne × jour puis somment
-**Fix** : servir le coût du jour depuis le backend avec la règle des bilans
-**Status** : ❌ Ouvert (mineur)
+**Fix** : servir le coût du jour depuis le backend avec la règle des bilans (`cout_eur` de `/api/stats/today`)
+**Status** : ✅ Résolu le 2026-09-11
 
 ### [2026-09-10] Coût par incident : formule front ≠ backend
 **Fichier(s)** : `frontend/index.html` (`coutIncident`, table `FREQ`)
 **Symptôme** : le montant d'un incident en cours ne correspond pas exactement à sa contribution au total de sa ligne
 **Cause** : le front calcule `FREQ / 1080 × durée × SMIC` (moyenne plate sur 18 h), le backend pondère par heure
 (`HOURLY_WEIGHTS`, lui-même faussé par le bug 9). `FREQ` duplique aussi `data/frequentation.json` en dur
-**Fix** : exposer le coût par incident depuis l'API, ou au minimum servir la fréquentation depuis le backend
-**Status** : ❌ Ouvert (mineur)
+**Fix** : coût par incident exposé par l'API (`cout_eur`, même calcul que les métriques du jour) ; `FREQ` supprimé.
+Une perturbation déclarée n'a plus de coût propre (« — ») : elle n'entre pas dans le total
+**Status** : ✅ Résolu le 2026-09-11
 
 ---
 
 ## Notes de surveillance
-- Quota PRIM : 20 000 req/jour — polling 5 min = 288 req/jour (marge x69)
+- Quota PRIM : 20 000 req/jour — polling 5 min = 7 488 req/jour (13 lignes × 2 appels par relevé, marge × 2,7)
 - Bot X : planifié à 20h via APScheduler dans `main.py`
 - Logs applicatifs : `logs/` (monté en volume Docker)
