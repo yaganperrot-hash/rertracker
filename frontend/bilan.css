@@ -17,6 +17,7 @@
   --rouge-fonce: #A32D2D;
   --rouge-pale: #FCEBEB;
   --blanc: #fff;
+  --nav-bg: var(--creme);   /* fond du menu commun (nav.css) */
 }
 
 html { -webkit-text-size-adjust: 100%; }
@@ -33,28 +34,16 @@ a { color: var(--gris); }
 
 .eyebrow { font-size: 11px; letter-spacing: 1.5px; color: var(--gris); text-transform: uppercase; }
 
-/* En-tête + navigation */
-.head {
-  display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 12px;
-  border-bottom: 1.5px solid var(--encre); padding-bottom: 11px; margin-bottom: 12px;
-}
-.brand { font-weight: 500; letter-spacing: 1px; font-size: 16px; color: var(--encre); text-decoration: none; }
-.brand span { color: var(--rouge); }
-.liens { display: flex; flex-wrap: wrap; font-size: 12px; margin-bottom: 20px; }
-.liens a { color: var(--gris); text-decoration: none; }
-.liens a + a::before { content: "·"; padding: 0 8px; color: var(--creux); }
-.liens a:hover { color: var(--encre); }
-.liens a[aria-current="page"] { color: var(--encre); font-weight: 500; }
-
-/* Sélecteur de période */
-.toggle { display: inline-flex; background: var(--sable); border-radius: 8px; padding: 3px; margin-bottom: 22px; font-size: 12px; }
-.toggle button {
-  border: 0; background: none; font: inherit; cursor: pointer;
+/* Sélecteur 7 jours · 30 jours · Année (boutons sur /statistiques, liens entre les deux pages) */
+.toggle { display: inline-flex; background: var(--sable); border-radius: 8px; padding: 3px; margin-bottom: 14px; font-size: 12px; }
+.toggle button, .toggle a {
+  border: 0; background: none; font: inherit; cursor: pointer; text-decoration: none;
   padding: 5px 15px; color: var(--gris); border-radius: 6px;
 }
-.toggle button:hover { color: var(--encre); }
-.toggle button[aria-pressed="true"] { background: var(--encre); color: var(--creme); }
-.toggle button:focus-visible { outline: 2px solid var(--encre); outline-offset: 1px; }
+.toggle button:hover, .toggle a:hover { color: var(--encre); }
+.toggle [aria-pressed="true"], .toggle [aria-current="page"] { background: var(--encre); color: var(--creme); }
+.toggle button:focus-visible, .toggle a:focus-visible { outline: 2px solid var(--encre); outline-offset: 1px; }
+.titre-page { margin-bottom: 18px; }
 
 /* Chiffres héros */
 .hero { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 36px; margin-bottom: 8px; }

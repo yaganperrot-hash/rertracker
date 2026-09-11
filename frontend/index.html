@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RETARDS IDF — Compteur en temps réel</title>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="nav.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     [hidden] { display: none !important; }
@@ -57,68 +58,7 @@
       to   { transform: translateX(-100%); }
     }
 
-    /* ─── 2. NAVIGATION ─── */
-    nav {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: var(--bg);
-      border-bottom: 2px solid var(--ink);
-      padding: 14px 32px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 24px;
-    }
-    .nav-logo {
-      font-weight: 900;
-      font-size: 18px;
-      letter-spacing: 5px;
-      text-transform: uppercase;
-      text-decoration: none;
-      flex-shrink: 0;
-    }
-    .nav-logo .logo-retards { color: var(--ink); }
-    .nav-logo .logo-idf     { color: var(--red); }
-
-    .nav-links {
-      display: flex;
-      gap: 28px;
-      list-style: none;
-    }
-    .nav-links a {
-      font-weight: 500;
-      font-size: 13px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: var(--muted);
-      text-decoration: none;
-      transition: color 0.15s;
-    }
-    .nav-links a:hover  { color: var(--ink); }
-    .nav-links a.active { color: var(--ink); font-weight: 700; }
-
-    .nav-live {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      font-weight: 700;
-      font-size: 13px;
-      letter-spacing: 2px;
-      color: var(--red);
-      flex-shrink: 0;
-    }
-    .live-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--red);
-      animation: blink 1.5s ease-in-out infinite;
-    }
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0.15; }
-    }
+    /* ─── 2. NAVIGATION : nav.css, commune aux 4 pages ─── */
 
     /* ─── 3. HERO — coût du jour ─── */
     .hero {
@@ -507,8 +447,6 @@
 
     /* ─── RESPONSIVE ─── */
     @media (max-width: 768px) {
-      nav { padding: 12px 16px; }
-      .nav-links { display: none; }
       .hero { padding: 28px 16px 20px; }
       .stamp { display: none; }
       .cumul { padding: 0 16px 22px; }
@@ -574,15 +512,14 @@
      2. NAVIGATION
 ════════════════════════════════════════════════════════ -->
 <nav>
-  <a href="#" class="nav-logo">
+  <a href="/" class="nav-logo">
     <span class="logo-retards">RETARDS </span><span class="logo-idf">IDF</span>
   </a>
   <ul class="nav-links">
-    <li><a href="#" class="active">Aujourd'hui</a></li>
+    <li><a href="/" class="active" aria-current="page">Aujourd'hui</a></li>
     <li><a href="/statistiques">Statistiques</a></li>
-    <li><a href="/annee">Année</a></li>
     <li><a href="#lignes">Par ligne</a></li>
-    <li><a href="methode.html">Méthode</a></li>
+    <li><a href="/methode.html">Méthode</a></li>
   </ul>
   <div class="nav-live">
     <span class="live-dot"></span>

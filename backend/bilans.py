@@ -1,5 +1,5 @@
 """
-bilans.py — Bilans des pages /statistiques (7, 30, 90 jours glissants) et /annee.
+bilans.py — Bilans des pages /statistiques (7 et 30 jours glissants) et /annee.
 
 Recalculés toutes les 10 min et écrits en JSON statique dans frontend/data/ : aucune requête base
 par visiteur. Source unique : daily_metrics, la table que lit aussi l'accueil.
@@ -29,7 +29,7 @@ from backend.models import DailyMetric, Incident
 logger = logging.getLogger(__name__)
 
 LIGNES: list[str] = list(LIGNES_CIBLES.values())
-PERIODES: tuple[int, ...] = (7, 30, 90)
+PERIODES: tuple[int, ...] = (7, 30)
 SEUIL_CREUX = 0.6      # mois « creux » : coût < 60 % de la moyenne des mois complets
 MIN_MOIS_CREUX = 3     # pas de creux calculé avec moins de 3 mois complets
 DOSSIER_BILANS = Path(__file__).parent.parent / "frontend" / "data"
@@ -304,7 +304,7 @@ async def generer_bilans(db: AsyncSession | None = None, dossier: Path = DOSSIER
 
         debut_donnees = (await session.execute(select(func.min(DailyMetric.date)))).scalar()
 
-        # Une seule lecture : 2 × 90 jours pour /statistiques, 2 années pleines pour /annee N-1
+        # Une seule lecture : 2 × la plus longue période pour /statistiques, 2 années pleines pour /annee N-1
         borne = min(aujourdhui - timedelta(days=2 * max(PERIODES)), date(aujourdhui.year - 2, 1, 1))
         rows = (await session.execute(
             select(DailyMetric).where(DailyMetric.date >= borne, DailyMetric.date <= aujourdhui)

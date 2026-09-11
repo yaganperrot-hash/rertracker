@@ -11,7 +11,7 @@ d'Île-de-France**, en temps réel.
 - **Compteur live** : euros de temps de travail volé, calculé au SMIC brut (12,31 €/h depuis le 1er juin 2026)
 - **Incidents en cours** : liste mise à jour toutes les 5 minutes depuis l'API PRIM
 - **Tableau par ligne** : incidents, minutes-voyageurs et coût du jour
-- **Statistiques** (`/statistiques`) : coût, minutes perdues et incidents sur 7 / 30 / 90 jours,
+- **Statistiques** (`/statistiques`) : coût, minutes perdues et incidents sur 7 / 30 jours,
   classement par ligne, comparaison avec la période précédente, causes déclarées par l'opérateur
 - **Bilan annuel** (`/annee`) : cumul des bilans mensuels, coût mois par mois, classement annuel
 - Bilans recalculés toutes les 10 minutes en fichiers JSON statiques (aucune requête base par visiteur)
@@ -75,7 +75,7 @@ docker-compose up -d
 | URL | Contenu |
 |-----|---------|
 | `http://localhost:8000` | Frontend (compteur live) |
-| `http://localhost:8000/statistiques` | Bilan sur 7 / 30 / 90 jours |
+| `http://localhost:8000/statistiques` | Bilan sur 7 / 30 jours |
 | `http://localhost:8000/annee` | Bilan annuel |
 | `http://localhost:8000/methode.html` | Méthode & transparence |
 | `http://localhost:8000/docs` | API Swagger |
@@ -169,9 +169,10 @@ Le bot est silencieux si les clés Twitter/X ne sont pas configurées.
 │   └── config.py        # Settings (pydantic-settings)
 ├── frontend/
 │   ├── index.html       # Compteur live
-│   ├── statistiques.html  # Bilan 7 / 30 / 90 jours
+│   ├── statistiques.html  # Bilan 7 / 30 jours
 │   ├── annee.html       # Bilan annuel (Chart.js)
 │   ├── bilan.css / bilan.js  # Communs aux deux bilans
+│   ├── nav.css          # Menu de navigation, commun aux 4 pages
 │   ├── methode.html     # Transparence méthodologique
 │   └── data/            # JSON des bilans, générés (ignorés par git)
 ├── data/

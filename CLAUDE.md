@@ -117,9 +117,12 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb reta
 - Frontend refonte complète — design light cream + Roboto, API fetch avec fallback mock
 - Accueil — refonte de la hiérarchie (2026-09-10) : coût du jour → cumul du jour → incident en cours →
   table par ligne (aujourd'hui, triée par coût, lignes épargnées condensées), repli mobile 2 colonnes
-- Bilans (2026-09-11) : `/statistiques` (7/30/90 j) et `/annee` d'après `docs/maquettes/` —
+- Bilans (2026-09-11) : `/statistiques` et `/annee` d'après `docs/maquettes/` —
   `backend/bilans.py`, `backend/causes.py`, `frontend/statistiques.html`, `frontend/annee.html`,
   `frontend/bilan.css|js` ; `stats.html` supprimée (301) ; SMIC 2026 = 12,31 €/h (`SMIC_HORAIRE`)
+- Navigation unifiée (2026-09-11) : menu de l'accueil sur les 4 pages (`frontend/nav.css`), liens gardés sur
+  mobile (2ᵉ rangée) ; menu = Aujourd'hui · Statistiques · Par ligne · Méthode ; sélecteur
+  « 7 jours · 30 jours · Année » partagé par `/statistiques` et `/annee` (90 j retiré)
 
 ### 🔄 En maintenance — voir `TODO.md`
 
