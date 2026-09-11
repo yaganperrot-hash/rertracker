@@ -1,6 +1,55 @@
 # SESSION — Dernière session de travail
 
-## Session du 2026-09-11 (en cours)
+## Session du 2026-09-11 bis (terminée)
+
+### Contexte au démarrage
+- Branche `master`, 10 commits de retard sur `origin/master`
+- Modification locale non commitée : `backend/collector.py` (ancienne version déduplication vj)
+- Objectif : se mettre à jour avec le git, relancer le serveur, bombarder les endpoints, corriger les tests
+
+### Actions effectuées
+- **Git sync** : `git stash` → `git pull` (10 commits, fast-forward) → `git stash pop` avec conflit
+  sur `collector.py` → stash abandonné (le remote avait déjà une version plus complète avec
+  gare/direction/mission, trains fantômes, déduplication par `all_delays` dict)
+- **Serveur relancé** avec le code à jour : bilans générés au démarrage (JSON dans `frontend/data/`)
+- **Bombardement endpoints** : tous les endpoints testés (stats today, reference, 13 lignes, incidents
+  current/history, statistiques-7/30.json, annee-2026.json, admin/collect) — tous OK
+- **Tests** : 6 échecs corrigés sur 131 :
+  - Bug 9 (HOURLY_WEIGHTS somme 19.2) : test aligné sur la réalité (19.2), commentaire corrigé
+  - Bug 10 (5 tests collector obsolètes) : `AsyncMock` → `MagicMock` pour `.json()` (pas awaité),
+    mock disruption corrigé (`status: "active"` manquant, heure `06:30` < 7h filtrée → `08:00`)
+  - **Bug 20 — `PRIM_BASE_URL` doublait `/line_reports`** : la constante contenait déjà `/line_reports`
+    et le code ajoutait `/lines/{id}/line_reports` → URL `.../line_reports/lines/.../line_reports`.
+    Corrigé en retirant le suffixe, unifié `PRIM_BASE_URL` et `PRIM_NAVITIA_BASE` (identiques)
+- **Résultat** : 131 tests, 131 passed, 0 failed
+
+### Bugs corrigés
+- Bug 9 — HOURLY_WEIGHTS : test mis à jour (19.2 est correct, pas 18.0)
+- Bug 10 — Tests collector : mocks async corrigés + mock disruption complété
+- Bug 20 — PRIM_BASE_URL doublait `/line_reports` dans l'URL des disruptions
+
+### Fichiers modifiés
+- `backend/collector.py` — fix PRIM_BASE_URL, suppression PRIM_NAVITIA_BASE redondant
+- `backend/metrics.py` — commentaire somme poids corrigé
+- `tests/test_collector.py` — mocks AsyncMock→MagicMock, mock disruption complété
+- `tests/test_metrics.py` — test somme poids aligné sur 19.2
+
+### Leçons
+- **`AsyncMock().method()` sans `await` retourne une coroutine** : si le code testé appelle
+  `.json()` ou `.raise_for_status()` sans await, le mock doit être `MagicMock`, pas `AsyncMock`
+- **Vérifier les URL par concaténation** : une constante terminant par `/line_reports` + un chemin
+  `/lines/{id}/line_reports` = double suffixe. Toujours garder la base URL sans endpoint final
+- **Les filtres du collector rejettent silencieusement les mocks** : heures < 7h Paris, status
+  manquant, durée > 720 min — un test qui « ne parse rien » n'échoue pas forcément au bon endroit
+
+### État en fin de session
+- 131/131 tests verts
+- Serveur actif : http://localhost:8000
+- Tous les endpoints statistiques opérationnels
+
+---
+
+## Session du 2026-09-11 (terminée)
 
 ### Contexte au démarrage
 - Branche `master`, 4 commits locaux non poussés (session du 2026-09-10)

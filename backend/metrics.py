@@ -31,7 +31,7 @@ def _load_frequentation() -> dict[str, int]:
 
 FREQUENTATION: dict[str, int] = _load_frequentation()
 
-# Hourly weight profile (sum = 18.0 to stay consistent with old /18 daily calc)
+# Hourly weight profile (sum = 19.2)
 HOURLY_WEIGHTS: dict[int, float] = {
     6: 0.5,  7: 1.8,  8: 2.5,  9: 1.5, 10: 0.8, 11: 0.7,
     12: 0.8, 13: 0.7, 14: 0.7, 15: 0.8, 16: 1.2, 17: 2.2,

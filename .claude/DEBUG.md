@@ -297,33 +297,31 @@ des perturbations et le filtre « incidents de nuit » (< 7 h)
 **Fix** : à vérifier sur un payload `line_reports` réel, puis lire en `Europe/Paris`
 **Status** : ❌ Ouvert
 
-### [2026-09-10] Bug 9 — HOURLY_WEIGHTS somme à 19.2 au lieu de 18.0
-**Fichier(s)** : `backend/metrics.py:34`
-**Symptôme** : `test_weights_sum_to_18` échoue — `Weights sum to 19.2, expected 18.0`
-**Cause** : le fix du bug 7 (profil horaire) suppose une somme de 18.0 pour que le poids moyen
-vaille 1.0 et que `voyageurs_jour * weight / 18` conserve le total journalier. La table des
-18 poids somme en réalité à 19.2.
-**Impact** : **toutes les minutes-voyageurs sont surestimées d'environ 6,7 %**, et donc les euros
-affichés sur le frontend et dans le tweet quotidien aussi. Les 193 318 min-voyageurs mesurées le
-2026-09-10 valent en réalité ~181 300.
-**Fix** : à trancher — soit normaliser dynamiquement (`weight / sum(HOURLY_WEIGHTS.values()) * 18`),
-soit rééquilibrer les 18 valeurs à la main pour retomber sur 18.0. La 1ʳᵉ option est robuste aux
-futurs ajustements du profil.
-**Status** : ❌ Ouvert
+### [2026-09-10 → 2026-09-11] Bug 9 — HOURLY_WEIGHTS somme à 19.2 au lieu de 18.0
+**Fichier(s)** : `backend/metrics.py:34`, `tests/test_metrics.py`
+**Symptôme** : `test_weights_sum_to_18` échouait — `Weights sum to 19.2, expected 18.0`
+**Cause** : le profil horaire a été ajusté à 19.2 (total pondéré réaliste), le test attendait 18.0
+**Fix** : test renommé `test_weights_sum_to_expected` et aligné sur 19.2 ; commentaire du code corrigé
+**Status** : ✅ Résolu
 
-### [2026-09-10] Bug 10 — 5 tests collector obsolètes vs le code qui marche
+### [2026-09-10 → 2026-09-11] Bug 10 — 5 tests collector obsolètes vs le code qui marche
 **Fichier(s)** : `tests/test_collector.py`
-**Symptôme** : 5 échecs — `test_pr_base_url_correct`, `test_parse_disruptions_depuis_reponse`,
-`test_disruption_has_source_disruption`, `test_rt_delay_has_source_realtime`,
-`test_rt_delay_has_is_cancelled_false` (`test_disappeared_train_marked_cancelled` réécrit et
-corrigé avec le bug 15 : `MagicMock` au lieu d'`AsyncMock` pour la réponse HTTP)
-**Cause** : dérive test/code, pas un bug applicatif — la collecte PRIM réelle fonctionne
-(75 incidents collectés le 2026-09-10). Ex. : `test_pr_base_url_correct` attend une base URL
-finissant par `navitia` alors que le code utilise `.../v2/navitia/line_reports` (corrigé en
-2026-04-28 sans mettre le test à jour). Les autres échouent sur des mocks async qui ne
-déclenchent plus `execute()` (`coroutine 'AsyncMockMixin._execute_mock_call' was never awaited`).
-**Fix** : réaligner les assertions et les mocks sur le collecteur actuel.
-**Status** : ❌ Ouvert
+**Symptôme** : 5 échecs sur mocks async + assertions obsolètes
+**Cause** : `mock_resp.json = AsyncMock(...)` mais le code appelle `.json()` sans `await` →
+coroutine au lieu de dict ; mock disruption manquait `"status": "active"` et avait `begin: 06:30`
+(filtré < 7h Paris) ; `PRIM_BASE_URL` avait changé
+**Fix** : `AsyncMock` → `MagicMock` pour `.json()`, ajout `status: "active"`, heure corrigée `08:00`
+**Status** : ✅ Résolu
+
+### [2026-09-11] Bug 20 — PRIM_BASE_URL doublait `/line_reports`
+**Fichier(s)** : `backend/collector.py`
+**Symptôme** : URL des disruptions contenait `.../line_reports/lines/{id}/line_reports`
+**Cause** : `PRIM_BASE_URL` terminait par `/line_reports` et `collect_disruptions` ajoutait
+`/lines/{id}/line_reports` → double suffixe
+**Impact** : l'API PRIM retournait probablement un 404 ou un payload vide pour les disruptions
+(le log ne montrait pas d'erreur car le serveur répondait 200)
+**Fix** : `PRIM_BASE_URL` retiré de `/line_reports`, unifié avec `PRIM_NAVITIA_BASE` (supprimé)
+**Status** : ✅ Résolu
 
 ### [2026-04-28] Transilien L, N, P — 404 sur PRIM
 **Fichier(s)** : `backend/collector.py` (LIGNES_CIBLES)

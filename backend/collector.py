@@ -13,7 +13,7 @@ from backend.models import Incident
 
 logger = logging.getLogger(__name__)
 
-PRIM_BASE_URL = "https://prim.iledefrance-mobilites.fr/marketplace/v2/navitia/line_reports"
+PRIM_BASE_URL = "https://prim.iledefrance-mobilites.fr/marketplace/v2/navitia"
 
 # Mapping Navitia line ID → internal line_id
 LIGNES_CIBLES: dict[str, str] = {
@@ -151,7 +151,6 @@ async def collect_disruptions() -> None:
     logger.info("Upserted %d incidents for tracked lines", inserted)
 
 
-PRIM_NAVITIA_BASE = "https://prim.iledefrance-mobilites.fr/marketplace/v2/navitia"
 MIN_DELAY_MINUTES = 2  # retard minimum pour être enregistré
 # Train fantôme : au-delà de ce retard, un départ estimé collé à l'heure du relevé
 # (à la tolérance près) glisse d'un relevé à l'autre — ce n'est pas une mesure.
@@ -180,7 +179,7 @@ async def collect_rt_delays() -> None:
 
     async with httpx.AsyncClient(timeout=30) as client:
         for navitia_id, line_id in LIGNES_CIBLES.items():
-            url = f"{PRIM_NAVITIA_BASE}/lines/{navitia_id}/departures"
+            url = f"{PRIM_BASE_URL}/lines/{navitia_id}/departures"
             fetched_ids_by_line[line_id] = set()
             try:
                 resp = await client.get(url, headers=headers, params={

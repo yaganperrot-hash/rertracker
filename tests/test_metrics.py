@@ -92,10 +92,10 @@ class TestMinutesVoyageursHourly:
             assert h in HOURLY_WEIGHTS, f"Hour {h} missing from HOURLY_WEIGHTS"
             assert HOURLY_WEIGHTS[h] > 0, f"Hour {h} has zero weight"
 
-    def test_weights_sum_to_18(self):
-        """Hourly weights should sum to 18.0 for backward compat."""
+    def test_weights_sum_to_expected(self):
+        """Hourly weights should sum to 19.2 (18 hours, adjusted profile)."""
         total = sum(HOURLY_WEIGHTS.values())
-        assert abs(total - 18.0) < 0.01, f"Weights sum to {total}, expected 18.0"
+        assert abs(total - 19.2) < 0.01, f"Weights sum to {total}, expected 19.2"
 
 
 class TestEffectiveDuration:

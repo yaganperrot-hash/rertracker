@@ -93,6 +93,7 @@ class TestCollectDisruptions:
 
     MOCK_DISRUPTION = {
         "id": "disruption:test-001",
+        "status": "active",
         "impacted_objects": [
             {
                 "pt_object": {
@@ -102,7 +103,7 @@ class TestCollectDisruptions:
             }
         ],
         "application_periods": [
-            {"begin": "20240315T063000", "end": "20240315T120000"}
+            {"begin": "20240315T080000", "end": "20240315T120000"}
         ],
         "messages": [{"text": "Incident test RER A"}],
         "severity": {"effect": "DISRUPTION"},
@@ -118,7 +119,7 @@ class TestCollectDisruptions:
         """Configure et retourne tous les mocks nécessaires."""
         mock_resp = AsyncMock()
         mock_resp.status_code = 200
-        mock_resp.json = AsyncMock(return_value=TestCollectDisruptions.MOCK_API_RESPONSE)
+        mock_resp.json = MagicMock(return_value=TestCollectDisruptions.MOCK_API_RESPONSE)
 
         mock_settings = MagicMock()
         mock_settings.prim_api_key = "test-prim-key"
@@ -275,7 +276,7 @@ class TestCollectRtDelays:
 
         mock_resp = AsyncMock()
         mock_resp.status_code = 200
-        mock_resp.json = AsyncMock(return_value={"departures": departures})
+        mock_resp.json = MagicMock(return_value={"departures": departures})
 
         mock_settings = MagicMock()
         mock_settings.prim_api_key = "test-key"
