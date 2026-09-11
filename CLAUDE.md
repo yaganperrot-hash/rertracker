@@ -31,7 +31,7 @@ sur les lignes RER et Transilien d'Île-de-France.
 ---
 
 ## Lignes couvertes
-RER A, B, C, D, E — Transilien H, J, K, L, N, P, R, U
+RER A, B, C, D, E — Transilien H, J, K, L, N, P, R, U — Métro 1, 2, 3, 3bis, 4, 5, 6, 7, 7bis, 8, 9, 10, 11, 12, 13, 14
 
 ---
 

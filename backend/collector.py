@@ -30,6 +30,23 @@ LIGNES_CIBLES: dict[str, str] = {
     "line:IDFM:C02152": "TRANSILIEN_P",
     "line:IDFM:C01735": "TRANSILIEN_R",
     "line:IDFM:C01736": "TRANSILIEN_U",
+    # Métro
+    "line:IDFM:C01371": "METRO_1",
+    "line:IDFM:C01372": "METRO_2",
+    "line:IDFM:C01373": "METRO_3",
+    "line:IDFM:C01386": "METRO_3B",
+    "line:IDFM:C01374": "METRO_4",
+    "line:IDFM:C01375": "METRO_5",
+    "line:IDFM:C01376": "METRO_6",
+    "line:IDFM:C01377": "METRO_7",
+    "line:IDFM:C01387": "METRO_7B",
+    "line:IDFM:C01378": "METRO_8",
+    "line:IDFM:C01379": "METRO_9",
+    "line:IDFM:C01380": "METRO_10",
+    "line:IDFM:C01381": "METRO_11",
+    "line:IDFM:C01382": "METRO_12",
+    "line:IDFM:C01383": "METRO_13",
+    "line:IDFM:C01384": "METRO_14",
 }
 
 

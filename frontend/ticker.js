@@ -1,11 +1,12 @@
 /* Bandeau défilant des incidents en cours — accueil et méthode.
    Source : /api/incidents/current ; aucun texte d'incident écrit en dur. */
 (function () {
-  // RER_A → « RER A » ; TRANSILIEN_H → « Transilien H »
+  // RER_A → « RER A » ; TRANSILIEN_H → « Transilien H » ; METRO_1 → « Métro 1 »
   function nomLigne(id) {
     const [type, lettre = ''] = String(id).split('_');
-    const nom = type === 'RER' ? type : type.charAt(0) + type.slice(1).toLowerCase();
-    return `${nom} ${lettre}`.trim();
+    if (type === 'RER') return `RER ${lettre}`;
+    if (type === 'METRO') return `Métro ${lettre}`;
+    return `${type.charAt(0) + type.slice(1).toLowerCase()} ${lettre}`.trim();
   }
 
   function esc(s) {
@@ -16,7 +17,7 @@
     const el = document.getElementById('ticker-track');
     if (!el) return;
     if (!incidents.length) {
-      el.textContent = 'Aucun incident en cours sur le réseau RER et Transilien';
+      el.textContent = 'Aucun incident en cours sur le réseau RER, Transilien et Métro';
       return;
     }
     const texte = incidents.slice(0, 8).map(inc => {

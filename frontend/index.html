@@ -278,6 +278,7 @@
       color: #fff;
       flex-shrink: 0;
     }
+    .incident-badge[data-tc="dark"] { color: #000; }
     .incident-info { min-width: 0; }
     .incident-desc {
       font-weight: 500;
@@ -375,6 +376,7 @@
       color: #fff;
       flex-shrink: 0;
     }
+    .line-badge[data-tc="dark"] { color: #000; }
     .line-name {
       font-weight: 500;
       font-size: 15px;
@@ -533,7 +535,7 @@
 <section class="hero">
   <span class="stamp">RETARDS IDF</span>
   <div class="hero-date" id="hero-date">&nbsp;</div>
-  <div class="hero-subtitle">Aujourd'hui, les retards des RER et Transiliens ont coûté</div>
+  <div class="hero-subtitle">Aujourd'hui, les retards des RER, Transiliens et Métros ont coûté</div>
   <div class="hero-counter" id="ctr-eur">— €</div>
   <div class="hero-unit">au SMIC horaire brut · réseau IDF complet</div>
 </section>
@@ -624,6 +626,23 @@
     'TRANSILIEN_P': { short: 'P', name: 'Transilien P', color: '#E87722' },
     'TRANSILIEN_R': { short: 'R', name: 'Transilien R', color: '#228B22' },
     'TRANSILIEN_U': { short: 'U', name: 'Transilien U', color: '#7B0F1F' },
+    // Métro
+    'METRO_1':  { short: '1',    name: 'Métro 1',    color: '#FFBE00', textColor: '#000' },
+    'METRO_2':  { short: '2',    name: 'Métro 2',    color: '#003CA6' },
+    'METRO_3':  { short: '3',    name: 'Métro 3',    color: '#837902' },
+    'METRO_3B': { short: '3B',   name: 'Métro 3bis', color: '#6EC4E8', textColor: '#000' },
+    'METRO_4':  { short: '4',    name: 'Métro 4',    color: '#CF009E' },
+    'METRO_5':  { short: '5',    name: 'Métro 5',    color: '#FF7E2E', textColor: '#000' },
+    'METRO_6':  { short: '6',    name: 'Métro 6',    color: '#6ECA97', textColor: '#000' },
+    'METRO_7':  { short: '7',    name: 'Métro 7',    color: '#FA9ABA', textColor: '#000' },
+    'METRO_7B': { short: '7B',   name: 'Métro 7bis', color: '#6ECA97', textColor: '#000' },
+    'METRO_8':  { short: '8',    name: 'Métro 8',    color: '#E19BDF', textColor: '#000' },
+    'METRO_9':  { short: '9',    name: 'Métro 9',    color: '#B6BD00', textColor: '#000' },
+    'METRO_10': { short: '10',   name: 'Métro 10',   color: '#C9910D', textColor: '#000' },
+    'METRO_11': { short: '11',   name: 'Métro 11',   color: '#704B1C' },
+    'METRO_12': { short: '12',   name: 'Métro 12',   color: '#007852' },
+    'METRO_13': { short: '13',   name: 'Métro 13',   color: '#6EC4E8', textColor: '#000' },
+    'METRO_14': { short: '14',   name: 'Métro 14',   color: '#62259D' },
   };
 
   function fmt(n) {
@@ -716,7 +735,7 @@
       <div class="inc-group${open ? ' open' : ''}" data-key="${g.key}">
         <button type="button" class="inc-chip" aria-expanded="${open}" aria-controls="pop-${g.key}"
                 aria-label="${g.meta.name} : ${compte}, ${cout} en cours">
-          <span class="incident-badge" style="background:${g.meta.color}">${g.meta.short}</span>
+          <span class="incident-badge" style="background:${g.meta.color}"${g.meta.textColor ? ' data-tc="dark"' : ''}>${g.meta.short}</span>
           <span class="chip-count">${compte}</span>
           <span class="chip-cout">${cout}</span>
           <span class="chip-chevron" aria-hidden="true">▾</span>
@@ -816,7 +835,7 @@
       const temps = formatDuree(l.mv, true);
       return `
         <div class="line-row${l === pire ? ' worst' : ''}${open ? ' open' : ''}" data-key="${l.key}">
-          <div class="line-badge" style="background:${l.color}">${l.short}</div>
+          <div class="line-badge" style="background:${l.color}"${l.textColor ? ' data-tc="dark"' : ''}>${l.short}</div>
           <div class="line-name">${l.name}</div>
           <div class="line-value col-inc">${fmt(l.inc)}</div>
           <div class="line-value col-temps">${temps}</div>
@@ -856,7 +875,7 @@
         const d = res.status === 'fulfilled' ? res.value : null;
         if (!d) { missing.push(meta.short); return; }
         next.push({
-          key, order: i, short: meta.short, name: meta.name, color: meta.color,
+          key, order: i, short: meta.short, name: meta.name, color: meta.color, textColor: meta.textColor,
           inc: d.total_incidents || 0,
           mv:  d.total_minutes_voyageurs || 0,
           cout: d.total_cout_eur || 0,

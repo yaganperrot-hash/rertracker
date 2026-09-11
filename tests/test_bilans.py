@@ -80,15 +80,15 @@ class TestStatistiques:
         assert ligne(s, "RER_A")["cout_eur"] == 38
         assert cout_eur(194, SMIC) == 39
 
-    def test_treize_lignes_triees_ligne_inconnue_ignoree(self):
+    def test_lignes_triees_ligne_inconnue_ignoree(self):
         rows = [
             row(AUJ, "RER_C", 500),
             row(AUJ, "TRANSILIEN_U", 900),
-            row(AUJ, "METRO_1", 99999),
+            row(AUJ, "TRAM_1", 99999),
         ]
         s = stats(7, rows, date(2026, 9, 1))
         ids = [l["id"] for l in s["lignes"]]
-        assert len(ids) == 13 and set(ids) == set(LIGNES)
+        assert len(ids) == len(LIGNES) and set(ids) == set(LIGNES)
         assert ids[:2] == ["TRANSILIEN_U", "RER_C"]
         assert ids[2:] == [l for l in LIGNES if l not in ("TRANSILIEN_U", "RER_C")]
         assert s["total"]["minutes"] == 1400
@@ -104,7 +104,7 @@ class TestStatistiques:
         assert s["total"] == {"cout_eur": 0, "minutes": 0, "incidents": 0}
         assert s["pire_ligne"] is None
         assert s["total_prec"] is None and s["delta_pct"] is None
-        assert len(s["lignes"]) == 13
+        assert len(s["lignes"]) == len(LIGNES)
         assert s["meta"]["jours_couverts"] == 0
 
     def test_precedente_incomplete(self):

@@ -22,6 +22,23 @@
     TRANSILIEN_P: L('Transilien P', 'P', '#E87722'),
     TRANSILIEN_R: L('Transilien R', 'R', '#228B22'),
     TRANSILIEN_U: L('Transilien U', 'U', '#7B0F1F'),
+    // Métro
+    METRO_1:  L('Métro 1',    'M1',  '#FFBE00', '#000', '#C89600'),
+    METRO_2:  L('Métro 2',    'M2',  '#003CA6'),
+    METRO_3:  L('Métro 3',    'M3',  '#837902'),
+    METRO_3B: L('Métro 3bis', 'M3b', '#6EC4E8', '#000', '#3A9AC0'),
+    METRO_4:  L('Métro 4',    'M4',  '#CF009E'),
+    METRO_5:  L('Métro 5',    'M5',  '#FF7E2E', '#000', '#C05A18'),
+    METRO_6:  L('Métro 6',    'M6',  '#6ECA97', '#000', '#3A9668'),
+    METRO_7:  L('Métro 7',    'M7',  '#FA9ABA', '#000', '#C06A8A'),
+    METRO_7B: L('Métro 7bis', 'M7b', '#6ECA97', '#000', '#3A9668'),
+    METRO_8:  L('Métro 8',    'M8',  '#E19BDF', '#000', '#A060A0'),
+    METRO_9:  L('Métro 9',    'M9',  '#B6BD00', '#000', '#888C00'),
+    METRO_10: L('Métro 10',   'M10', '#C9910D', '#000', '#966C0A'),
+    METRO_11: L('Métro 11',   'M11', '#704B1C'),
+    METRO_12: L('Métro 12',   'M12', '#007852'),
+    METRO_13: L('Métro 13',   'M13', '#6EC4E8', '#000', '#3A9AC0'),
+    METRO_14: L('Métro 14',   'M14', '#62259D'),
   };
 
   const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin',

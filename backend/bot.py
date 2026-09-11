@@ -25,6 +25,12 @@ LINE_DISPLAY: dict[str, str] = {
     "TRANSILIEN_H": "H",     "TRANSILIEN_J": "J",     "TRANSILIEN_K": "K",
     "TRANSILIEN_L": "L",     "TRANSILIEN_N": "N",     "TRANSILIEN_P": "P",
     "TRANSILIEN_R": "R",     "TRANSILIEN_U": "U",
+    "METRO_1": "M1",        "METRO_2": "M2",        "METRO_3": "M3",
+    "METRO_3B": "M3bis",    "METRO_4": "M4",        "METRO_5": "M5",
+    "METRO_6": "M6",        "METRO_7": "M7",        "METRO_7B": "M7bis",
+    "METRO_8": "M8",        "METRO_9": "M9",        "METRO_10": "M10",
+    "METRO_11": "M11",      "METRO_12": "M12",      "METRO_13": "M13",
+    "METRO_14": "M14",
 }
 
 # Espace fine insécable pour les grands nombres
@@ -70,7 +76,7 @@ def _compose_tweet(total_incidents: int, total_mv: int, lignes: list[str], d: da
     pire = LINE_DISPLAY.get(lignes[0], lignes[0]) if lignes else None
 
     lines = [
-        f"🚨 {jour.capitalize()} {d.day:02d}/{d.month:02d}/{d.year} — Bilan RER & Transilien IDF",
+        f"🚨 {jour.capitalize()} {d.day:02d}/{d.month:02d}/{d.year} — Bilan RER, Transilien & Métro IDF",
         f"💶 {_fmt(euros)} € de temps de travail volé",
         f"⏱ {_fmt_duree(total_mv)} de vie {_accord_perdu(total_mv)} collectivement",
         f"🔴 {total_incidents} incident{'s' if total_incidents != 1 else ''}"
