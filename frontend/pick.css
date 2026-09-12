@@ -21,55 +21,38 @@
   margin-top: 4px;
 }
 
-/* ── Onglets réseau ── */
-.pick-tabs {
-  display: flex;
-  gap: 0;
-  margin-top: 20px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
+/* ── Groupes réseau (label + pastilles) ── */
+.pick-group {
+  margin-top: 18px;
 }
-.pick-tab {
-  flex: 1;
-  border: none;
-  background: var(--bg);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 500;
+.pick-group-label {
+  font-weight: 700;
+  font-size: 13px;
   letter-spacing: 1px;
   text-transform: uppercase;
-  color: var(--muted);
-  padding: 10px 4px;
-  border-right: 1px solid var(--border);
-  transition: background .15s, color .15s;
-}
-.pick-tab:last-child { border-right: none; }
-.pick-tab:hover { color: var(--ink); }
-.pick-tab.on {
-  background: var(--ink);
-  color: var(--bg);
-  font-weight: 700;
+  color: var(--sub);
+  margin-bottom: 10px;
 }
 
 /* ── Grille de pastilles ── */
 .pick-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 11px;
 }
-@media (max-width: 420px) { .pick-grid { grid-template-columns: repeat(5, 1fr); } }
 
 .pick-dot {
-  aspect-ratio: 1;
+  width: 88px;
+  height: 88px;
+  flex: none;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 900;
-  font-size: 18px;
+  font-size: 37px;
   letter-spacing: -.03em;
+  line-height: 1;
   color: #fff;
   cursor: pointer;
   border: 2px solid transparent;
@@ -77,7 +60,7 @@
   user-select: none;
 }
 .pick-dot:hover { transform: scale(1.06); }
-.pick-dot[data-tc="dark"] { color: #000; }
+.pick-dot[data-tc="dark"] { color: #1A1916; }
 .pick-dot.sel {
   border-color: var(--ink);
   box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--ink);
@@ -107,8 +90,8 @@
   gap: 12px;
 }
 .pp-round {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   flex: none;
   color: #fff;
@@ -116,9 +99,11 @@
   align-items: center;
   justify-content: center;
   font-weight: 900;
-  font-size: 16px;
+  font-size: 17px;
+  letter-spacing: -.03em;
+  line-height: 1;
 }
-.pp-round[data-tc="dark"] { color: #000; }
+.pp-round[data-tc="dark"] { color: #1A1916; }
 .pp-name {
   font-weight: 700;
   font-size: 17px;

@@ -369,15 +369,17 @@
       width: 28px;
       height: 28px;
       border-radius: 50%;
+      flex: none;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 700;
-      font-size: 11px;
+      font-weight: 900;
+      font-size: 13px;
+      letter-spacing: -.03em;
+      line-height: 1;
       color: #fff;
-      flex-shrink: 0;
     }
-    .line-badge[data-tc="dark"] { color: #000; }
+    .line-badge[data-tc="dark"] { color: #1A1916; }
     .line-name {
       font-weight: 500;
       font-size: 15px;
@@ -616,16 +618,16 @@
   const LINE_META = {
     'RER_A':        { short: 'A', name: 'RER A',        color: '#E2231A' },
     'RER_B':        { short: 'B', name: 'RER B',        color: '#5191CF' },
-    'RER_C':        { short: 'C', name: 'RER C',        color: '#C8A800' },
+    'RER_C':        { short: 'C', name: 'RER C',        color: '#C8A800', textColor: '#1A1916' },
     'RER_D':        { short: 'D', name: 'RER D',        color: '#00814F' },
     'RER_E':        { short: 'E', name: 'RER E',        color: '#B04191' },
     'TRANSILIEN_H': { short: 'H', name: 'Transilien H', color: '#7B7B7B' },
-    'TRANSILIEN_J': { short: 'J', name: 'Transilien J', color: '#D2B464' },
-    'TRANSILIEN_K': { short: 'K', name: 'Transilien K', color: '#8C4B31' },
+    'TRANSILIEN_J': { short: 'J', name: 'Transilien J', color: '#D2B464', textColor: '#1A1916' },
+    'TRANSILIEN_K': { short: 'K', name: 'Transilien K', color: '#8C4B31', textColor: '#1A1916' },
     'TRANSILIEN_L': { short: 'L', name: 'Transilien L', color: '#9F3E96' },
     'TRANSILIEN_N': { short: 'N', name: 'Transilien N', color: '#333333' },
-    'TRANSILIEN_P': { short: 'P', name: 'Transilien P', color: '#E87722' },
-    'TRANSILIEN_R': { short: 'R', name: 'Transilien R', color: '#228B22' },
+    'TRANSILIEN_P': { short: 'P', name: 'Transilien P', color: '#E87722', textColor: '#1A1916' },
+    'TRANSILIEN_R': { short: 'R', name: 'Transilien R', color: '#228B22', textColor: '#1A1916' },
     'TRANSILIEN_U': { short: 'U', name: 'Transilien U', color: '#7B0F1F' },
   };
 </script>

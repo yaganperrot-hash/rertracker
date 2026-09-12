@@ -123,23 +123,16 @@
     const nets = ['rer', 'transilien', 'metro'].filter(n => groups[n].length > 0);
     if (!nets.includes(currentTab)) currentTab = nets[0] || 'rer';
 
-    // Onglets réseau (seulement si 2+ réseaux)
-    if (nets.length > 1) {
-      html += '<div class="pick-tabs">';
-      nets.forEach(net => {
-        html += '<button type="button" class="pick-tab' + (net === currentTab ? ' on' : '') + '" data-net="' + net + '">' + NET_LABEL[net] + '</button>';
-      });
-      html += '</div>';
-    }
-
-    // Grilles (une par réseau, une seule visible)
+    // Groupes par réseau : label + pastilles (tous visibles)
     nets.forEach(net => {
-      const vis = net === currentTab ? '' : ' hidden';
-      html += '<div class="pick-grid" data-net="' + net + '"' + vis + '>';
+      html += '<div class="pick-group">';
+      html += '<div class="pick-group-label">' + NET_LABEL[net] + '</div>';
+      html += '<div class="pick-grid" data-net="' + net + '">';
       groups[net].forEach(l => {
         const tc = l.textColor ? ' data-tc="dark"' : '';
         html += '<div class="pick-dot" data-id="' + l.id + '" style="background:' + l.color + '"' + tc + '>' + l.short + '</div>';
       });
+      html += '</div>';
       html += '</div>';
     });
 
@@ -185,15 +178,8 @@
     const ppShare = container.querySelector('#pp-share');
     const ppPageLink = container.querySelector('#pp-page-link');
 
-    // ── Onglets ──
-    function switchTab(net) {
-      currentTab = net;
-      container.querySelectorAll('.pick-tab').forEach(b => b.classList.toggle('on', b.dataset.net === net));
-      container.querySelectorAll('.pick-grid').forEach(g => { g.hidden = g.dataset.net !== net; });
-    }
-    container.querySelectorAll('.pick-tab').forEach(btn => {
-      btn.addEventListener('click', () => switchTab(btn.dataset.net));
-    });
+    // ── Onglets (rétro-compatibilité) ──
+    function switchTab(net) { currentTab = net; }
 
     // ── Sélection d'une pastille ──
     async function select(lineId, scroll) {

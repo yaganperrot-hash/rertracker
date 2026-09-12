@@ -1,5 +1,34 @@
 # SESSION — Dernière session de travail
 
+## Session du 2026-09-13 (terminée)
+
+### Contexte au démarrage
+- Branche `master`, dernier commit `05e70f5`
+- 132/132 tests verts, projet propre
+
+### Actions effectuées
+- **Picker : onglets → groupes visibles** (`frontend/pick.js`, `frontend/pick.css`) : les onglets RER/Transilien ont été remplacés par deux groupes toujours visibles avec label « RER » puis « Transilien » au-dessus des pastilles
+- **Pastilles — règles strictes de proportions** (`frontend/pick.css`) :
+  - Grille sélecteur : 88×88px, font 37px (doublé en fin de session)
+  - En-tête panneau : 40×40px, font 17px
+  - Ligne de tableau (`temps-reel.html`) : 28×28px, font 13px
+  - Toutes : `flex:none`, `border-radius:50%`, centrage flexbox, `line-height:1`
+- **Contraste texte** : fonds clairs (RER C, J, K, P, R) → texte `#1A1916` via `textColor` dans LINE_META sur les 3 pages (`index.html`, `temps-reel.html`, `ligne.html`)
+- **En-tête réduit d'1/5** (`frontend/index.html`) : compteur clamp(52–112px), subtitle clamp(16–22px), cumul clamp(24–35px), paddings et marges réduits de ~20%
+- **Grille pastilles** : `display:grid` → `display:flex; flex-wrap:wrap` pour éviter l'étirement par les colonnes `1fr`
+- **132/132 tests verts**
+
+### Fichiers modifiés
+- `frontend/pick.css`, `frontend/pick.js`
+- `frontend/index.html`, `frontend/temps-reel.html`, `frontend/ligne.html`
+
+### État en fin de session
+- 132/132 tests verts
+- Picker avec 2 groupes visibles (RER + Transilien), pastilles 88px, contraste corrigé
+- Hero réduit d'1/5
+
+---
+
 ## Session du 2026-09-12 bis (terminée)
 
 ### Contexte au démarrage

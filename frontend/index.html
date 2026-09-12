@@ -35,85 +35,85 @@
     /* ── Hero ── */
     .hero {
       position: relative;
-      padding: 32px 32px 22px;
+      padding: 26px 32px 18px;
       text-align: center;
     }
     .stamp {
-      position: absolute; top: 20px; right: 28px;
-      border: 3px solid var(--red); padding: 4px 10px;
-      color: var(--red); font-size: 9px; font-weight: 900;
+      position: absolute; top: 16px; right: 28px;
+      border: 3px solid var(--red); padding: 3px 8px;
+      color: var(--red); font-size: 8px; font-weight: 900;
       letter-spacing: 3px; text-transform: uppercase;
       transform: rotate(-8deg); opacity: 0.15;
       pointer-events: none; user-select: none;
     }
     .hero-date {
       font-weight: 400;
-      font-size: 13px;
+      font-size: 11px;
       letter-spacing: 2px;
       text-transform: uppercase;
       color: var(--sub);
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
     .hero-subtitle {
       font-weight: 500;
-      font-size: clamp(20px, 3vw, 28px);
+      font-size: clamp(16px, 2.4vw, 22px);
       line-height: 1.3;
       color: var(--ink);
-      margin-bottom: 18px;
+      margin-bottom: 14px;
     }
     .hero-counter {
       font-weight: 900;
-      font-size: clamp(64px, 13vw, 140px);
+      font-size: clamp(52px, 10.4vw, 112px);
       letter-spacing: -3px;
       line-height: .88;
       color: var(--ink);
     }
     .hero-unit {
       font-weight: 400;
-      font-size: 13px;
+      font-size: 11px;
       letter-spacing: 1px;
       text-transform: uppercase;
       color: var(--sub);
-      margin-top: 10px;
+      margin-top: 8px;
     }
 
     /* ── Cumul ── */
     .cumul {
       text-align: center;
-      padding: 0 32px 22px;
+      padding: 0 32px 18px;
       border-bottom: 1px solid var(--border);
     }
     .cumul-inner {
       display: inline-block;
       border-top: 1px solid var(--border);
-      padding-top: 14px;
+      padding-top: 11px;
       min-width: min(420px, 100%);
     }
     .cumul-kicker {
       font-weight: 500;
-      font-size: 12px;
+      font-size: 10px;
       letter-spacing: 2px;
       text-transform: uppercase;
       color: var(--muted);
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
     .cumul-value {
       font-weight: 700;
-      font-size: clamp(30px, 5vw, 44px);
+      font-size: clamp(24px, 4vw, 35px);
       line-height: 1.05;
       color: var(--red);
     }
     .cumul-label {
       font-weight: 500;
-      font-size: 15px;
+      font-size: 12px;
       color: var(--ink);
-      margin-top: 6px;
+      margin-top: 5px;
     }
     .cumul-note {
       font-weight: 400;
-      font-size: 12px;
+      font-size: 10px;
       color: var(--sub);
-      margin-top: 6px;
+      margin-top: 5px;
     }
 
     .live-dot {
@@ -152,10 +152,10 @@
     .footer-right a:hover { color: var(--ink); }
 
     @media (max-width: 768px) {
-      .hero { padding: 28px 16px 20px; }
+      .hero { padding: 22px 16px 16px; }
       .stamp { display: none; }
-      .cumul { padding: 0 16px 22px; }
-      .cumul-value { font-size: 28px; }
+      .cumul { padding: 0 16px 18px; }
+      .cumul-value { font-size: 22px; }
       footer { padding: 14px 16px; flex-direction: column; align-items: flex-start; }
       .footer-right a:first-child { margin-left: 0; }
     }
@@ -218,16 +218,16 @@
   const LINE_META = {
     'RER_A':        { short: 'A', name: 'RER A',        color: '#E2231A' },
     'RER_B':        { short: 'B', name: 'RER B',        color: '#5191CF' },
-    'RER_C':        { short: 'C', name: 'RER C',        color: '#C8A800' },
+    'RER_C':        { short: 'C', name: 'RER C',        color: '#C8A800', textColor: '#1A1916' },
     'RER_D':        { short: 'D', name: 'RER D',        color: '#00814F' },
     'RER_E':        { short: 'E', name: 'RER E',        color: '#B04191' },
     'TRANSILIEN_H': { short: 'H', name: 'Transilien H', color: '#7B7B7B' },
-    'TRANSILIEN_J': { short: 'J', name: 'Transilien J', color: '#D2B464' },
-    'TRANSILIEN_K': { short: 'K', name: 'Transilien K', color: '#8C4B31' },
+    'TRANSILIEN_J': { short: 'J', name: 'Transilien J', color: '#D2B464', textColor: '#1A1916' },
+    'TRANSILIEN_K': { short: 'K', name: 'Transilien K', color: '#8C4B31', textColor: '#1A1916' },
     'TRANSILIEN_L': { short: 'L', name: 'Transilien L', color: '#9F3E96' },
     'TRANSILIEN_N': { short: 'N', name: 'Transilien N', color: '#333333' },
-    'TRANSILIEN_P': { short: 'P', name: 'Transilien P', color: '#E87722' },
-    'TRANSILIEN_R': { short: 'R', name: 'Transilien R', color: '#228B22' },
+    'TRANSILIEN_P': { short: 'P', name: 'Transilien P', color: '#E87722', textColor: '#1A1916' },
+    'TRANSILIEN_R': { short: 'R', name: 'Transilien R', color: '#228B22', textColor: '#1A1916' },
     'TRANSILIEN_U': { short: 'U', name: 'Transilien U', color: '#7B0F1F' },
   };
 
