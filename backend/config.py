@@ -23,6 +23,16 @@ class Settings(BaseSettings):
         extra = "ignore"
 
 
+# Mapping line_id → URL slug (pour les pages /:slug)
+LINE_SLUGS = {
+    'RER_A': 'rer-a', 'RER_B': 'rer-b', 'RER_C': 'rer-c', 'RER_D': 'rer-d', 'RER_E': 'rer-e',
+    'TRANSILIEN_H': 'ligne-h', 'TRANSILIEN_J': 'ligne-j', 'TRANSILIEN_K': 'ligne-k',
+    'TRANSILIEN_L': 'ligne-l', 'TRANSILIEN_N': 'ligne-n', 'TRANSILIEN_P': 'ligne-p',
+    'TRANSILIEN_R': 'ligne-r', 'TRANSILIEN_U': 'ligne-u',
+}
+SLUG_TO_ID = {v: k for k, v in LINE_SLUGS.items()}
+
+
 @lru_cache
 def get_settings() -> Settings:
     return Settings()

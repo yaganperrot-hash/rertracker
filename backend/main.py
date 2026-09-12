@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from backend.config import get_settings
+from backend.config import get_settings, SLUG_TO_ID
 from backend.database import init_db
 from backend.collector import collect_disruptions, collect_rt_delays
 from backend.metrics import compute_daily_metrics
@@ -133,6 +133,20 @@ async def page_annee():
 @app.get("/stats.html", include_in_schema=False)
 async def ancienne_page_stats():
     return RedirectResponse("/statistiques", status_code=301)
+
+
+@app.get("/temps-reel", include_in_schema=False)
+async def page_temps_reel():
+    return FileResponse(frontend_dir / "temps-reel.html")
+
+
+# Pages par ligne : une route explicite par slug (pas de catch-all
+# qui masquerait les fichiers statiques comme nav.css, pick.js, etc.)
+_ligne_html = frontend_dir / "ligne.html"
+for _slug in SLUG_TO_ID:
+    @app.get(f"/{_slug}", include_in_schema=False)
+    async def _page_ligne(_s=_slug):
+        return FileResponse(_ligne_html)
 
 
 # Serve frontend static files

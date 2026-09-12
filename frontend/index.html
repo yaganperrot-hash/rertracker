@@ -6,9 +6,9 @@
   <title>RETARDS IDF — Compteur en temps réel</title>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="nav.css">
+  <link rel="stylesheet" href="pick.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    [hidden] { display: none !important; }
 
     :root {
       --bg:     #F7F4EF;
@@ -21,15 +21,9 @@
       --sub:    #333333;
       --red:    #C0392B;
       --ok:     #2ECC71;
-      --rer-a:  #E2231A;
-      --rer-b:  #5191CF;
-      --rer-c:  #C8A800;
-      --rer-d:  #00814F;
-      --rer-e:  #B04191;
     }
 
     html { scroll-behavior: smooth; }
-
     body {
       background: var(--bg);
       color: var(--text);
@@ -38,29 +32,7 @@
       overflow-x: hidden;
     }
 
-    /* ─── 1. TICKER ─── */
-    .ticker {
-      background: var(--ink);
-      padding: 7px 0;
-      overflow: hidden;
-      white-space: nowrap;
-    }
-    .ticker-track {
-      display: inline-block;
-      animation: tick 28s linear infinite;
-      font-weight: 400;
-      font-size: 13px;
-      letter-spacing: 1px;
-      color: var(--bg);
-    }
-    @keyframes tick {
-      from { transform: translateX(100vw); }
-      to   { transform: translateX(-100%); }
-    }
-
-    /* ─── 2. NAVIGATION : nav.css, commune aux 4 pages ─── */
-
-    /* ─── 3. HERO — coût du jour ─── */
+    /* ── Hero ── */
     .hero {
       position: relative;
       padding: 32px 32px 22px;
@@ -105,7 +77,7 @@
       margin-top: 10px;
     }
 
-    /* ─── 4. CUMUL — seule occurrence du temps cumulé ─── */
+    /* ── Cumul ── */
     .cumul {
       text-align: center;
       padding: 0 32px 22px;
@@ -144,282 +116,19 @@
       margin-top: 6px;
     }
 
-    /* ─── Sections ─── */
-    .section-wrap {
-      max-width: 1060px;
-      margin: 0 auto;
-      padding: 28px 32px;
-      border-bottom: 1px solid var(--border);
-    }
-    .section-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: 12px;
-      border-bottom: 2px solid var(--ink);
-      padding-bottom: 8px;
-      margin-bottom: 12px;
-    }
-    .section-title {
-      font-weight: 700;
-      font-size: 18px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
-    .section-meta {
-      font-weight: 400;
-      font-size: 12px;
-      letter-spacing: 1px;
-      color: var(--sub);
-    }
-    .empty-msg {
-      text-align: center;
-      padding: 20px;
-      color: var(--muted);
-      font-size: 13px;
-      letter-spacing: 1px;
-    }
-
-    /* ─── 5. INCIDENTS EN COURS — regroupés par ligne, détail au survol ─── */
-    .inc-groups { display: flex; flex-wrap: wrap; gap: 8px; }
-    .inc-groups .empty-msg { flex: 1; }
-    .inc-group  { position: relative; }
-    .inc-chip {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      width: 100%;
-      padding: 8px 16px 8px 8px;
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      font: inherit;
-      color: var(--text);
-      text-align: left;
-      cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
-    }
-    .inc-group:hover .inc-chip,
-    .inc-group.open .inc-chip,
-    .inc-chip:focus-visible { background: var(--bg3); border-color: var(--ink); }
-    .chip-count { font-weight: 500; font-size: 14px; color: var(--sub); white-space: nowrap; }
-    .chip-cout  { font-weight: 700; font-size: 20px; color: var(--red); white-space: nowrap; }
-    .chip-chevron { display: none; }
-
-    /* Popover : le padding-top sert de pont pour ne pas perdre le survol */
-    .inc-pop {
-      display: none;
-      position: absolute;
-      top: 100%;
-      left: 0;
-      z-index: 50;
-      width: min(460px, calc(100vw - 32px));
-      padding-top: 6px;
-    }
-    .inc-group.align-right .inc-pop { left: auto; right: 0; }
-    @media (hover: hover) {
-      .inc-group:hover .inc-pop,
-      .inc-group:focus-within .inc-pop { display: block; }
-    }
-    .inc-group.open .inc-pop { display: block; }
-    .pop-inner {
-      background: var(--bg);
-      border: 1px solid var(--ink);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-      max-height: 60vh;
-      overflow-y: auto;
-    }
-    .pop-title {
-      padding: 10px 12px;
-      font-weight: 700;
-      font-size: 12px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      border-bottom: 1px solid var(--border);
-    }
-    .hint-touch { display: none; }
-    @media (hover: none) {
-      .hint-hover { display: none; }
-      .hint-touch { display: inline; }
-    }
-
-    .incident {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto auto;
-      align-items: center;
-      gap: 12px;
-      padding: 9px 12px;
-      border-left: 3px solid transparent;
-      border-bottom: 1px solid var(--border);
-    }
-    .incident:last-child { border-bottom: 0; }
-    .incident.critical  { border-left-color: var(--red); }
-    .incident.cancelled { border-left-color: var(--ink); }
-    .cancelled-tag {
+    .live-dot {
       display: inline-block;
-      background: #333;
-      color: #fff;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      padding: 2px 6px;
-      margin-left: 6px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--red);
+      margin-right: 5px;
+      animation: pulse 1.6s ease-in-out infinite;
       vertical-align: middle;
     }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-    .incident-badge {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 13px;
-      color: #fff;
-      flex-shrink: 0;
-    }
-    .incident-badge[data-tc="dark"] { color: #000; }
-    .incident-info { min-width: 0; }
-    .incident-desc {
-      font-weight: 500;
-      font-size: 14px;
-      color: var(--text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .incident-cause {
-      font-weight: 400;
-      font-size: 13px;
-      color: var(--sub);
-      margin-top: 3px;
-    }
-    .incident-duree {
-      font-weight: 500;
-      font-size: 14px;
-      color: var(--sub);
-      text-align: right;
-    }
-    .incident-duree-m { display: none; }
-    .incident-cout {
-      font-weight: 700;
-      font-size: 15px;
-      color: var(--red);
-      text-align: right;
-      white-space: nowrap;
-    }
-
-    /* ─── 6. TABLEAU PAR LIGNE — fenêtre unique : aujourd'hui ─── */
-    .table-wrap {
-      max-width: 1060px;
-      margin: 0 auto;
-      padding: 28px 32px;
-    }
-    .table-header-row,
-    .line-row {
-      display: grid;
-      grid-template-columns: 36px minmax(0, 1fr) 120px 150px 150px;
-      align-items: center;
-      gap: 0 8px;
-      padding: 11px 14px;
-    }
-    .table-header-row {
-      padding-top: 8px;
-      padding-bottom: 8px;
-      font-weight: 500;
-      font-size: 11px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: var(--sub);
-      border-bottom: 1px solid var(--border);
-    }
-    .th { text-align: right; }
-    .th-name { text-align: left; }
-    .sort-btn {
-      background: none;
-      border: 0;
-      font: inherit;
-      letter-spacing: inherit;
-      text-transform: inherit;
-      color: inherit;
-      cursor: pointer;
-      padding: 0;
-    }
-    .sort-btn:hover { color: var(--ink); }
-    .th[aria-sort="descending"] .sort-btn,
-    .th[aria-sort="ascending"]  .sort-btn { color: var(--ink); font-weight: 700; }
-    .th[aria-sort="descending"] .sort-btn::after { content: ' ▼'; }
-    .th[aria-sort="ascending"]  .sort-btn::after { content: ' ▲'; }
-
-    .lines-list { display: flex; flex-direction: column; gap: 1px; margin-top: 1px; }
-
-    .line-row {
-      background: var(--bg2);
-      transition: background 0.15s;
-    }
-    .line-row:hover { background: var(--bg3); }
-
-    /* Pire ligne du jour */
-    .line-row.worst { background: var(--bg3); box-shadow: inset 3px 0 0 var(--red); }
-    .line-row.worst .line-name,
-    .line-row.worst .line-value { color: var(--red); font-weight: 700; }
-
-    .line-badge {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 11px;
-      color: #fff;
-      flex-shrink: 0;
-    }
-    .line-badge[data-tc="dark"] { color: #000; }
-    .line-name {
-      font-weight: 500;
-      font-size: 15px;
-      color: var(--text);
-      padding-left: 2px;
-    }
-    .line-value {
-      font-weight: 400;
-      font-size: 14px;
-      color: var(--text);
-      text-align: right;
-    }
-    .line-cout { font-weight: 700; font-size: 15px; }
-
-    /* Détail au tap : mobile uniquement */
-    .line-toggle, .th-toggle, .line-detail { display: none; }
-
-    /* Lignes épargnées : une seule rangée de synthèse */
-    .line-spared {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px 14px;
-      margin-top: 1px;
-      border-top: 1px solid var(--border);
-      font-size: 14px;
-      color: var(--sub);
-    }
-    .spared-dot {
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      background: var(--ok);
-      flex-shrink: 0;
-    }
-    .line-spared strong { color: var(--ink); font-weight: 500; }
-    .line-missing {
-      padding: 8px 14px;
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    /* ─── 7. FOOTER ─── */
+    /* ── Footer ── */
     footer {
       border-top: 2px solid var(--ink);
       padding: 18px 32px;
@@ -429,12 +138,7 @@
       flex-wrap: wrap;
       gap: 8px;
     }
-    .footer-left {
-      font-weight: 400;
-      font-size: 12px;
-      color: var(--sub);
-    }
-    .footer-right {
+    .footer-left, .footer-right {
       font-weight: 400;
       font-size: 12px;
       color: var(--sub);
@@ -447,80 +151,27 @@
     }
     .footer-right a:hover { color: var(--ink); }
 
-    /* ─── RESPONSIVE ─── */
     @media (max-width: 768px) {
       .hero { padding: 28px 16px 20px; }
       .stamp { display: none; }
       .cumul { padding: 0 16px 22px; }
       .cumul-value { font-size: 28px; }
-      .section-wrap, .table-wrap { padding: 20px 16px; }
-      .section-header { flex-direction: column; gap: 2px; }
       footer { padding: 14px 16px; flex-direction: column; align-items: flex-start; }
       .footer-right a:first-child { margin-left: 0; }
-
-      /* Incidents : une rangée par ligne, détail déplié au toucher */
-      .inc-groups { flex-direction: column; gap: 1px; }
-      .inc-chip { border: 0; padding: 10px 12px; }
-      .chip-cout { margin-left: auto; font-size: 17px; }
-      .chip-chevron { display: block; font-size: 14px; color: var(--sub); transition: transform 0.15s; }
-      .inc-group.open .chip-chevron { transform: rotate(180deg); }
-      .inc-pop { position: static; width: auto; padding-top: 0; }
-      .pop-inner { border: 0; border-top: 1px solid var(--border); box-shadow: none; max-height: none; }
-      .pop-title { display: none; }
-      .incident { grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
-      .incident-duree { display: none; }
-      .incident-duree-m { display: inline; }
-
-      /* Table : repli 2 colonnes (Ligne + Coût du jour), détail au tap */
-      .table-header-row,
-      .line-row { grid-template-columns: 28px minmax(0, 1fr) auto 28px; padding: 11px 12px; }
-      .col-inc, .col-temps { display: none; }
-      .th-toggle { display: block; }
-      .line-row { cursor: pointer; }
-      .line-toggle {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 28px;
-        height: 28px;
-        background: none;
-        border: 0;
-        font-size: 14px;
-        color: var(--sub);
-        cursor: pointer;
-        transition: transform 0.15s;
-      }
-      .line-row.open .line-toggle { transform: rotate(180deg); }
-      .line-row.open .line-detail {
-        display: block;
-        grid-column: 2 / -1;
-        padding: 6px 0 0 2px;
-        font-size: 13px;
-        color: var(--sub);
-      }
     }
   </style>
 </head>
 <body>
 
-<!-- ════════════════════════════════════════════════════════
-     1. TICKER
-════════════════════════════════════════════════════════ -->
-<div class="ticker">
-  <span class="ticker-track" id="ticker-track">Chargement des données en cours…</span>
-</div>
-
-<!-- ════════════════════════════════════════════════════════
-     2. NAVIGATION
-════════════════════════════════════════════════════════ -->
+<!-- Navigation -->
 <nav>
   <a href="/" class="nav-logo">
     <span class="logo-retards">RETARDS </span><span class="logo-idf">IDF</span>
   </a>
   <ul class="nav-links">
     <li><a href="/" class="active" aria-current="page">Aujourd'hui</a></li>
+    <li><a href="/temps-reel">Temps réel</a></li>
     <li><a href="/statistiques">Statistiques</a></li>
-    <li><a href="#lignes">Par ligne</a></li>
     <li><a href="/methode.html">Méthode</a></li>
   </ul>
   <div class="nav-live">
@@ -529,20 +180,16 @@
   </div>
 </nav>
 
-<!-- ════════════════════════════════════════════════════════
-     3. HERO — COÛT DU JOUR
-════════════════════════════════════════════════════════ -->
+<!-- Hero — coût du jour -->
 <section class="hero">
   <span class="stamp">RETARDS IDF</span>
   <div class="hero-date" id="hero-date">&nbsp;</div>
-  <div class="hero-subtitle">Aujourd'hui, les retards des RER, Transiliens et Métros ont coûté</div>
-  <div class="hero-counter" id="ctr-eur">— €</div>
+  <div class="hero-subtitle">Aujourd'hui, les retards des RER et Transiliens ont coûté</div>
+  <div class="hero-counter" id="hero-eur">— €</div>
   <div class="hero-unit">au SMIC horaire brut · réseau IDF complet</div>
 </section>
 
-<!-- ════════════════════════════════════════════════════════
-     4. CUMUL — seule occurrence du temps cumulé sur la page
-════════════════════════════════════════════════════════ -->
+<!-- Cumul du jour -->
 <section class="cumul">
   <div class="cumul-inner">
     <div class="cumul-kicker">Cumul du jour · depuis 7 h</div>
@@ -552,67 +199,22 @@
   </div>
 </section>
 
-<!-- ════════════════════════════════════════════════════════
-     5. INCIDENTS EN COURS
-════════════════════════════════════════════════════════ -->
-<div class="section-wrap">
-  <div class="section-header">
-    <span class="section-title">Incidents en cours</span>
-    <span class="section-meta">coût en cours estimé au SMIC brut ·
-      <span class="hint-hover">détail au survol</span><span class="hint-touch">détail au toucher</span>
-      · <span id="tmr"></span></span>
-  </div>
-  <div class="inc-groups" id="incidents-list">
-    <div class="empty-msg">Chargement…</div>
-  </div>
-</div>
+<!-- Et toi, ta ligne ? -->
+<div class="pick-section" id="pick-container"></div>
 
-<!-- ════════════════════════════════════════════════════════
-     6. TABLEAU PAR LIGNE — aujourd'hui uniquement
-════════════════════════════════════════════════════════ -->
-<div class="table-wrap" id="lignes">
-  <div class="section-header">
-    <span class="section-title">Par ligne — aujourd'hui</span>
-    <span class="section-meta">coût estimé au SMIC brut</span>
-  </div>
-
-  <div class="table-header-row" id="table-head">
-    <span></span>
-    <span class="th th-name" data-sort="name"><button type="button" class="sort-btn">Ligne</button></span>
-    <span class="th col-inc" data-sort="inc"><button type="button" class="sort-btn">Incidents (auj.)</button></span>
-    <span class="th col-temps" data-sort="temps"><button type="button" class="sort-btn">Temps perdu (auj.)</button></span>
-    <span class="th" data-sort="cout"><button type="button" class="sort-btn">Coût du jour</button></span>
-    <span class="th-toggle"></span>
-  </div>
-
-  <!-- Données : /api/stats/line/{id}?period=1 -->
-  <div class="lines-list" id="lines-list">
-    <div class="empty-msg">Chargement des données…</div>
-  </div>
-</div>
-
-<!-- ════════════════════════════════════════════════════════
-     7. FOOTER
-════════════════════════════════════════════════════════ -->
+<!-- Footer -->
 <footer>
   <div class="footer-left">Données : API PRIM · IDF Mobilités · Licence Open Data Etalab</div>
   <div class="footer-right">
-    <a href="methode.html">Méthodologie</a>
+    <a href="/methode.html">Méthodologie</a>
     <a href="https://github.com/" target="_blank" rel="noopener">GitHub</a>
     <a href="mailto:contact@retardsidf.fr">Contact</a>
   </div>
 </footer>
 
-<!-- ════════════════════════════════════════════════════════
-     JAVASCRIPT
-════════════════════════════════════════════════════════ -->
+<!-- JavaScript -->
 <script src="duree.js"></script>
-<script src="ticker.js"></script>
 <script>
-  /* ── Tous les chiffres (coût du jour, par ligne, par incident, taux SMIC) viennent du
-     backend, seule source de calcul : cette page ne fait que les afficher. ── */
-  const HEURES_JOUR = 7;  // salaire journalier = 7 h au SMIC
-
   const LINE_META = {
     'RER_A':        { short: 'A', name: 'RER A',        color: '#E2231A' },
     'RER_B':        { short: 'B', name: 'RER B',        color: '#5191CF' },
@@ -627,35 +229,16 @@
     'TRANSILIEN_P': { short: 'P', name: 'Transilien P', color: '#E87722' },
     'TRANSILIEN_R': { short: 'R', name: 'Transilien R', color: '#228B22' },
     'TRANSILIEN_U': { short: 'U', name: 'Transilien U', color: '#7B0F1F' },
-    // Métro
-    'METRO_1':  { short: '1',    name: 'Métro 1',    color: '#FFBE00', textColor: '#000' },
-    'METRO_2':  { short: '2',    name: 'Métro 2',    color: '#003CA6' },
-    'METRO_3':  { short: '3',    name: 'Métro 3',    color: '#837902' },
-    'METRO_3B': { short: '3B',   name: 'Métro 3bis', color: '#6EC4E8', textColor: '#000' },
-    'METRO_4':  { short: '4',    name: 'Métro 4',    color: '#CF009E' },
-    'METRO_5':  { short: '5',    name: 'Métro 5',    color: '#FF7E2E', textColor: '#000' },
-    'METRO_6':  { short: '6',    name: 'Métro 6',    color: '#6ECA97', textColor: '#000' },
-    'METRO_7':  { short: '7',    name: 'Métro 7',    color: '#FA9ABA', textColor: '#000' },
-    'METRO_7B': { short: '7B',   name: 'Métro 7bis', color: '#6ECA97', textColor: '#000' },
-    'METRO_8':  { short: '8',    name: 'Métro 8',    color: '#E19BDF', textColor: '#000' },
-    'METRO_9':  { short: '9',    name: 'Métro 9',    color: '#B6BD00', textColor: '#000' },
-    'METRO_10': { short: '10',   name: 'Métro 10',   color: '#C9910D', textColor: '#000' },
-    'METRO_11': { short: '11',   name: 'Métro 11',   color: '#704B1C' },
-    'METRO_12': { short: '12',   name: 'Métro 12',   color: '#007852' },
-    'METRO_13': { short: '13',   name: 'Métro 13',   color: '#6EC4E8', textColor: '#000' },
-    'METRO_14': { short: '14',   name: 'Métro 14',   color: '#62259D' },
   };
 
   function fmt(n) {
     return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   }
-  function esc(s) {
-    return String(s ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
-  }
+</script>
+<script src="pick.js"></script>
+<script>
+  var HEURES_JOUR = 7;
 
-  /* ════════ 1. HERO (coût du jour) + CUMUL (temps du jour) ════════
-     Même source, /api/stats/today : les deux chiffres portent sur la
-     même fenêtre (journée comptée à partir de 7 h, heure de Paris).  */
   function renderCumul(mv, cout, smic) {
     document.getElementById('cumul-value').textContent = formatDuree(mv);
     document.getElementById('cumul-label').textContent = 'de vie ' + accordPerdu(mv) + ' collectivement';
@@ -670,288 +253,35 @@
       if (!res.ok) return;
       const stats = await res.json();
       const cout = stats.cout_eur || 0;
-      document.getElementById('ctr-eur').textContent = fmt(cout) + ' €';
+      document.getElementById('hero-eur').textContent = fmt(cout) + ' €';
       renderCumul(stats.total_minutes_voyageurs || 0, cout, stats.smic_horaire);
-    } catch (_) { /* on garde les placeholders « — » */ }
+    } catch (_) {}
   }
+  fetchToday();
+  setInterval(fetchToday, 300000);
 
-  /* ════════ 2. INCIDENTS EN COURS — regroupés par ligne (/api/incidents/current) ════════
-     Une pastille par ligne (nombre + coût en cours) ; le détail apparaît au survol
-     (ou au focus clavier), et au toucher sur les écrans sans survol.              */
-  const groupesOuverts = new Set();
-  const survol = window.matchMedia('(hover: hover)');
-
-  // Coût calculé par l'API, même formule que le total du jour ; null pour une perturbation
-  // déclarée, qui n'entre pas dans le coût
-  function coutIncident(inc) {
-    return inc.cout_eur ?? null;
-  }
-
-  function renderIncident(inc) {
-    const meta = LINE_META[inc.line_id] || { name: inc.line_id };
-    const isCancelled = inc.is_cancelled === true;
-    const severity = isCancelled ? 'cancelled'
-      : (['NO_SERVICE', 'SIGNIFICANT_DELAYS'].includes(inc.type_incident) ? 'critical' : '');
-    const dureeMin = inc.duree_minutes || 0;
-    const dureeTxt = isCancelled ? 'Supprimé' : (dureeMin > 0 ? dureeMin + ' min' : 'En cours');
-    // Temps réel : heure de départ prévue du train ; perturbation : heure de début
-    const heureRef = inc.heure_theorique || inc.heure_debut;
-    const heureStr = heureRef ? new Date(heureRef).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
-    const cout = coutIncident(inc);
-    const desc = inc.gare
-      ? esc(inc.gare) + (inc.direction ? ' → ' + esc(inc.direction) : '')
-      : esc(inc.resume || inc.cause || 'Incident — ' + meta.name);
-    const sub = [
-      inc.mission ? 'Train ' + esc(inc.mission) : esc(inc.categorie || inc.type_incident),
-      heureStr ? (inc.heure_theorique ? 'départ prévu ' : 'à ') + heureStr : '',
-    ].filter(Boolean).join(' · ');
-    return `
-      <div class="incident ${severity}">
-        <div class="incident-info">
-          <div class="incident-desc" title="${esc(inc.cause)}">${desc}${isCancelled ? '<span class="cancelled-tag">SUPPRIMÉ</span>' : ''}</div>
-          <div class="incident-cause">${sub}<span class="incident-duree-m"> · ${dureeTxt}</span></div>
-        </div>
-        <div class="incident-duree">${dureeTxt}</div>
-        <div class="incident-cout">${cout === null ? '—' : '+' + fmt(Math.floor(cout)) + ' €'}</div>
-      </div>`;
-  }
-
-  // « 3 retards · 1 supprimé » — les perturbations (source disruption) à part
-  function libelleCompte(incs) {
-    const supp = incs.filter(i => i.is_cancelled === true).length;
-    const pert = incs.filter(i => i.is_cancelled !== true && i.source === 'disruption').length;
-    const ret  = incs.length - supp - pert;
-    return [
-      ret  ? ret  + ' retard'       + (ret  > 1 ? 's' : '') : '',
-      supp ? supp + ' supprimé'     + (supp > 1 ? 's' : '') : '',
-      pert ? pert + ' perturbation' + (pert > 1 ? 's' : '') : '',
-    ].filter(Boolean).join(' · ');
-  }
-
-  function renderGroupe(g) {
-    const open = groupesOuverts.has(g.key);
-    const compte = libelleCompte(g.incs);
-    const cout = g.cout === null ? '—' : '+' + fmt(Math.floor(g.cout)) + ' €';
-    return `
-      <div class="inc-group${open ? ' open' : ''}" data-key="${g.key}">
-        <button type="button" class="inc-chip" aria-expanded="${open}" aria-controls="pop-${g.key}"
-                aria-label="${g.meta.name} : ${compte}, ${cout} en cours">
-          <span class="incident-badge" style="background:${g.meta.color}"${g.meta.textColor ? ' data-tc="dark"' : ''}>${g.meta.short}</span>
-          <span class="chip-count">${compte}</span>
-          <span class="chip-cout">${cout}</span>
-          <span class="chip-chevron" aria-hidden="true">▾</span>
-        </button>
-        <div class="inc-pop" id="pop-${g.key}">
-          <div class="pop-inner">
-            <div class="pop-title">${g.meta.name} — ${compte} en cours</div>
-            ${g.incs.map(renderIncident).join('')}
-          </div>
-        </div>
-      </div>`;
-  }
-
-  async function fetchIncidents() {
-    try {
-      const res = await fetch('/api/incidents/current');
-      if (!res.ok) return;
-      const incidents = await res.json();
-      const list = document.getElementById('incidents-list');
-
-      Ticker.render(incidents);
-      if (incidents.length === 0) {
-        list.innerHTML = '<div class="empty-msg">Aucun incident en cours ✓</div>';
-        return;
-      }
-
-      // Regroupement par ligne ; lignes et trains triés par coût décroissant
-      const parLigne = new Map();
-      incidents.forEach(inc => {
-        if (!parLigne.has(inc.line_id)) parLigne.set(inc.line_id, []);
-        parLigne.get(inc.line_id).push(inc);
-      });
-      const groupes = [...parLigne].map(([key, incs]) => {
-        incs.sort((a, b) => (coutIncident(b) || 0) - (coutIncident(a) || 0));
-        const couts = incs.map(coutIncident).filter(c => c !== null);
-        return {
-          key, incs,
-          meta: LINE_META[key] || { short: '?', color: '#999', name: key },
-          cout: couts.length ? couts.reduce((s, c) => s + c, 0) : null,
-        };
-      }).sort((a, b) => (b.cout || 0) - (a.cout || 0) || b.incs.length - a.incs.length);
-
-      list.innerHTML = groupes.map(renderGroupe).join('');
-    } catch (_) { /* on garde l'état précédent */ }
-  }
-
-  const incList = document.getElementById('incidents-list');
-
-  // Popover aligné à droite s'il déborderait de l'écran
-  function placerPopover(e) {
-    const g = e.target.closest('.inc-group');
-    if (!g) return;
-    const largeur = Math.min(460, window.innerWidth - 32);
-    g.classList.toggle('align-right', g.getBoundingClientRect().left + largeur > window.innerWidth - 16);
-  }
-  incList.addEventListener('mouseover', placerPopover);
-  incList.addEventListener('focusin', placerPopover);
-
-  // Écrans sans survol (tactile) : toucher = déplier / replier
-  incList.addEventListener('click', e => {
-    const btn = e.target.closest('.inc-chip');
-    if (!btn || survol.matches) return;
-    const g = btn.parentElement;
-    const open = g.classList.toggle('open');
-    btn.setAttribute('aria-expanded', open);
-    if (open) groupesOuverts.add(g.dataset.key); else groupesOuverts.delete(g.dataset.key);
-  });
-
-  /* ════════ 3. LIGNES — aujourd'hui (/api/stats/line/{id}?period=1) ════════ */
-  let lignes = [];          // [{ key, order, short, name, color, inc, mv, cout }]
-  let manquantes = [];      // lignes dont l'API n'a pas répondu
-  let sortKey = 'cout', sortDir = -1;
-  const lignesOuvertes = new Set();
-  const mobile = window.matchMedia('(max-width: 768px)');
-
-  const SORTS = {
-    name:  l => l.order,
-    inc:   l => l.inc,
-    temps: l => l.mv,
-    cout:  l => l.cout,
-  };
-
-  function renderLines() {
-    const list = document.getElementById('lines-list');
-    const touchees = lignes.filter(l => l.inc > 0);
-    const epargnees = lignes.filter(l => l.inc === 0);
-    const pire = touchees.reduce((p, l) => (l.mv > (p ? p.mv : 0) ? l : p), null);
-
-    touchees.sort((a, b) => (SORTS[sortKey](a) - SORTS[sortKey](b)) * sortDir || a.order - b.order);
-
-    document.querySelectorAll('#table-head .th').forEach(th => {
-      th.setAttribute('aria-sort', th.dataset.sort === sortKey ? (sortDir < 0 ? 'descending' : 'ascending') : 'none');
-    });
-
-    let html = touchees.map(l => {
-      const open = lignesOuvertes.has(l.key);
-      const temps = formatDuree(l.mv, true);
-      return `
-        <div class="line-row${l === pire ? ' worst' : ''}${open ? ' open' : ''}" data-key="${l.key}">
-          <div class="line-badge" style="background:${l.color}"${l.textColor ? ' data-tc="dark"' : ''}>${l.short}</div>
-          <div class="line-name">${l.name}</div>
-          <div class="line-value col-inc">${fmt(l.inc)}</div>
-          <div class="line-value col-temps">${temps}</div>
-          <div class="line-value line-cout">${fmt(l.cout)} €</div>
-          <button type="button" class="line-toggle" aria-expanded="${open}" aria-label="Détail ${l.name}">▾</button>
-          <div class="line-detail">${fmt(l.inc)} incident${l.inc > 1 ? 's' : ''} aujourd'hui · ${temps} de temps perdu</div>
-        </div>`;
-    }).join('');
-
-    if (epargnees.length > 0) {
-      const n = epargnees.length;
-      html += `
-        <div class="line-spared">
-          <span class="spared-dot"></span>
-          <span><strong>${n} ligne${n > 1 ? 's' : ''} épargnée${n > 1 ? 's' : ''} aujourd'hui</strong>
-          (${epargnees.map(l => l.short).join(', ')}) — 0 incident</span>
-        </div>`;
-    }
-    if (manquantes.length > 0) {
-      html += `<div class="line-missing">Données indisponibles pour : ${manquantes.join(', ')}</div>`;
-    }
-    list.innerHTML = html || '<div class="empty-msg">Données indisponibles</div>';
-  }
-
-  async function fetchLines() {
-    const entries = Object.entries(LINE_META);
-    try {
-      const results = await Promise.allSettled(
-        entries.map(([id]) =>
-          fetch(`/api/stats/line/${id}?period=1`).then(r => r.ok ? r.json() : null)
-        )
-      );
-
-      const next = [], missing = [];
-      results.forEach((res, i) => {
-        const [key, meta] = entries[i];
-        const d = res.status === 'fulfilled' ? res.value : null;
-        if (!d) { missing.push(meta.short); return; }
-        next.push({
-          key, order: i, short: meta.short, name: meta.name, color: meta.color, textColor: meta.textColor,
-          inc: d.total_incidents || 0,
-          mv:  d.total_minutes_voyageurs || 0,
-          cout: d.total_cout_eur || 0,
-        });
-      });
-
-      if (next.length === 0) throw new Error('aucune ligne');
-      lignes = next;
-      manquantes = missing;
-      renderLines();
-    } catch (_) {
-      if (lignes.length === 0) {
-        document.getElementById('lines-list').innerHTML = '<div class="empty-msg">Données indisponibles</div>';
-      }
-    }
-  }
-
-  /* ── Tri au clic sur les en-têtes ── */
-  document.getElementById('table-head').addEventListener('click', e => {
-    const th = e.target.closest('.th');
-    if (!th || !th.dataset.sort) return;
-    if (th.dataset.sort === sortKey) sortDir = -sortDir;
-    else { sortKey = th.dataset.sort; sortDir = sortKey === 'name' ? 1 : -1; }
-    renderLines();
-  });
-
-  /* ── Mobile : tap sur une ligne → détail incidents / temps perdu ── */
-  document.getElementById('lines-list').addEventListener('click', e => {
-    const row = e.target.closest('.line-row');
-    if (!row || !mobile.matches) return;
-    const open = row.classList.toggle('open');
-    row.querySelector('.line-toggle').setAttribute('aria-expanded', open);
-    if (open) lignesOuvertes.add(row.dataset.key); else lignesOuvertes.delete(row.dataset.key);
-  });
-
-  /* ── Initialisation + polling 5 min ── */
-  let countdown = 300;
-  function refresh() {
-    fetchToday();
-    fetchIncidents();
-    fetchLines();
-    countdown = 300;
-  }
-  refresh();
-  setInterval(refresh, 300000);
-
-  /* ── Compte à rebours prochaine actualisation ── */
-  function updateCountdown() {
-    countdown--;
-    if (countdown < 0) countdown = 300;
-    const mn = Math.floor(countdown / 60);
-    const sc = String(countdown % 60).padStart(2, '0');
-    document.getElementById('tmr').textContent =
-      'actualisation dans ' + mn + '\u202Fmin\u202F' + sc + '\u202Fs';
-  }
-  updateCountdown();
-  setInterval(updateCountdown, 1000);
-
-  /* ── Date/heure màj ─────────────────────────────────────── */
+  /* ── Date/heure ── */
   function updateDate() {
     const now = new Date();
     const jours = ['DIMANCHE','LUNDI','MARDI','MERCREDI','JEUDI','VENDREDI','SAMEDI'];
     const mois  = ['JANVIER','FÉVRIER','MARS','AVRIL','MAI','JUIN',
                    'JUILLET','AOÛT','SEPTEMBRE','OCTOBRE','NOVEMBRE','DÉCEMBRE'];
     document.getElementById('hero-date').textContent =
-      jours[now.getDay()] + ' ' +
-      now.getDate() + ' ' +
-      mois[now.getMonth()] + ' ' +
-      now.getFullYear() +
-      '  ·  MÀJ ' +
+      jours[now.getDay()] + ' ' + now.getDate() + ' ' + mois[now.getMonth()] + ' ' +
+      now.getFullYear() + '  ·  MÀJ ' +
       String(now.getHours()).padStart(2, '0') + 'H' +
       String(now.getMinutes()).padStart(2, '0');
   }
   updateDate();
   setInterval(updateDate, 60000);
+
+  /* ── Picker ── */
+  Pick.init(document.getElementById('pick-container'), {
+    showTitle: true,
+    showPageLink: true,
+    showRank: false,
+    defaultPeriod: 'mois',
+  });
 </script>
 </body>
 </html>

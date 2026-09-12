@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title id="page-title">RETARDS IDF</title>
+  <meta name="description" id="page-desc" content="Combien les retards de cette ligne coûtent aux usagers franciliens.">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/nav.css">
+  <link rel="stylesheet" href="/pick.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    [hidden] { display: none !important; }
+
+    :root {
+      --bg:     #F7F4EF;
+      --bg2:    #EDEAE4;
+      --bg3:    #E2DED7;
+      --border: #D4CFC7;
+      --ink:    #000000;
+      --text:   #000000;
+      --muted:  #555555;
+      --sub:    #333333;
+      --red:    #C0392B;
+      --ok:     #2ECC71;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Roboto', sans-serif;
+      font-size: 16px;
+      overflow-x: hidden;
+    }
+
+    /* ── Ticker ── */
+    .ticker {
+      background: var(--ink);
+      padding: 7px 0;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .ticker-track {
+      display: inline-block;
+      animation: tick 28s linear infinite;
+      font-weight: 400;
+      font-size: 13px;
+      letter-spacing: 1px;
+      color: var(--bg);
+    }
+    @keyframes tick {
+      from { transform: translateX(100vw); }
+      to   { transform: translateX(-100%); }
+    }
+
+    /* ── Hero compact (compteur global résumé) ── */
+    .hero-compact {
+      text-align: center;
+      padding: 22px 32px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .hero-compact .hc-label {
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .hero-compact .hc-value {
+      font-weight: 900;
+      font-size: clamp(36px, 8vw, 56px);
+      letter-spacing: -2px;
+      line-height: .9;
+      color: var(--ink);
+      margin: 6px 0 4px;
+    }
+    .hero-compact .hc-sub {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--sub);
+    }
+    .hero-compact .hc-sub a {
+      color: var(--sub);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    /* ── Section wrapper ── */
+    .section-wrap {
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 28px 32px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      border-bottom: 2px solid var(--ink);
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .section-meta {
+      font-weight: 400;
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: var(--sub);
+    }
+    .empty-msg {
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 1px;
+    }
+
+    /* ── Incidents de la ligne ── */
+    .incident-list { display: flex; flex-direction: column; gap: 1px; }
+    .incident-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: var(--bg2);
+      border-left: 3px solid transparent;
+    }
+    .incident-item.critical { border-left-color: var(--red); }
+    .incident-item.cancelled { border-left-color: var(--ink); }
+    .inc-info { min-width: 0; }
+    .inc-desc {
+      font-weight: 500;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .inc-sub {
+      font-size: 13px;
+      color: var(--sub);
+      margin-top: 2px;
+    }
+    .inc-duree {
+      font-weight: 500;
+      font-size: 14px;
+      color: var(--sub);
+      text-align: right;
+    }
+    .inc-cout {
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--red);
+      text-align: right;
+      white-space: nowrap;
+    }
+    .cancelled-tag {
+      display: inline-block;
+      background: #333;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 2px 6px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    /* ── Lien méthode ── */
+    .methode-link {
+      text-align: center;
+      padding: 24px 32px;
+    }
+    .methode-link a {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--sub);
+      text-decoration: none;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      transition: color .15s;
+    }
+    .methode-link a:hover { color: var(--ink); }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 2px solid var(--ink);
+      padding: 18px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .footer-left, .footer-right {
+      font-weight: 400;
+      font-size: 12px;
+      color: var(--sub);
+    }
+    .footer-right a {
+      color: var(--sub);
+      text-decoration: none;
+      margin-left: 14px;
+      transition: color 0.15s;
+    }
+    .footer-right a:hover { color: var(--ink); }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .hero-compact { padding: 18px 16px 14px; }
+      .section-wrap { padding: 20px 16px; }
+      .section-header { flex-direction: column; gap: 2px; }
+      .incident-item { grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+      .inc-duree { display: none; }
+      footer { padding: 14px 16px; flex-direction: column; align-items: flex-start; }
+      .footer-right a:first-child { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Ticker -->
+<div class="ticker">
+  <span class="ticker-track" id="ticker-track">Chargement des données en cours…</span>
+</div>
+
+<!-- Navigation -->
+<nav>
+  <a href="/" class="nav-logo">
+    <span class="logo-retards">RETARDS </span><span class="logo-idf">IDF</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="/">Aujourd'hui</a></li>
+    <li><a href="/temps-reel">Temps réel</a></li>
+    <li><a href="/statistiques">Statistiques</a></li>
+    <li><a href="/methode.html">Méthode</a></li>
+  </ul>
+  <div class="nav-live">
+    <span class="live-dot"></span>
+    LIVE
+  </div>
+</nav>
+
+<!-- Hero compact : compteur global résumé -->
+<section class="hero-compact">
+  <div class="hc-label">Réseau IDF aujourd'hui</div>
+  <div class="hc-value" id="hc-value">— €</div>
+  <div class="hc-sub">au SMIC brut · <a href="/">voir le détail complet</a></div>
+</section>
+
+<!-- Sélecteur + panneau perso -->
+<div class="pick-section" id="pick-container"></div>
+
+<!-- Incidents en cours de la ligne -->
+<div class="section-wrap" id="incidents-section" hidden>
+  <div class="section-header">
+    <span class="section-title" id="inc-title">Incidents en cours</span>
+    <span class="section-meta">coût estimé au SMIC brut</span>
+  </div>
+  <div class="incident-list" id="inc-list">
+    <div class="empty-msg">Chargement…</div>
+  </div>
+</div>
+
+<!-- Lien méthode -->
+<div class="methode-link">
+  <a href="/methode.html">Comment sont calculés ces chiffres ? → Méthodologie</a>
+</div>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-left">Données : API PRIM · IDF Mobilités · Licence Open Data Etalab</div>
+  <div class="footer-right">
+    <a href="/methode.html">Méthodologie</a>
+    <a href="https://github.com/" target="_blank" rel="noopener">GitHub</a>
+    <a href="mailto:contact@retardsidf.fr">Contact</a>
+  </div>
+</footer>
+
+<!-- JavaScript -->
+<script src="/duree.js"></script>
+<script src="/ticker.js"></script>
+<script>
+  /* ── Registre des lignes (identique à index.html) ── */
+  const LINE_META = {
+    'RER_A':        { short: 'A', name: 'RER A',        color: '#E2231A' },
+    'RER_B':        { short: 'B', name: 'RER B',        color: '#5191CF' },
+    'RER_C':        { short: 'C', name: 'RER C',        color: '#C8A800' },
+    'RER_D':        { short: 'D', name: 'RER D',        color: '#00814F' },
+    'RER_E':        { short: 'E', name: 'RER E',        color: '#B04191' },
+    'TRANSILIEN_H': { short: 'H', name: 'Transilien H', color: '#7B7B7B' },
+    'TRANSILIEN_J': { short: 'J', name: 'Transilien J', color: '#D2B464' },
+    'TRANSILIEN_K': { short: 'K', name: 'Transilien K', color: '#8C4B31' },
+    'TRANSILIEN_L': { short: 'L', name: 'Transilien L', color: '#9F3E96' },
+    'TRANSILIEN_N': { short: 'N', name: 'Transilien N', color: '#333333' },
+    'TRANSILIEN_P': { short: 'P', name: 'Transilien P', color: '#E87722' },
+    'TRANSILIEN_R': { short: 'R', name: 'Transilien R', color: '#228B22' },
+    'TRANSILIEN_U': { short: 'U', name: 'Transilien U', color: '#7B0F1F' },
+  };
+</script>
+<script src="/pick.js"></script>
+<script>
+  /* ── Résoudre la ligne depuis le slug dans l'URL ── */
+  const slug = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
+  const lineId = Pick.SLUG_TO_ID[slug];
+
+  if (!lineId || !LINE_META[lineId]) {
+    document.body.innerHTML = '<div style="text-align:center;padding:60px;font-size:18px">Ligne inconnue.</div>';
+  } else {
+    const meta = LINE_META[lineId];
+
+    // Titre et méta
+    document.getElementById('page-title').textContent = meta.name + ' — RETARDS IDF';
+    document.getElementById('page-desc').content =
+      'Combien les retards du ' + meta.name + ' coûtent aux usagers. Compteur en temps réel.';
+
+    // Réseau pour l'onglet par défaut
+    let defaultTab = 'rer';
+    if (lineId.startsWith('TRANSILIEN_')) defaultTab = 'transilien';
+    else if (lineId.startsWith('METRO_')) defaultTab = 'metro';
+
+    // Initialiser le picker avec la ligne pré-sélectionnée
+    const pickInstance = Pick.init(document.getElementById('pick-container'), {
+      showTitle: false,
+      showPageLink: false,
+      showRank: true,
+      preselect: lineId,
+      defaultTab: defaultTab,
+      defaultPeriod: 'mois',
+      onSelect: function (id) {
+        // Naviguer vers la page de la nouvelle ligne si différente
+        const newSlug = Pick.SLUGS[id];
+        if (newSlug && newSlug !== slug) {
+          window.location.href = '/' + newSlug;
+        }
+      },
+    });
+
+    // ── Hero compact : coût global du jour ──
+    async function fetchGlobal() {
+      try {
+        const res = await fetch('/api/stats/today');
+        if (!res.ok) return;
+        const stats = await res.json();
+        const cout = stats.cout_eur || 0;
+        document.getElementById('hc-value').textContent =
+          cout.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' €';
+      } catch (_) {}
+    }
+    fetchGlobal();
+
+    // ── Incidents en cours de la ligne ──
+    function esc(s) {
+      return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    }
+    function fmt(n) {
+      return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+
+    async function fetchLineIncidents() {
+      try {
+        const res = await fetch('/api/incidents/current');
+        if (!res.ok) return;
+        const all = await res.json();
+        const incs = all.filter(i => i.line_id === lineId);
+        const section = document.getElementById('incidents-section');
+        const list = document.getElementById('inc-list');
+        const title = document.getElementById('inc-title');
+
+        title.textContent = 'Incidents en cours — ' + meta.name;
+
+        if (incs.length === 0) {
+          section.hidden = false;
+          list.innerHTML = '<div class="empty-msg">Aucun incident en cours \u2714</div>';
+          return;
+        }
+
+        section.hidden = false;
+        list.innerHTML = incs.map(inc => {
+          const isCancelled = inc.is_cancelled === true;
+          const severity = isCancelled ? 'cancelled'
+            : (['NO_SERVICE','SIGNIFICANT_DELAYS'].includes(inc.type_incident) ? 'critical' : '');
+          const dureeMin = inc.duree_minutes || 0;
+          const dureeTxt = isCancelled ? 'Supprimé' : (dureeMin > 0 ? dureeMin + ' min' : 'En cours');
+          const heureRef = inc.heure_theorique || inc.heure_debut;
+          const heureStr = heureRef ? new Date(heureRef).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}) : '';
+          const cout = (inc.cout_eur != null && (inc.source === 'realtime' || inc.is_cancelled)) ? inc.cout_eur : null;
+          const desc = inc.gare
+            ? esc(inc.gare) + (inc.direction ? ' → ' + esc(inc.direction) : '')
+            : esc(inc.resume || inc.cause || 'Incident');
+          const sub = [
+            inc.mission ? 'Train ' + esc(inc.mission) : esc(inc.categorie || inc.type_incident),
+            heureStr ? (inc.heure_theorique ? 'départ prévu ' : 'à ') + heureStr : '',
+          ].filter(Boolean).join(' · ');
+          return '<div class="incident-item ' + severity + '">' +
+            '<div class="inc-info"><div class="inc-desc">' + desc +
+            (isCancelled ? '<span class="cancelled-tag">SUPPRIMÉ</span>' : '') +
+            '</div><div class="inc-sub">' + sub + '</div></div>' +
+            '<div class="inc-duree">' + dureeTxt + '</div>' +
+            '<div class="inc-cout">' + (cout === null ? '—' : '+' + fmt(Math.floor(cout)) + ' €') + '</div></div>';
+        }).join('');
+      } catch (_) {}
+    }
+    fetchLineIncidents();
+
+    // ── Ticker ──
+    Ticker.charger();
+
+    // ── Polling ──
+    setInterval(function () {
+      fetchGlobal();
+      fetchLineIncidents();
+      Ticker.charger();
+    }, 300000);
+  }
+</script>
+</body>
+</html>

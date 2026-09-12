@@ -1,0 +1,388 @@
+/* ── Sélecteur de ligne + panneau « usager moyen » ────────────
+   Composant partagé entre la home (/) et les pages par ligne (/:slug).
+   Dépend de : LINE_META (global), formatDuree() (duree.js).
+   Expose : window.Pick                                                */
+(function () {
+  'use strict';
+
+  // ── Slug ↔ ID mapping (miroir de backend/config.py) ──
+  const SLUGS = {};
+  const SLUG_TO_ID = {};
+  Object.entries(LINE_META).forEach(([id]) => {
+    let slug;
+    if (id.startsWith('RER_'))        slug = 'rer-' + id.slice(4).toLowerCase();
+    else if (id.startsWith('TRANSILIEN_')) slug = 'ligne-' + id.slice(11).toLowerCase();
+    else if (id === 'METRO_3B')       slug = 'metro-3bis';
+    else if (id === 'METRO_7B')       slug = 'metro-7bis';
+    else if (id.startsWith('METRO_')) slug = 'metro-' + id.slice(6).toLowerCase();
+    else slug = id.toLowerCase();
+    SLUGS[id] = slug;
+    SLUG_TO_ID[slug] = id;
+  });
+
+  // ── Réseau de chaque ligne ──
+  function reseau(id) {
+    if (id.startsWith('RER_')) return 'rer';
+    if (id.startsWith('TRANSILIEN_')) return 'transilien';
+    return 'metro';
+  }
+  const NET_LABEL = { rer: 'RER', transilien: 'Transilien', metro: 'M\u00E9tro' };
+
+  // ── Période → nombre de jours pour l'API ──
+  const PERIOD_DAYS = { jour: 1, semaine: 7, mois: 30, annee: 365 };
+  const PERIOD_LABEL = { jour: "aujourd'hui", semaine: 'cette semaine', mois: 'ce mois', annee: 'cette année' };
+
+  // ── Cache des données (fréquentation + stats par ligne/période) ──
+  let frequentation = null;
+  let smicHoraire = 12.31;
+  const statsCache = {};
+
+  async function loadReference() {
+    if (frequentation) return;
+    try {
+      const res = await fetch('/api/reference');
+      if (!res.ok) return;
+      const ref = await res.json();
+      frequentation = ref.frequentation || {};
+      smicHoraire = ref.smic_horaire || 12.31;
+    } catch (_) { frequentation = {}; }
+  }
+
+  async function loadLineStats(id, days) {
+    const key = id + '_' + days;
+    if (statsCache[key]) return statsCache[key];
+    try {
+      const res = await fetch('/api/stats/line/' + id + '?period=' + days);
+      if (!res.ok) return null;
+      const data = await res.json();
+      statsCache[key] = data;
+      return data;
+    } catch (_) { return null; }
+  }
+
+  // ── Calcul par usager moyen ──
+  function perUser(totalMinutesVoyageurs, lineId) {
+    const freq = (frequentation || {})[lineId];
+    if (!freq || freq === 0) return { minutes: 0, cout: 0 };
+    const minutes = totalMinutesVoyageurs / freq;
+    const cout = minutes * smicHoraire / 60;
+    return { minutes, cout };
+  }
+
+  // ── Formatage nombres FR ──
+  function fmtEur(n) {
+    if (n < 0.01) return '0,00';
+    return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function fmtMin(n) {
+    return Math.round(n).toLocaleString('fr-FR');
+  }
+
+  // ── Classement de la ligne ──
+  async function computeRank(lineId, days) {
+    const promises = Object.keys(LINE_META).map(async id => {
+      const data = await loadLineStats(id, days);
+      return { id, cout: data ? (data.total_cout_eur || 0) : 0 };
+    });
+    const all = await Promise.all(promises);
+    all.sort((a, b) => b.cout - a.cout);
+    const idx = all.findIndex(x => x.id === lineId);
+    return idx >= 0 ? idx + 1 : null;
+  }
+
+  // ── Construction du DOM ──
+  function init(container, options) {
+    const opts = Object.assign({
+      showTitle: true,
+      showPageLink: true,
+      showRank: false,
+      preselect: null,
+      defaultTab: null,       // 'rer', 'transilien', 'metro'
+      defaultPeriod: 'mois',
+      onSelect: null,
+    }, options);
+
+    let currentLine = null;
+    let currentPeriod = opts.defaultPeriod;
+    let currentTab = opts.defaultTab || 'rer';
+
+    // Grouper les lignes par réseau
+    const groups = { rer: [], transilien: [], metro: [] };
+    Object.entries(LINE_META).forEach(([id, meta]) => {
+      groups[reseau(id)].push({ id, ...meta });
+    });
+
+    // HTML du sélecteur
+    let html = '';
+    if (opts.showTitle) {
+      html += '<h2 class="pick-title">Et toi, ta ligne t\'a co\u00FBt\u00E9 combien ce mois-ci\u00A0?</h2>';
+      html += '<div class="pick-sub">Un tap. Le jour reste \u00E0 port\u00E9e de clic.</div>';
+    }
+
+    // Réseaux avec au moins une ligne
+    const nets = ['rer', 'transilien', 'metro'].filter(n => groups[n].length > 0);
+    if (!nets.includes(currentTab)) currentTab = nets[0] || 'rer';
+
+    // Onglets réseau (seulement si 2+ réseaux)
+    if (nets.length > 1) {
+      html += '<div class="pick-tabs">';
+      nets.forEach(net => {
+        html += '<button type="button" class="pick-tab' + (net === currentTab ? ' on' : '') + '" data-net="' + net + '">' + NET_LABEL[net] + '</button>';
+      });
+      html += '</div>';
+    }
+
+    // Grilles (une par réseau, une seule visible)
+    nets.forEach(net => {
+      const vis = net === currentTab ? '' : ' hidden';
+      html += '<div class="pick-grid" data-net="' + net + '"' + vis + '>';
+      groups[net].forEach(l => {
+        const tc = l.textColor ? ' data-tc="dark"' : '';
+        html += '<div class="pick-dot" data-id="' + l.id + '" style="background:' + l.color + '"' + tc + '>' + l.short + '</div>';
+      });
+      html += '</div>';
+    });
+
+    // Panneau
+    html += '<div class="pick-panel" id="pick-panel">';
+    html += '<div class="pick-panel-inner">';
+    html += '  <div class="pp-head">';
+    html += '    <div class="pp-round" id="pp-round"></div>';
+    html += '    <div class="pp-name" id="pp-name"></div>';
+    html += '    <div class="pp-status" id="pp-status"></div>';
+    html += '  </div>';
+    html += '  <div class="pp-label">Un usager moyen y a perdu</div>';
+    html += '  <div class="pp-amount"><span id="pp-eur"></span><span class="pp-unit">\u20AC <span id="pp-scope"></span></span></div>';
+    html += '  <div class="pp-time">soit <b id="pp-min"></b> minutes de vie \u00B7 au SMIC brut</div>';
+    html += '  <div class="pp-toggle">';
+    html += '    <button type="button" data-p="jour"' + (currentPeriod === 'jour' ? ' class="on"' : '') + '>Jour</button>';
+    html += '    <button type="button" data-p="semaine"' + (currentPeriod === 'semaine' ? ' class="on"' : '') + '>Semaine</button>';
+    html += '    <button type="button" data-p="mois"' + (currentPeriod === 'mois' ? ' class="on"' : '') + '>Mois</button>';
+    html += '    <button type="button" data-p="annee"' + (currentPeriod === 'annee' ? ' class="on"' : '') + '>Ann\u00E9e</button>';
+    html += '  </div>';
+    if (opts.showRank) {
+      html += '  <div class="pp-rank" id="pp-rank"></div>';
+    }
+    html += '  <div class="pp-actions">';
+    html += '    <button type="button" class="pp-btn-share" id="pp-share">Partager</button>';
+    if (opts.showPageLink) {
+      html += '    <a id="pp-page-link" href="#">Page compl\u00E8te \u2192</a>';
+    }
+    html += '  </div>';
+    html += '</div></div>';
+
+    container.innerHTML = html;
+
+    // Refs
+    const panel = container.querySelector('#pick-panel');
+    const ppRound = container.querySelector('#pp-round');
+    const ppName = container.querySelector('#pp-name');
+    const ppStatus = container.querySelector('#pp-status');
+    const ppEur = container.querySelector('#pp-eur');
+    const ppScope = container.querySelector('#pp-scope');
+    const ppMin = container.querySelector('#pp-min');
+    const ppRank = container.querySelector('#pp-rank');
+    const ppShare = container.querySelector('#pp-share');
+    const ppPageLink = container.querySelector('#pp-page-link');
+
+    // ── Onglets ──
+    function switchTab(net) {
+      currentTab = net;
+      container.querySelectorAll('.pick-tab').forEach(b => b.classList.toggle('on', b.dataset.net === net));
+      container.querySelectorAll('.pick-grid').forEach(g => { g.hidden = g.dataset.net !== net; });
+    }
+    container.querySelectorAll('.pick-tab').forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.net));
+    });
+
+    // ── Sélection d'une pastille ──
+    async function select(lineId, scroll) {
+      currentLine = lineId;
+      const meta = LINE_META[lineId];
+      if (!meta) return;
+
+      // Surligner
+      container.querySelectorAll('.pick-dot').forEach(d => d.classList.toggle('sel', d.dataset.id === lineId));
+
+      // Aligner l'onglet sur le réseau de la ligne
+      const net = reseau(lineId);
+      if (net !== currentTab) switchTab(net);
+
+      // Mettre à jour l'en-tête du panneau
+      ppRound.textContent = meta.short;
+      ppRound.style.background = meta.color;
+      if (meta.textColor) ppRound.setAttribute('data-tc', 'dark');
+      else ppRound.removeAttribute('data-tc');
+      ppName.textContent = meta.name;
+
+      // Bouton partage couleur
+      ppShare.style.background = meta.color;
+      ppShare.style.color = meta.textColor || '#fff';
+
+      // Lien page complète
+      if (ppPageLink) ppPageLink.href = '/' + SLUGS[lineId];
+
+      // Ouvrir le panneau
+      panel.classList.add('open');
+
+      // Charger et afficher les données
+      await updatePanel();
+
+      // Scroll
+      if (scroll) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      // Persister
+      try { localStorage.setItem('pick_line', lineId); } catch (_) {}
+      if (opts.onSelect) opts.onSelect(lineId);
+    }
+
+    async function updatePanel() {
+      if (!currentLine) return;
+      await loadReference();
+      const days = PERIOD_DAYS[currentPeriod];
+      const data = await loadLineStats(currentLine, days);
+
+      const mv = data ? (data.total_minutes_voyageurs || 0) : 0;
+      const user = perUser(mv, currentLine);
+
+      ppEur.textContent = fmtEur(user.cout);
+      ppScope.textContent = PERIOD_LABEL[currentPeriod];
+      ppMin.textContent = fmtMin(user.minutes);
+
+      // Statut : perturbé si incidents aujourd'hui
+      const todayData = await loadLineStats(currentLine, 1);
+      const hasIncidents = todayData && (todayData.total_incidents || 0) > 0;
+      ppStatus.textContent = hasIncidents ? 'Perturbé' : 'OK';
+      ppStatus.className = 'pp-status ' + (hasIncidents ? 'perturbé' : 'ok');
+
+      // Classement
+      if (ppRank && opts.showRank) {
+        const rank = await computeRank(currentLine, days);
+        if (rank) {
+          const total = Object.keys(LINE_META).length;
+          ppRank.innerHTML = '<strong>' + rank + (rank === 1 ? '\u02B3\u1D49' : '\u1D49') + ' pire ligne</strong> sur ' + total + ' \u00B7 ' + PERIOD_LABEL[currentPeriod];
+        } else {
+          ppRank.textContent = '';
+        }
+      }
+    }
+
+    // ── Clic sur les pastilles ──
+    container.querySelectorAll('.pick-dot').forEach(dot => {
+      dot.addEventListener('click', () => select(dot.dataset.id, true));
+    });
+
+    // ── Toggle période ──
+    container.querySelector('.pp-toggle').addEventListener('click', e => {
+      const btn = e.target.closest('button[data-p]');
+      if (!btn) return;
+      container.querySelectorAll('.pp-toggle button').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+      currentPeriod = btn.dataset.p;
+      updatePanel();
+    });
+
+    // ── Partage (canvas 1080×1080) ──
+    ppShare.addEventListener('click', async () => {
+      if (!currentLine) return;
+      const meta = LINE_META[currentLine];
+      const days = PERIOD_DAYS[currentPeriod];
+      await loadReference();
+      const data = await loadLineStats(currentLine, days);
+      const mv = data ? (data.total_minutes_voyageurs || 0) : 0;
+      const user = perUser(mv, currentLine);
+
+      const W = 1080, H = 1080;
+      const canvas = document.createElement('canvas');
+      canvas.width = W; canvas.height = H;
+      const ctx = canvas.getContext('2d');
+
+      // Fond crème
+      ctx.fillStyle = '#F7F4EF';
+      ctx.fillRect(0, 0, W, H);
+
+      // Pastille
+      const cx = W / 2, cy = 280;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 90, 0, Math.PI * 2);
+      ctx.fillStyle = meta.color;
+      ctx.fill();
+      ctx.fillStyle = meta.textColor || '#fff';
+      ctx.font = '900 60px Roboto, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(meta.short, cx, cy);
+
+      // Nom
+      ctx.fillStyle = '#000';
+      ctx.font = '700 36px Roboto, sans-serif';
+      ctx.fillText(meta.name, cx, cy + 140);
+
+      // Label
+      ctx.fillStyle = '#555';
+      ctx.font = '400 28px Roboto, sans-serif';
+      ctx.fillText('Un usager moyen y a perdu', cx, cy + 220);
+
+      // Montant
+      ctx.fillStyle = '#000';
+      ctx.font = '900 96px Roboto, sans-serif';
+      ctx.fillText(fmtEur(user.cout) + ' \u20AC', cx, cy + 340);
+
+      // Temps
+      ctx.fillStyle = '#555';
+      ctx.font = '500 32px Roboto, sans-serif';
+      ctx.fillText('soit ' + fmtMin(user.minutes) + ' minutes de vie', cx, cy + 400);
+
+      // Période
+      ctx.font = '500 26px Roboto, sans-serif';
+      ctx.fillText(PERIOD_LABEL[currentPeriod] + ' \u00B7 au SMIC brut', cx, cy + 460);
+
+      // URL filigrane
+      ctx.fillStyle = 'rgba(0,0,0,0.12)';
+      ctx.font = '500 22px Roboto, sans-serif';
+      ctx.fillText('retards-idf.fr/' + SLUGS[currentLine], cx, H - 60);
+
+      // Logo
+      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      ctx.font = '900 20px Roboto, sans-serif';
+      ctx.fillText('RETARDS IDF', cx, H - 100);
+
+      canvas.toBlob(blob => {
+        if (!blob) return;
+        const file = new File([blob], 'retards-' + SLUGS[currentLine] + '.png', { type: 'image/png' });
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          navigator.share({
+            title: meta.name + ' \u2014 RETARDS IDF',
+            text: 'Un usager moyen du ' + meta.name + ' a perdu ' + fmtEur(user.cout) + ' \u20AC ' + PERIOD_LABEL[currentPeriod],
+            files: [file],
+          }).catch(() => {});
+        } else {
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = file.name;
+          a.click();
+          URL.revokeObjectURL(a.href);
+        }
+      }, 'image/png');
+    });
+
+    // ── Pré-sélection ──
+    if (opts.preselect) {
+      select(opts.preselect, false);
+    } else {
+      try {
+        const saved = localStorage.getItem('pick_line');
+        if (saved && LINE_META[saved]) select(saved, false);
+      } catch (_) {}
+    }
+
+    return {
+      select,
+      getCurrentLine: () => currentLine,
+      getSlug: id => SLUGS[id],
+      getId: slug => SLUG_TO_ID[slug],
+    };
+  }
+
+  window.Pick = { init, SLUGS, SLUG_TO_ID, perUser, loadReference, loadLineStats, fmtEur, fmtMin };
+})();

@@ -1,5 +1,42 @@
 # SESSION — Dernière session de travail
 
+## Session du 2026-09-12 bis (terminée)
+
+### Contexte au démarrage
+- Branche `master`, dernier commit `e93c8ef`
+- Objectif : restructurer le site — nouvelle page d'accueil (hero + picker), ancien accueil → `/temps-reel`, pages par ligne `/:slug`
+
+### Actions effectuées
+- **Nouvelle page d'accueil `/`** (`frontend/index.html`) : hero (date, subtitle, gros compteur €, unité SMIC, cumul temps perdu) + picker "Et toi, ta ligne ?" — design identique à l'ancien accueil
+- **Ancien accueil → `/temps-reel`** (`frontend/temps-reel.html`) : ticker, hero, cumul, incidents, table par ligne — inchangé sauf nav mise à jour
+- **Pages par ligne `/:slug`** (`frontend/ligne.html`) : hero compact, picker pré-sélectionné avec classement, incidents de la ligne, navigation entre lignes
+- **Picker component** (`frontend/pick.js` + `frontend/pick.css`) : sélecteur pastilles par réseau (onglets RER/Transilien), panneau inline coût perso, partage canvas 1080×1080, persistance localStorage
+- **Slug mapping** (`backend/config.py`) : `LINE_SLUGS` / `SLUG_TO_ID` (13 lignes RER+Transilien)
+- **Routes** (`backend/main.py`) : `/temps-reel` + routes explicites par slug (pas de catch-all pour ne pas masquer les fichiers statiques)
+- **Retrait métro de tous les fichiers** : `index.html`, `ligne.html`, `temps-reel.html`, `config.py` — PRIM ne remonte pas de données métro
+- **Nav mise à jour sur toutes les pages** : Aujourd'hui · Temps réel · Statistiques · Méthode
+- **Hero accueil aligné sur le design temps-reel** : même tailles (subtitle clamp 20-28px, compteur clamp 64-140px), date, stamp, cumul en rouge
+- **132/132 tests verts**
+
+### Bugs découverts / corrigés
+- **Route catch-all `/{slug}` masquait les fichiers statiques** (nav.css, pick.js → 404) → remplacé par routes explicites par slug
+- **Design hero accueil trop petit** : tailles de texte initiales (14px label, 56-92px compteur) ne correspondaient pas au design de référence → aligné sur temps-reel
+
+### Fichiers créés
+- `frontend/temps-reel.html`, `frontend/pick.js`, `frontend/pick.css`
+
+### Fichiers modifiés
+- `frontend/index.html` (réécrit), `frontend/ligne.html` (réécrit)
+- `frontend/statistiques.html`, `frontend/annee.html`, `frontend/methode.html` (nav)
+- `backend/config.py` (slugs), `backend/main.py` (routes)
+
+### État en fin de session
+- 132/132 tests verts
+- Serveur lancé sur localhost:8000
+- 3 pages fonctionnelles : `/` (accueil + picker), `/temps-reel` (ancien accueil), `/:slug` (page par ligne)
+
+---
+
 ## Session du 2026-09-12 (terminée)
 
 ### Contexte au démarrage

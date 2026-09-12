@@ -1,0 +1,246 @@
+/* ── Sélecteur de ligne « Et toi, ta ligne ? » ──────────────
+   Composant partagé entre la home (/) et les pages par ligne (/:slug).
+   Dépend des tokens :root de la page hôte (--bg, --ink, --border, etc.)  */
+
+.pick-section {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 28px 32px;
+  border-bottom: 1px solid var(--border);
+}
+.pick-title {
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: -.02em;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.pick-sub {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+/* ── Onglets réseau ── */
+.pick-tabs {
+  display: flex;
+  gap: 0;
+  margin-top: 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.pick-tab {
+  flex: 1;
+  border: none;
+  background: var(--bg);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 10px 4px;
+  border-right: 1px solid var(--border);
+  transition: background .15s, color .15s;
+}
+.pick-tab:last-child { border-right: none; }
+.pick-tab:hover { color: var(--ink); }
+.pick-tab.on {
+  background: var(--ink);
+  color: var(--bg);
+  font-weight: 700;
+}
+
+/* ── Grille de pastilles ── */
+.pick-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 11px;
+}
+@media (max-width: 420px) { .pick-grid { grid-template-columns: repeat(5, 1fr); } }
+
+.pick-dot {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: -.03em;
+  color: #fff;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform .12s ease, border-color .15s;
+  user-select: none;
+}
+.pick-dot:hover { transform: scale(1.06); }
+.pick-dot[data-tc="dark"] { color: #000; }
+.pick-dot.sel {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--ink);
+}
+
+/* ── Panneau inline ── */
+.pick-panel {
+  margin-top: 20px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height .32s ease, opacity .24s ease;
+}
+.pick-panel.open {
+  max-height: 600px;
+  opacity: 1;
+}
+.pick-panel-inner { padding: 22px; }
+
+/* En-tête : pastille + nom + statut */
+.pp-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pp-round {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex: none;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 16px;
+}
+.pp-round[data-tc="dark"] { color: #000; }
+.pp-name {
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--ink);
+}
+.pp-status {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 100px;
+}
+.pp-status.perturbé {
+  background: rgba(192, 57, 43, .1);
+  color: var(--red);
+}
+.pp-status.ok {
+  background: rgba(46, 204, 113, .12);
+  color: #27ae60;
+}
+
+/* Chiffre principal */
+.pp-label {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 14px;
+}
+.pp-amount {
+  font-weight: 900;
+  letter-spacing: -.04em;
+  line-height: .95;
+  color: var(--ink);
+  font-size: clamp(50px, 15vw, 74px);
+  font-variant-numeric: tabular-nums;
+}
+.pp-amount .pp-unit {
+  font-size: .30em;
+  font-weight: 500;
+  color: var(--muted);
+  letter-spacing: 0;
+  margin-left: 4px;
+}
+.pp-time {
+  margin-top: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.pp-time b { font-weight: 700; }
+
+/* Toggle période */
+.pp-toggle {
+  display: flex;
+  margin-top: 18px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+}
+.pp-toggle button {
+  flex: 1;
+  border: none;
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 9px 4px;
+  border-right: 1px solid var(--border);
+  transition: background .15s, color .15s;
+}
+.pp-toggle button:last-child { border-right: none; }
+.pp-toggle button.on {
+  background: var(--ink);
+  color: var(--bg);
+  font-weight: 700;
+}
+
+/* Classement (page ligne) */
+.pp-rank {
+  margin-top: 14px;
+  font-size: 14px;
+  color: var(--sub);
+}
+.pp-rank strong {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Boutons bas */
+.pp-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.pp-actions button,
+.pp-actions a {
+  flex: 1;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  text-align: center;
+  text-decoration: none;
+  transition: background .15s;
+}
+.pp-actions button:hover,
+.pp-actions a:hover { background: var(--bg2, #EDEAE4); }
+.pp-btn-share {
+  border: none !important;
+  color: #fff;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .pick-section { padding: 20px 16px; }
+  .pick-title { font-size: 19px; }
+  .pp-amount { font-size: clamp(40px, 12vw, 60px); }
+}
