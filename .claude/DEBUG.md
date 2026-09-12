@@ -365,7 +365,24 @@ Une perturbation déclarée n'a plus de coût propre (« — ») : elle n'entre 
 
 ---
 
+### [2026-09-12] Quota PRIM grillé en 3h30 avec 29 lignes
+**Fichier(s)** : `backend/collector.py`, `backend/config.py`, `.env`
+**Symptôme** : API retourne 429 après ~3h30 de fonctionnement, plus aucune collecte
+**Cause** : 29 lignes × 2 appels × 5 cycles/h = ~290 req/h → 1 000 atteint en 3h30
+**Fix** : retrait des 16 métros (inutiles sur PRIM), disruptions en appel global (1 req au lieu de 13),
+polling 15 min → 14 req/cycle × 4/h × 16h ≈ 896 req/jour
+**Status** : ✅ Résolu
+
+### [2026-09-12] Métro PRIM : quasi aucune donnée
+**Fichier(s)** : `backend/collector.py`
+**Symptôme** : 1 seul incident métro jamais enregistré (METRO_4) sur tout l'historique
+**Cause** : PRIM/Navitia ne couvre pas le métro en disruptions ni en retards RT de manière fiable
+**Fix** : lignes de métro retirées du polling. Réintroduction possible avec une source alternative
+**Status** : ✅ Résolu (contourné)
+
+---
+
 ## Notes de surveillance
-- Quota PRIM : 20 000 req/jour — polling 5 min = 7 488 req/jour (13 lignes × 2 appels par relevé, marge × 2,7)
+- Quota PRIM : 1 000 req/jour — polling 15 min, 13 lignes departures + 1 global disruptions ≈ 896 req/jour
 - Bot X : planifié à 20h via APScheduler dans `main.py`
 - Logs applicatifs : `logs/` (monté en volume Docker)

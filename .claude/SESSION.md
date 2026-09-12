@@ -1,5 +1,38 @@
 # SESSION — Dernière session de travail
 
+## Session du 2026-09-12 (terminée)
+
+### Contexte au démarrage
+- Branche `master`, dernier commit `79c63e1` (polling 12 min)
+- Serveur lancé, quota PRIM grillé en ~3h30 à cause des 29 lignes (13 RER/Transilien + 16 métro)
+
+### Actions effectuées
+- **Retrait des 16 lignes de métro** (`backend/collector.py`) : PRIM ne remonte quasiment rien pour le métro (1 seul incident METRO_4 en tout et pour tout). Retour à 13 lignes RER/Transilien
+- **Optimisation disruptions → appel global** : `collect_disruptions` passe d'un appel par ligne (13 requêtes) à 1 seul appel global sur `/line_reports` avec pagination. Économie : 12 requêtes par cycle
+- **Polling 12 min → 15 min** : budget = 14 req/cycle × 4/h × 16h ≈ 896 req/jour (sous les 1 000)
+- **Quota corrigé** dans `config.py` : 20 000 → 1 000 (valeur réelle de la clé)
+- **`.env`** : `POLLING_INTERVAL_MINUTES=15`
+- **Tests adaptés** : `test_ignore_si_api_retourne_erreur` mis à jour pour l'appel global
+- **CLAUDE.md** : quota, lignes couvertes mis à jour ; commandes « début/fin de session » ajoutées
+- **132/132 tests verts**
+
+### Bugs découverts
+- Quota PRIM réel = 1 000 req/jour (pas 20 000) → confirmé via header `x-ratelimit-limit-day`
+- Métro PRIM quasi inutile : sur tout l'historique, 1 seul incident (METRO_4)
+
+### Fichiers modifiés
+- `backend/collector.py`, `backend/config.py`
+- `.env`
+- `tests/test_collector.py`
+- `CLAUDE.md`
+
+### État en fin de session
+- 132/132 tests verts
+- Serveur relancé avec interval=15 min
+- Budget quota : ~896 req/jour sur 1 000
+
+---
+
 ## Session du 2026-09-11 quater (terminée)
 
 ### Contexte au démarrage
@@ -41,9 +74,15 @@
 - `frontend/index.html`, `frontend/bilan.js`, `frontend/ticker.js`, `frontend/methode.html`
 - `CLAUDE.md`, `tests/test_bilans.py`
 
+### Polling réduit
+- Quota PRIM insuffisant pour 29 lignes à 5 min → **polling passé à 12 min**
+- 29 × 2 × 120 cycles/jour = 6 960 req/jour (similaire aux 7 488 d'avant avec 13 lignes à 5 min)
+- Modifié dans : `config.py`, `.env`, `.env.example`, `CLAUDE.md`, `README.md`
+- **Piste future** : 2ᵉ clé PRIM dédiée au métro → retour à 5 min pour les deux groupes
+
 ### État en fin de session
 - 132/132 tests verts
-- Commit `54e436c` poussé sur `origin/master`
+- Commits `54e436c` (métro) + `79c63e1` (polling 12 min) poussés sur `origin/master`
 - Serveur actif : http://localhost:8000
 
 ---

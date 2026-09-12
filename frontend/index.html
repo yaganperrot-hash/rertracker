@@ -559,7 +559,8 @@
   <div class="section-header">
     <span class="section-title">Incidents en cours</span>
     <span class="section-meta">coût en cours estimé au SMIC brut ·
-      <span class="hint-hover">détail au survol</span><span class="hint-touch">détail au toucher</span></span>
+      <span class="hint-hover">détail au survol</span><span class="hint-touch">détail au toucher</span>
+      · <span id="tmr"></span></span>
   </div>
   <div class="inc-groups" id="incidents-list">
     <div class="empty-msg">Chargement…</div>
@@ -912,13 +913,27 @@
   });
 
   /* ── Initialisation + polling 5 min ── */
+  let countdown = 300;
   function refresh() {
     fetchToday();
     fetchIncidents();
     fetchLines();
+    countdown = 300;
   }
   refresh();
   setInterval(refresh, 300000);
+
+  /* ── Compte à rebours prochaine actualisation ── */
+  function updateCountdown() {
+    countdown--;
+    if (countdown < 0) countdown = 300;
+    const mn = Math.floor(countdown / 60);
+    const sc = String(countdown % 60).padStart(2, '0');
+    document.getElementById('tmr').textContent =
+      'actualisation dans ' + mn + '\u202Fmin\u202F' + sc + '\u202Fs';
+  }
+  updateCountdown();
+  setInterval(updateCountdown, 1000);
 
   /* ── Date/heure màj ─────────────────────────────────────── */
   function updateDate() {

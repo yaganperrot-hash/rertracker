@@ -215,11 +215,6 @@ class TestCollectDisruptions:
 
     async def test_ignore_si_api_retourne_erreur(self):
         """Une erreur HTTP ne doit pas planter le collecteur."""
-        mock_resp = AsyncMock()
-        mock_resp.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "403 Forbidden", request=MagicMock(), response=MagicMock()
-        )
-
         mock_settings = MagicMock()
         mock_settings.prim_api_key = "test-key"
 
@@ -227,7 +222,7 @@ class TestCollectDisruptions:
             patch("backend.collector.get_settings", return_value=mock_settings),
             patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock) as mock_get,
         ):
-            mock_get.return_value = mock_resp
+            mock_get.side_effect = httpx.HTTPError("403 Forbidden")
             await collect_disruptions()  # ne doit pas lever d'exception
 
     async def test_disruption_has_source_disruption(self):

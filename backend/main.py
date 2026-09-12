@@ -38,18 +38,21 @@ async def lifespan(app: FastAPI):
         "interval",
         minutes=settings.polling_interval_minutes,
         id="collect_disruptions",
+        next_run_time=datetime.now(timezone.utc),  # collecte dès le démarrage
     )
     scheduler.add_job(
         collect_rt_delays,
         "interval",
         minutes=settings.polling_interval_minutes,
         id="collect_rt_delays",
+        next_run_time=datetime.now(timezone.utc),
     )
     scheduler.add_job(
         compute_daily_metrics,
         "interval",
         minutes=settings.polling_interval_minutes,
         id="compute_metrics",
+        next_run_time=datetime.now(timezone.utc),
     )
     scheduler.add_job(
         generer_bilans,

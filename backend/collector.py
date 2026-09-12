@@ -30,23 +30,6 @@ LIGNES_CIBLES: dict[str, str] = {
     "line:IDFM:C02152": "TRANSILIEN_P",
     "line:IDFM:C01735": "TRANSILIEN_R",
     "line:IDFM:C01736": "TRANSILIEN_U",
-    # Métro
-    "line:IDFM:C01371": "METRO_1",
-    "line:IDFM:C01372": "METRO_2",
-    "line:IDFM:C01373": "METRO_3",
-    "line:IDFM:C01386": "METRO_3B",
-    "line:IDFM:C01374": "METRO_4",
-    "line:IDFM:C01375": "METRO_5",
-    "line:IDFM:C01376": "METRO_6",
-    "line:IDFM:C01377": "METRO_7",
-    "line:IDFM:C01387": "METRO_7B",
-    "line:IDFM:C01378": "METRO_8",
-    "line:IDFM:C01379": "METRO_9",
-    "line:IDFM:C01380": "METRO_10",
-    "line:IDFM:C01381": "METRO_11",
-    "line:IDFM:C01382": "METRO_12",
-    "line:IDFM:C01383": "METRO_13",
-    "line:IDFM:C01384": "METRO_14",
 }
 
 
@@ -84,26 +67,43 @@ async def collect_disruptions() -> None:
         return
 
     headers = {"apikey": settings.prim_api_key}
-    params = {"count": 100, "start_page": 0, "disable_geojson": "true"}
 
     all_disruptions: list[tuple[str, dict]] = []  # (line_id_interne, disruption)
 
+    # Appel global unique (1 requête au lieu de N par ligne)
     async with httpx.AsyncClient(timeout=30) as client:
-        for navitia_id, line_id in LIGNES_CIBLES.items():
-            url = f"{PRIM_BASE_URL}/lines/{navitia_id}/line_reports"
+        url = f"{PRIM_BASE_URL}/line_reports"
+        page = 0
+        while True:
+            params = {"count": 250, "start_page": page, "disable_geojson": "true"}
             try:
                 resp = await client.get(url, headers=headers, params=params)
                 resp.raise_for_status()
                 data = resp.json()
-                for d in data.get("disruptions", []):
-                    if d.get("status") in ("active", "future"):
-                        all_disruptions.append((line_id, d))
             except httpx.HTTPError as exc:
-                logger.error("PRIM API error for %s: %s", line_id, exc)
+                logger.error("PRIM API error (disruptions global): %s", exc)
+                break
             except Exception as exc:
-                logger.error("Unexpected error for %s: %s", line_id, exc)
+                logger.error("Unexpected error (disruptions global): %s", exc)
+                break
 
-    logger.info("Fetched %d disruptions from PRIM", len(all_disruptions))
+            disruptions = data.get("disruptions", [])
+            for d in disruptions:
+                if d.get("status") not in ("active", "future"):
+                    continue
+                line_id = _extract_line_id(d.get("impacted_objects", []))
+                if line_id:
+                    all_disruptions.append((line_id, d))
+
+            # Pagination : s'arrêter si moins de résultats que demandé
+            line_reports = data.get("line_reports", [])
+            if len(line_reports) < 250:
+                break
+            page += 1
+            if page > 10:  # sécurité anti-boucle infinie
+                break
+
+    logger.info("Fetched %d disruptions from PRIM (1 global call, %d pages)", len(all_disruptions), page + 1)
 
     # Diagnostic : lignes sans aucune disruption
     lines_with = {lid for lid, _ in all_disruptions}

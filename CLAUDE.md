@@ -25,13 +25,14 @@ sur les lignes RER et Transilien d'Île-de-France.
 - **API PRIM IDF Mobilités** : polling toutes les 5 min
 - Endpoint : `https://prim.iledefrance-mobilites.fr/marketplace/v2/navitia/line_reports`
 - Auth : header `apikey: {PRIM_API_KEY}`
-- Quota : 20 000 req/jour (polling 5 min × 13 lignes × 2 appels ≈ 7 488 req/jour ✅)
+- Quota : 1 000 req/jour (polling 15 min × 13 lignes departures + 1 global disruptions ≈ 896 req/jour ✅)
 - **Fréquentation** : `data/frequentation.json` (statique, màj mensuelle)
 
 ---
 
 ## Lignes couvertes
-RER A, B, C, D, E — Transilien H, J, K, L, N, P, R, U — Métro 1, 2, 3, 3bis, 4, 5, 6, 7, 7bis, 8, 9, 10, 11, 12, 13, 14
+RER A, B, C, D, E — Transilien H, J, K, L, N, P, R, U
+(Métro retiré : PRIM ne remonte quasiment pas de données pour les lignes de métro)
 
 ---
 
@@ -166,6 +167,25 @@ l'historique git), puis bugs 9 / 10 / 11 / 17.
 - Deepseek lit les fichiers, écrit du code, c'est tout.
 - Toute vérification (tests, lint, docker) est faite par Claude Code ou l'utilisateur.
 - Les tâches sont décrites dans `.claude/TASKS.md` avec fichier cible, contexte et critères d'acceptation.
+
+---
+
+## Commandes de session
+
+### « début de session »
+Quand l'utilisateur dit **« début de session »** (ou équivalent), Claude Code doit :
+1. Lire `CLAUDE.md` (ce fichier)
+2. Lire `.claude/SESSION.md` (contexte de la dernière session)
+3. Lire `.claude/DEBUG.md` (bugs connus et leur état)
+4. Lire le fichier `memory/lessons.md` (leçons apprises)
+5. Faire un résumé rapide de l'état du projet et des priorités
+
+### « fin de session »
+Quand l'utilisateur dit **« fin de session »** (ou équivalent), Claude Code doit :
+1. **`.claude/SESSION.md`** — Ajouter une nouvelle entrée avec : contexte au démarrage, actions effectuées, bugs découverts, fichiers modifiés, état en fin de session
+2. **`.claude/DEBUG.md`** — Mettre à jour les bugs existants (résolus/en cours) et ajouter les nouveaux bugs découverts
+3. **`memory/lessons.md`** — Ajouter les nouvelles leçons apprises pendant la session (patterns, pièges, solutions)
+4. **`git commit` + `git push`** — Commiter tous les changements et pousser sur `origin/master`
 
 ---
 
