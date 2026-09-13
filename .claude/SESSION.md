@@ -1,5 +1,34 @@
 # SESSION — Dernière session de travail
 
+## Session du 2026-09-13 sexies (terminée)
+
+### Contexte au démarrage
+- Branche `master`, dernier commit `6ff1503`
+- Objectif : ajouter 3 stats ligne (incidents, coût total, temps perdu) dans le picker + réduire les périodes à 3 boutons
+
+### Actions effectuées
+- **Picker — 3 stats réseau** (`frontend/pick.js`, `frontend/pick.css`) :
+  - Ajout bloc `.pp-line-stats` avec 3 tuiles : Incidents, Coût total, Temps perdu
+  - Données lues depuis `loadLineStats()` déjà appelé (aucun nouvel endpoint)
+  - Coût formaté en `toLocaleString('fr-FR') + ' €'`, durée via `formatDuree(min, true)`
+- **Sélecteur de période réduit** : 4 boutons (Jour/Semaine/Mois/Année) → 3 boutons (Aujourd'hui/Mois/Année)
+  - `PERIOD_DAYS` et `PERIOD_LABEL` : entrée `semaine` supprimée
+- **CSS** : grille 3 colonnes, fond crème `#F7F4EF`, `border-radius: 12px`, valeurs 20px/700, labels 11px/muted
+  - `max-height` du panneau augmenté de 600px → 700px
+
+### Bug signalé non résolu
+- L'utilisateur signale que rien ne se passe au clic sur une pastille — **probablement un problème pré-existant** (API qui ne répond pas, erreur console non communiquée). L'API `/api/stats/line/RER_C?period=30` répond 200 OK. Le serveur sert bien le fichier mis à jour. La console navigateur (`F12`) n'a pas été vérifiée par l'utilisateur.
+
+### Fichiers modifiés
+- `frontend/pick.js` (3 stats + 3 boutons période)
+- `frontend/pick.css` (styles `.pp-line-stats`)
+
+### État en fin de session
+- Code modifié, non testé par l'utilisateur (console non vérifiée)
+- Bug clic pastille à investiguer en prochaine session (vérifier F12)
+
+---
+
 ## Session du 2026-09-13 quinquies (terminée)
 
 ### Contexte au démarrage

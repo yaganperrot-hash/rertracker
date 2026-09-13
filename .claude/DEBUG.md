@@ -397,6 +397,15 @@ relevé (incidents ouverts avec durée sous-estimée)
 **Fix** : `_finalize_yesterday()` au démarrage + job cron à 07h05 Paris (fenêtre 07h-07h bouclée)
 **Status** : ✅ Résolu
 
+### [2026-09-13] Bug 23 — Clic pastille picker sans effet
+**Fichier(s)** : `frontend/pick.js`
+**Symptôme** : clic sur une pastille (ex: RER C) → rien ne se passe visuellement
+**Cause** : inconnue — le code semble correct, l'API répond 200, le serveur sert le fichier à jour.
+Possibles pistes : erreur JS silencieuse dans `select()` ou `updatePanel()`, cache navigateur,
+`formatDuree` non trouvé (mais `duree.js` est chargé avant `pick.js`)
+**Fix** : à diagnostiquer — vérifier la console navigateur (`F12`) au prochain clic
+**Status** : 🔄 En cours — en attente de diagnostic console
+
 ---
 
 ## Notes de surveillance

@@ -17,6 +17,12 @@
 - Toujours appeler `generer_bilans()` manuellement après ajout d'un nouveau fichier JSON, sinon la page affiche "Bilan en cours de calcul" jusqu'au prochain cycle scheduler.
 - Les données `hall-of-shame.json` contiennent les 3 périodes (semaine/mois/année) dans un seul fichier — le frontend filtre côté client.
 
+## Cohérence cross-pages
+- Les styles hero/cumul sont dupliqués dans chaque HTML (pas de CSS partagé). Toute modification de taille/couleur doit être propagée sur les 5 pages : `index.html`, `temps-reel.html`, `statistiques.html`, `ligne.html`, `methode.html`.
+- Valeurs de référence (accueil) : compteur `clamp(52px, 10.4vw, 112px)` 900, cumul `clamp(24px, 4vw, 35px)` 700 red, subtitle `clamp(16px, 2.4vw, 22px)` 500, labels 10-11px.
+- Le ticker CSS+JS est aussi dupliqué dans chaque page. Vitesse = 45s.
+- Pour déborder un élément hors de son conteneur max-width : `margin-inline: calc(-50vw + 50%)`.
+
 ## APScheduler — race conditions
 - Ne jamais lancer en parallèle des jobs qui ont une dépendance séquentielle (ex: collecte → métriques). Utiliser un seul job qui enchaîne les étapes, ou `await` séquentiel au démarrage.
 - `next_run_time=datetime.now()` sur plusieurs jobs = exécution simultanée = race condition garantie.

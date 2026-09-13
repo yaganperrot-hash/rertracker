@@ -29,8 +29,8 @@
   const NET_LABEL = { rer: 'RER', transilien: 'Transilien', metro: 'M\u00E9tro' };
 
   // ── Période → nombre de jours pour l'API ──
-  const PERIOD_DAYS = { jour: 1, semaine: 7, mois: 30, annee: 365 };
-  const PERIOD_LABEL = { jour: "aujourd'hui", semaine: 'cette semaine', mois: 'ce mois', annee: 'cette année' };
+  const PERIOD_DAYS = { jour: 1, mois: 30, annee: 365 };
+  const PERIOD_LABEL = { jour: "aujourd'hui", mois: 'ce mois', annee: 'cette année' };
 
   // ── Cache des données (fréquentation + stats par ligne/période) ──
   let frequentation = null;
@@ -147,9 +147,13 @@
     html += '  <div class="pp-label">Un usager moyen y a perdu</div>';
     html += '  <div class="pp-amount"><span id="pp-eur"></span><span class="pp-unit">\u20AC <span id="pp-scope"></span></span></div>';
     html += '  <div class="pp-time">soit <b id="pp-min"></b> minutes de vie \u00B7 au SMIC brut</div>';
+    html += '  <div class="pp-line-stats">';
+    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-incidents">—</span><span class="pp-stat-label">Incidents</span></div>';
+    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-cout">—</span><span class="pp-stat-label">Co\u00FBt total</span></div>';
+    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-duree">—</span><span class="pp-stat-label">Temps perdu</span></div>';
+    html += '  </div>';
     html += '  <div class="pp-toggle">';
-    html += '    <button type="button" data-p="jour"' + (currentPeriod === 'jour' ? ' class="on"' : '') + '>Jour</button>';
-    html += '    <button type="button" data-p="semaine"' + (currentPeriod === 'semaine' ? ' class="on"' : '') + '>Semaine</button>';
+    html += '    <button type="button" data-p="jour"' + (currentPeriod === 'jour' ? ' class="on"' : '') + '>Aujourd\u2019hui</button>';
     html += '    <button type="button" data-p="mois"' + (currentPeriod === 'mois' ? ' class="on"' : '') + '>Mois</button>';
     html += '    <button type="button" data-p="annee"' + (currentPeriod === 'annee' ? ' class="on"' : '') + '>Ann\u00E9e</button>';
     html += '  </div>';
@@ -177,6 +181,9 @@
     const ppRank = container.querySelector('#pp-rank');
     const ppShare = container.querySelector('#pp-share');
     const ppPageLink = container.querySelector('#pp-page-link');
+    const ppStatIncidents = container.querySelector('#pp-stat-incidents');
+    const ppStatCout = container.querySelector('#pp-stat-cout');
+    const ppStatDuree = container.querySelector('#pp-stat-duree');
 
     // ── Onglets (rétro-compatibilité) ──
     function switchTab(net) { currentTab = net; }
@@ -234,6 +241,11 @@
       ppEur.textContent = fmtEur(user.cout);
       ppScope.textContent = PERIOD_LABEL[currentPeriod];
       ppMin.textContent = fmtMin(user.minutes);
+
+      // Stats réseau de la ligne
+      ppStatIncidents.textContent = data ? (data.total_incidents || 0).toLocaleString('fr-FR') : '—';
+      ppStatCout.textContent = data ? (data.total_cout_eur || 0).toLocaleString('fr-FR') + ' \u20AC' : '—';
+      ppStatDuree.textContent = data ? formatDuree(data.total_duree_min || 0, true) : '—';
 
       // Statut : perturbé si incidents aujourd'hui
       const todayData = await loadLineStats(currentLine, 1);
