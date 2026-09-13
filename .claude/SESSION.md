@@ -1,5 +1,27 @@
 # SESSION — Dernière session de travail
 
+## Session du 2026-09-13 bis (terminée)
+
+### Contexte au démarrage
+- Branche `master`, dernier commit `5d8347d`
+- 132/132 tests verts
+- Bug signalé : 3 retards en cours mais 0 € / 0 min affichés sur l'accueil
+
+### Actions effectuées
+- **Race condition scheduler corrigée** (`backend/main.py`) : au démarrage, `collect_disruptions`, `collect_rt_delays` et `compute_daily_metrics` se lançaient en parallèle via APScheduler → les métriques étaient calculées sur une BDD vide. Fix : `_startup_collect()` exécute les 3 séquentiellement, puis un seul job `_collect_cycle` enchaîne collecte → métriques à chaque cycle
+- **Finalisation des métriques de la veille** (`backend/main.py`) : `_finalize_yesterday()` recalcule la veille au démarrage + cron à 07h05 Paris (fenêtre 07h-07h bouclée). Couvre le cas serveur éteint la nuit
+- **132/132 tests verts**
+
+### Fichiers modifiés
+- `backend/main.py`
+
+### État en fin de session
+- 132/132 tests verts
+- Commit `0c9a0b1` poussé sur `origin/master`
+- Serveur actif sur http://localhost:8000
+
+---
+
 ## Session du 2026-09-13 (terminée)
 
 ### Contexte au démarrage

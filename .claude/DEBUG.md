@@ -380,6 +380,23 @@ polling 15 min → 14 req/cycle × 4/h × 16h ≈ 896 req/jour
 **Fix** : lignes de métro retirées du polling. Réintroduction possible avec une source alternative
 **Status** : ✅ Résolu (contourné)
 
+### [2026-09-13] Bug 21 — Race condition scheduler : 0 € malgré des incidents en cours
+**Fichier(s)** : `backend/main.py`
+**Symptôme** : 3 retards en BDD avec coûts calculés, mais `/api/stats/today` retourne 0 € / 0 min
+**Cause** : au démarrage, APScheduler lançait `collect_disruptions`, `collect_rt_delays` et
+`compute_daily_metrics` en parallèle → les métriques étaient calculées avant que la collecte ne soit terminée
+**Fix** : `_startup_collect()` séquentiel (collecte → métriques → bilans), cycle régulier via un seul job
+`_collect_cycle` qui enchaîne les 3 étapes
+**Status** : ✅ Résolu
+
+### [2026-09-13] Bug 22 — Métriques de la veille jamais finalisées
+**Fichier(s)** : `backend/main.py`
+**Symptôme** : si le serveur est redémarré le lendemain, les métriques de la veille sont figées au dernier
+relevé (incidents ouverts avec durée sous-estimée)
+**Cause** : `compute_daily_metrics` ne traite que `today`, pas de recalcul au changement de jour
+**Fix** : `_finalize_yesterday()` au démarrage + job cron à 07h05 Paris (fenêtre 07h-07h bouclée)
+**Status** : ✅ Résolu
+
 ---
 
 ## Notes de surveillance
