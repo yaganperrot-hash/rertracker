@@ -1,5 +1,34 @@
 # SESSION — Dernière session de travail
 
+## Session du 2026-09-13 quater (terminée)
+
+### Contexte au démarrage
+- Branche `master`, dernier commit `4f3df0c`
+- 132/132 tests verts
+- Serveur lancé sur localhost:8000
+
+### Actions effectuées
+- **Harmonisation tailles page `/statistiques`** avec le design de l'accueil :
+  - Hero : `56px` fixe → `clamp(52px, 10vw, 88px)`, `font-weight: 500 → 900`
+  - Bulles Hall of Shame : rayon max `60 → 88px` (diamètre 176px), min `24 → 32`, texte `12 → 18px` min, labels `12 → 15px`, coût `11 → 13px`
+  - Panneau détails : titre `18 → 22px`, badge `15 → 18px`, mois `17 → 20px`
+  - Heatmap : cellules `18 → 20px`, labels `10 → 11px`
+  - Causes : labels `13 → 15px`, barres `20 → 24px`
+  - Directions : texte `13 → 15px`, dots `10 → 12px`
+  - Toggle période : `12 → 14px`, padding augmenté
+  - Eyebrow : `11 → 13px` + `font-weight: 500`
+  - Container : `max-width 860 → 960px`
+  - Mobile : tailles adaptées avec `clamp()`
+
+### Fichiers modifiés
+- `frontend/statistiques.html`
+
+### État en fin de session
+- 132/132 tests verts
+- Commit `09cf4d4` poussé sur `origin/master`
+
+---
+
 ## Session du 2026-09-13 ter (terminée)
 
 ### Contexte au démarrage
