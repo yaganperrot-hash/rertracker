@@ -1,7 +1,8 @@
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Request
@@ -26,6 +27,42 @@ logger = logging.getLogger(__name__)
 scheduler = AsyncIOScheduler(job_defaults={"coalesce": True, "misfire_grace_time": None})
 
 
+PARIS_TZ = ZoneInfo("Europe/Paris")
+
+
+async def _finalize_yesterday():
+    """Recalcule les métriques de la veille (basées sur les incidents déjà en BDD).
+
+    Utile quand le serveur a été arrêté pendant la nuit : les métriques de la
+    veille étaient figées au dernier relevé et les incidents encore ouverts
+    avaient une durée sous-estimée.
+    """
+    yesterday = datetime.now(PARIS_TZ).date() - timedelta(days=1)
+    try:
+        await compute_daily_metrics(target_date=yesterday)
+        logger.info("Finalized yesterday's metrics (%s)", yesterday)
+    except Exception:
+        logger.exception("Error finalizing yesterday's metrics")
+
+
+async def _startup_collect():
+    """Collecte initiale séquentielle : collecte → métriques → bilans.
+
+    Évite la race condition où compute_daily_metrics tourne avant que les
+    incidents du cycle soient en BDD.
+    """
+    try:
+        # Finaliser la veille (incidents ouverts, serveur éteint la nuit…)
+        await _finalize_yesterday()
+        await collect_disruptions()
+        await collect_rt_delays()
+        await compute_daily_metrics()
+        await generer_bilans()
+        logger.info("Initial collect + metrics + bilans OK")
+    except Exception:
+        logger.exception("Error during startup collect")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
@@ -33,33 +70,36 @@ async def lifespan(app: FastAPI):
     await init_db()
 
     logger.info("Starting scheduler (interval=%d min)", settings.polling_interval_minutes)
+
+    # Premier cycle : séquentiel au démarrage pour éviter la race condition
+    await _startup_collect()
+
+    # Cycle régulier : un seul job qui enchaîne collecte → métriques (pas de race)
+    async def _collect_cycle():
+        await collect_disruptions()
+        await collect_rt_delays()
+        await compute_daily_metrics()
+
     scheduler.add_job(
-        collect_disruptions,
+        _collect_cycle,
         "interval",
         minutes=settings.polling_interval_minutes,
-        id="collect_disruptions",
-        next_run_time=datetime.now(timezone.utc),  # collecte dès le démarrage
-    )
-    scheduler.add_job(
-        collect_rt_delays,
-        "interval",
-        minutes=settings.polling_interval_minutes,
-        id="collect_rt_delays",
-        next_run_time=datetime.now(timezone.utc),
-    )
-    scheduler.add_job(
-        compute_daily_metrics,
-        "interval",
-        minutes=settings.polling_interval_minutes,
-        id="compute_metrics",
-        next_run_time=datetime.now(timezone.utc),
+        id="collect_cycle",
     )
     scheduler.add_job(
         generer_bilans,
         "interval",
         minutes=settings.bilans_interval_minutes,
         id="generer_bilans",
-        next_run_time=datetime.now(timezone.utc),  # premier calcul dès le démarrage
+    )
+    # À 07h05 Paris : finaliser les métriques de la veille (fenêtre 07h-07h bouclée)
+    scheduler.add_job(
+        _finalize_yesterday,
+        "cron",
+        hour=7,
+        minute=5,
+        timezone=PARIS_TZ,
+        id="finalize_yesterday",
     )
     scheduler.add_job(
         post_daily_recap,
