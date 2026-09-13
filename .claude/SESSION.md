@@ -1,5 +1,44 @@
 # SESSION — Dernière session de travail
 
+## Session du 2026-09-13 quinquies (terminée)
+
+### Contexte au démarrage
+- Branche `master`, dernier commit `c04158f`
+- 132/132 tests verts
+
+### Actions effectuées
+- **Page statistiques — refonte complète de l'en-tête** pour aligner sur accueil/temps-réel :
+  - Structure hero identique : date période · MÀJ, sous-titre adaptatif, compteur €, unit SMIC
+  - Section cumul avec séparateur : kicker adaptatif, durée formatée en rouge, label "de vie perdus collectivement", note SMIC + salaires journaliers + lien Méthode
+  - Sous-titre dynamique : "Cette semaine / Ce mois-ci / Cette année, les retards des RER et Transiliens ont coûté"
+  - Date de période : "14 AOÛT — 13 SEPT. 2026 · MÀJ 17H41"
+  - Cumul kicker adaptatif : "Cumul de la semaine / du mois / de l'année"
+- **Harmonisation tailles/couleurs sur les 3 pages** (index, temps-reel, statistiques) :
+  - Compteur : `clamp(52px, 10.4vw, 112px)`, weight 900, line-height .88, letter-spacing -3px
+  - Temps perdu : `clamp(24px, 4vw, 35px)`, weight 700, color red
+  - Sous-titre : `clamp(16px, 2.4vw, 22px)`, weight 500
+  - Labels : 10-11px, --sub
+  - Couleurs statistiques alignées : fond `#F7F4EF`, texte `#000`, muted `#555`, red `#C0392B`
+  - temps-reel.html avait des tailles 20-30% plus grandes → ramenées à l'identique
+- **Ticker noir défilant** : ajouté sur index.html et statistiques.html (manquait), vitesse ralentie 28s → 45s sur les 5 pages
+- **Hall of Shame — Top 5** : titre centré, grossi (22px, gras, noir), texte "top 5 des lignes les plus coûteuses" supprimé
+- **Séparateur pleine largeur** (`<hr class="shame-separator">`) entre cumul et Hall of Shame via `margin: calc(-50vw + 50%)`
+- **Page centrée** : `text-align: center` sur `.page`, panneau détails reste aligné à gauche
+- **`formatDuree()`** appliquée partout (hero, pire/meilleur mois) via inclusion de `duree.js`
+
+### Fichiers modifiés
+- `frontend/statistiques.html` (refonte majeure de l'en-tête)
+- `frontend/temps-reel.html` (tailles alignées, ticker ralenti)
+- `frontend/index.html` (ticker ajouté)
+- `frontend/ligne.html` (ticker ralenti)
+- `frontend/methode.html` (ticker ralenti)
+
+### État en fin de session
+- 5 fichiers modifiés, 218 insertions, 78 suppressions
+- Les 3 pages principales ont exactement la même mise en page d'en-tête
+
+---
+
 ## Session du 2026-09-13 quater (terminée)
 
 ### Contexte au démarrage

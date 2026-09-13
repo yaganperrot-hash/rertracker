@@ -128,6 +128,26 @@
     }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
+    /* ── Ticker ── */
+    .ticker {
+      background: var(--ink);
+      padding: 7px 0;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .ticker-track {
+      display: inline-block;
+      animation: tick 45s linear infinite;
+      font-weight: 400;
+      font-size: 13px;
+      letter-spacing: 1px;
+      color: var(--bg);
+    }
+    @keyframes tick {
+      from { transform: translateX(100vw); }
+      to   { transform: translateX(-100%); }
+    }
+
     /* ── Footer ── */
     footer {
       border-top: 2px solid var(--ink);
@@ -162,6 +182,11 @@
   </style>
 </head>
 <body>
+
+<!-- Ticker -->
+<div class="ticker">
+  <span class="ticker-track" id="ticker-track">Chargement des données en cours…</span>
+</div>
 
 <!-- Navigation -->
 <nav>
@@ -213,6 +238,7 @@
 </footer>
 
 <!-- JavaScript -->
+<script src="ticker.js"></script>
 <script src="duree.js"></script>
 <script>
   const LINE_META = {

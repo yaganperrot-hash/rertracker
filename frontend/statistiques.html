@@ -14,37 +14,49 @@
 [hidden] { display: none !important; }
 
 :root {
-  --creme: #F4EFE6;
-  --encre: #1a1a17;
-  --brun: #4a463d;
-  --gris: #8a8478;
+  --bg:     #F7F4EF;
+  --bg2:    #EDEAE4;
+  --bg3:    #E2DED7;
+  --border: #D4CFC7;
+  --ink:    #000000;
+  --text:   #000000;
+  --muted:  #555555;
+  --sub:    #333333;
+  --red:    #C0392B;
+  --ok:     #2ECC71;
+  --blanc:  #fff;
+  --nav-bg: var(--bg);
+  /* aliases pour composants existants */
+  --creme: var(--bg);
+  --encre: var(--ink);
+  --brun: var(--sub);
+  --gris: var(--muted);
   --gris-clair: #a39c8c;
-  --sable: #e8e1d4;
-  --filet: #f0ebe1;
-  --creux: #c9c1b1;
-  --rouge: #E1251B;
+  --sable: var(--bg2);
+  --filet: var(--bg3);
+  --creux: var(--border);
+  --rouge: var(--red);
   --rouge-fonce: #A32D2D;
   --rouge-pale: #FCEBEB;
-  --blanc: #fff;
-  --nav-bg: var(--creme);
 }
 
 html { -webkit-text-size-adjust: 100%; }
 body {
-  background: var(--creme);
+  background: var(--bg);
   font-family: 'Roboto', -apple-system, sans-serif;
-  color: var(--encre);
+  color: var(--text);
+  font-size: 16px;
   line-height: 1.4;
 }
-a { color: var(--gris); }
+a { color: var(--muted); }
 
-.page { max-width: 960px; margin: 0 auto; padding-block: 32px; padding-inline: 16px; }
+.page { max-width: 960px; margin: 0 auto; padding-block: 32px; padding-inline: 16px; text-align: center; }
 @media (min-width: 600px) { .page { padding-inline: 30px; } }
 
-.eyebrow { font-size: 13px; letter-spacing: 1.5px; color: var(--gris); text-transform: uppercase; font-weight: 500; }
+.eyebrow { font-size: 13px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; font-weight: 500; }
 
 /* ── Sélecteur période ── */
-.toggle { display: inline-flex; background: var(--sable); border-radius: 8px; padding: 3px; margin-bottom: 14px; font-size: 14px; }
+.toggle { display: inline-flex; background: var(--sable); border-radius: 8px; padding: 3px; margin-bottom: 6px; font-size: 14px; }
 .toggle button, .toggle a {
   border: 0; background: none; font: inherit; cursor: pointer; text-decoration: none;
   padding: 7px 20px; color: var(--gris); border-radius: 6px;
@@ -52,19 +64,59 @@ a { color: var(--gris); }
 .toggle button:hover, .toggle a:hover { color: var(--encre); }
 .toggle [aria-pressed="true"] { background: var(--encre); color: var(--creme); }
 .toggle button:focus-visible { outline: 2px solid var(--encre); outline-offset: 1px; }
-.titre-page { margin-bottom: 18px; font-size: 14px !important; letter-spacing: 2px; }
 
 /* ── Hero ── */
-.hero { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 40px; margin-bottom: 10px; }
-.big { font-size: clamp(52px, 10vw, 88px); font-weight: 900; line-height: 1; letter-spacing: -2px; }
-.big small { font-size: clamp(32px, 6vw, 52px); }
-.sub { font-size: clamp(22px, 3.5vw, 30px); font-weight: 500; color: var(--brun); }
-.sub small { font-size: 16px; color: var(--gris); }
-.hero-inc { font-size: 14px; color: var(--gris); }
-.note { font-size: 13px; color: var(--gris-clair); margin-bottom: 32px; font-style: italic; }
+.hero {
+  position: relative;
+  padding: 26px 32px 18px;
+  text-align: center;
+}
+.hero-date {
+  font-weight: 400; font-size: 11px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--sub); margin-bottom: 12px;
+}
+.hero-subtitle {
+  font-weight: 500; font-size: clamp(16px, 2.4vw, 22px);
+  line-height: 1.3; color: var(--ink); margin-bottom: 14px;
+}
+.hero-counter {
+  font-weight: 900; font-size: clamp(52px, 10.4vw, 112px);
+  letter-spacing: -3px; line-height: .88; color: var(--ink);
+}
+.hero-unit {
+  font-weight: 400; font-size: 11px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--sub); margin-top: 8px;
+}
+
+/* ── Cumul ── */
+.cumul {
+  text-align: center; padding: 0 32px 18px;
+}
+.cumul-inner {
+  display: inline-block; border-top: 1px solid var(--border);
+  padding-top: 11px; min-width: min(420px, 100%);
+}
+.cumul-kicker {
+  font-weight: 500; font-size: 10px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+}
+.cumul-value {
+  font-weight: 700; font-size: clamp(24px, 4vw, 35px);
+  line-height: 1.05; color: var(--red);
+}
+.cumul-label {
+  font-weight: 500; font-size: 12px; color: var(--ink); margin-top: 5px;
+}
+.cumul-note {
+  font-weight: 400; font-size: 10px; color: var(--sub); margin-top: 5px;
+}
 
 /* ── Bulles Hall of Shame ── */
-.shame-section { margin-bottom: 36px; }
+.shame-separator {
+  border: none; border-top: 1px solid var(--border);
+  margin: 20px calc(-50vw + 50%) 0;
+}
+.shame-section { margin-top: 20px; margin-bottom: 48px; }
 .bubbles-wrap {
   display: flex; align-items: flex-end; justify-content: center;
   gap: 24px; padding: 28px 0 20px; flex-wrap: wrap;
@@ -95,7 +147,7 @@ a { color: var(--gris); }
 /* ── Panneau détails ── */
 .detail-panel {
   background: var(--blanc); border-radius: 12px; padding: 24px 28px;
-  margin-bottom: 32px; animation: fadeIn 0.2s ease;
+  margin-bottom: 32px; animation: fadeIn 0.2s ease; text-align: left;
 }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
@@ -185,11 +237,12 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
   margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--sable);
 }
 
+@media (max-width: 768px) {
+  .hero { padding: 22px 16px 16px; }
+  .cumul { padding: 0 16px 18px; }
+  .cumul-value { font-size: 22px; }
+}
 @media (max-width: 480px) {
-  .hero { gap: 8px 24px; }
-  .big { font-size: clamp(40px, 9vw, 52px); }
-  .big small { font-size: clamp(24px, 5.5vw, 32px); }
-  .sub { font-size: clamp(18px, 4vw, 22px); }
   .bubbles-wrap { gap: 14px; }
   .heatmap {
     grid-template-columns: 34px repeat(31, 16px);
@@ -199,9 +252,32 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
   .cause-label { width: 110px; font-size: 13px; }
   .month-tiles { flex-direction: column; }
 }
+/* ── Ticker ── */
+.ticker {
+  background: var(--ink);
+  padding: 7px 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.ticker-track {
+  display: inline-block;
+  animation: tick 45s linear infinite;
+  font-weight: 400;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--bg);
+}
+@keyframes tick {
+  from { transform: translateX(100vw); }
+  to   { transform: translateX(-100%); }
+}
 </style>
 </head>
 <body>
+
+<div class="ticker">
+  <span class="ticker-track" id="ticker-track">Chargement des données en cours…</span>
+</div>
 
 <nav>
   <a href="/" class="nav-logo">
@@ -226,23 +302,28 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
     <button type="button" data-p="mois" aria-pressed="true">Mois</button>
     <button type="button" data-p="annee" aria-pressed="false">Année</button>
   </div>
-  <p class="eyebrow titre-page" id="periode-titre">30 derniers jours · Hall of Shame</p>
 
   <main id="contenu">
     <section class="hero" aria-label="Chiffres de la période">
-      <div>
-        <div class="eyebrow" style="margin-bottom:3px">Coût estimé · SMIC brut</div>
-        <div class="big"><span id="h-cout">—</span> <small>€</small></div>
-      </div>
-      <div style="padding-bottom:6px">
-        <div class="sub"><span id="h-min">—</span> <small id="h-min-suffixe">minutes perdues</small></div>
-        <div class="hero-inc" id="h-inc">—</div>
+      <div class="hero-date" id="h-date">&nbsp;</div>
+      <div class="hero-subtitle" id="h-subtitle">Ce mois-ci, les retards ont coûté</div>
+      <div class="hero-counter" id="h-cout">— €</div>
+      <div class="hero-unit">au SMIC horaire brut · réseau IDF complet</div>
+    </section>
+
+    <section class="cumul">
+      <div class="cumul-inner">
+        <div class="cumul-kicker" id="h-cumul-kicker">Cumul de la période</div>
+        <div class="cumul-value" id="h-min">—</div>
+        <div class="cumul-label" id="h-min-suffixe">de vie perdus collectivement</div>
+        <div class="cumul-note" id="h-note">base SMIC — €/h · <a href="/methode.html#bilans">Méthode →</a></div>
       </div>
     </section>
-    <p class="note" id="note">Top 5 des lignes les plus coûteuses. <a href="/methode.html#bilans">Méthode →</a></p>
+
+    <hr class="shame-separator">
 
     <section class="shame-section" aria-label="Hall of Shame">
-      <div class="eyebrow" style="margin-bottom:4px">Hall of Shame — Top 5</div>
+      <div class="eyebrow" style="margin-bottom:4px;font-size:22px;font-weight:700;color:var(--encre)">Hall of Shame — Top 5</div>
       <div class="bubbles-wrap" id="bubbles" role="listbox" aria-label="Classement des pires lignes">
       </div>
     </section>
@@ -256,6 +337,8 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
 
 </div>
 
+<script src="ticker.js"></script>
+<script src="duree.js"></script>
 <script src="bilan.js?v=2"></script>
 <script>
 (function () {
@@ -267,14 +350,16 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
   const GRAVITE_COULEURS = ['#EAE3D3', '#E4BBA2', '#D68A63', '#BE4E2E', '#8A2817'];
 
   const PERIODES = {
-    semaine: { label: '7 derniers jours', jours: 7, cle: 'semaine' },
-    mois:    { label: '30 derniers jours', jours: 30, cle: 'mois' },
-    annee:   { label: 'Année en cours', jours: 365, cle: 'annee' },
+    semaine: { label: '7 derniers jours', jours: 7, cle: 'semaine', subtitle: 'Cette semaine, les retards des RER et Transiliens ont coûté', cumul_kicker: 'Cumul de la semaine' },
+    mois:    { label: '30 derniers jours', jours: 30, cle: 'mois', subtitle: 'Ce mois-ci, les retards des RER et Transiliens ont coûté', cumul_kicker: 'Cumul du mois' },
+    annee:   { label: 'Année en cours', jours: 365, cle: 'annee', subtitle: 'Cette année, les retards des RER et Transiliens ont coûté', cumul_kicker: 'Cumul de l\'année' },
   };
 
   let donnees = null;      // hall-of-shame.json chargé
   let periodeActuelle = 'mois';
   let ligneSelectionnee = null;
+  let majHeure = null;     // timestamp MÀJ
+  let smicHoraire = null;  // SMIC depuis le JSON
 
   // ── Formats ────────────────────────────────────────────────
 
@@ -295,7 +380,30 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
 
   const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin',
                 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
-  const MOIS_COURT = ['jan', 'fév', 'mar', 'avr', 'mai', 'jun', 'jul', 'aoû', 'sep', 'oct', 'nov', 'déc'];
+  const MOIS_COURT = ['jan.', 'fév.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+
+  function fmtDateCourte(d) {
+    return d.getDate() + ' ' + MOIS_COURT[d.getMonth()];
+  }
+
+  function labelPeriode() {
+    var aujourdhui = new Date();
+    var p = PERIODES[periodeActuelle];
+    var fin = fmtDateCourte(aujourdhui) + ' ' + aujourdhui.getFullYear();
+    var debut;
+    if (periodeActuelle === 'annee') {
+      debut = '1 jan.';
+    } else {
+      var d = new Date(aujourdhui);
+      d.setDate(d.getDate() - p.jours);
+      debut = fmtDateCourte(d);
+    }
+    var txt = debut + ' — ' + fin;
+    if (majHeure) {
+      txt += ' · MÀJ ' + majHeure;
+    }
+    return txt.toUpperCase();
+  }
 
   function esc(s) {
     return String(s ?? '').replace(/[&<>"']/g, function(c) {
@@ -307,19 +415,25 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
 
   function renderHero(lignes) {
     var p = PERIODES[periodeActuelle];
-    var totalEur = 0, totalMin = 0, totalInc = 0;
+    var totalEur = 0, totalMin = 0;
     lignes.forEach(function(l) {
       var c = l.cout[p.cle];
       totalEur += c.euros;
       totalMin += c.minutes;
     });
 
-    $('h-cout').textContent = fmtNombre(totalEur);
-    var m = fmtMinutes(totalMin);
-    $('h-min').textContent = m.valeur;
-    $('h-min-suffixe').textContent = m.suffixe;
-    $('h-inc').textContent = 'Top 5 des lignes les plus coûteuses';
-    $('periode-titre').textContent = p.label + ' · Hall of Shame';
+    $('h-date').textContent = labelPeriode();
+    $('h-subtitle').textContent = p.subtitle;
+    $('h-cout').textContent = fmtNombre(totalEur) + ' €';
+    $('h-cumul-kicker').textContent = p.cumul_kicker;
+    $('h-min').textContent = formatDuree(totalMin);
+    $('h-min-suffixe').textContent = 'de vie ' + accordPerdu(totalMin) + ' collectivement';
+
+    // Note SMIC
+    if (smicHoraire) {
+      var salairesJour = Math.round(totalEur / (smicHoraire * 7));
+      $('h-note').innerHTML = 'base SMIC ' + smicHoraire.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + NBSP + '€/h · ≈ ' + fmtNombre(salairesJour) + ' salaires journaliers · <a href="/methode.html#bilans">Méthode →</a>';
+    }
   }
 
   // ── Bulles ────────────────────────────────────────────────
@@ -415,14 +529,14 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
         html += '<div class="month-tile worst">' +
           '<div class="mt-label">Pire mois</div>' +
           '<div class="mt-month">' + esc(MOIS[ligne.pire_mois.mois - 1]) + '</div>' +
-          '<div class="mt-cost">' + esc(fmtEuros(ligne.pire_mois.cout_eur)) + ' · ' + esc(fmtNombre(ligne.pire_mois.minutes)) + ' min</div>' +
+          '<div class="mt-cost">' + esc(fmtEuros(ligne.pire_mois.cout_eur)) + ' · ' + esc(formatDuree(ligne.pire_mois.minutes, true)) + '</div>' +
         '</div>';
       }
       if (ligne.meilleur_mois) {
         html += '<div class="month-tile best">' +
           '<div class="mt-label">Meilleur mois</div>' +
           '<div class="mt-month">' + esc(MOIS[ligne.meilleur_mois.mois - 1]) + '</div>' +
-          '<div class="mt-cost">' + esc(fmtEuros(ligne.meilleur_mois.cout_eur)) + ' · ' + esc(fmtNombre(ligne.meilleur_mois.minutes)) + ' min</div>' +
+          '<div class="mt-cost">' + esc(fmtEuros(ligne.meilleur_mois.cout_eur)) + ' · ' + esc(formatDuree(ligne.meilleur_mois.minutes, true)) + '</div>' +
         '</div>';
       }
       html += '</div>';
@@ -580,9 +694,9 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
         var json = await resp.json();
         donnees = json.lignes || [];
         if (json.meta) {
-          $('pied').textContent = 'Données API PRIM · IDF Mobilités · mis à jour à ' +
-            new Date(json.meta.genere_a).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }).replace(':', ' h ') +
-            ' · base SMIC brut ' + (json.meta.smic_horaire || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + NBSP + '€/h';
+          majHeure = new Date(json.meta.genere_a).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }).replace(':', 'H');
+          smicHoraire = json.meta.smic_horaire || 0;
+          $('pied').textContent = 'Données API PRIM · IDF Mobilités';
         }
       }
     } catch (e) {
