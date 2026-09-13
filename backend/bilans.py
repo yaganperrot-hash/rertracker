@@ -12,7 +12,7 @@ import logging
 import math
 import os
 from calendar import monthrange
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
 
@@ -279,6 +279,189 @@ def construire_annee(
     }
 
 
+# ── Hall of Shame ─────────────────────────────────────────────
+
+
+def _percentile(values: list[int], p: float) -> float:
+    """Percentile (interpolation linéaire) sans dépendance numpy."""
+    if not values:
+        return 0.0
+    s = sorted(values)
+    k = (len(s) - 1) * p / 100
+    f = int(k)
+    c = f + 1
+    if c >= len(s):
+        return float(s[f])
+    return s[f] + (k - f) * (s[c] - s[f])
+
+
+def _niveau_gravite(cout: int, seuils: tuple[float, float, float, float]) -> int:
+    """0-4 selon les seuils p25, p50, p75, p90."""
+    if cout <= 0:
+        return 0
+    if cout <= seuils[0]:
+        return 1
+    if cout <= seuils[1]:
+        return 2
+    if cout <= seuils[2]:
+        return 3
+    return 4
+
+
+def construire_hall_of_shame(
+    aujourdhui: date,
+    lignes_metriques,
+    perturbations_par_ligne: dict[str, list[str]],
+    directions_par_ligne: dict[str, list[str]],
+    smic_horaire: float,
+    genere_a: datetime,
+) -> dict:
+    """Construit le JSON hall-of-shame avec coûts, gravité quotidienne, causes et directions."""
+    annee = aujourdhui.year
+    debut_annee = date(annee, 1, 1)
+    du_semaine = aujourdhui - timedelta(days=6)
+    du_mois = aujourdhui - timedelta(days=29)
+
+    # Agréger les daily_metrics par ligne
+    par_ligne: dict[str, dict] = {}
+    par_ligne_jour: dict[str, dict[date, int]] = {}  # ligne → {date → cout_eur}
+
+    for r in lignes_metriques:
+        if r.line_id not in _RANG_LIGNE:
+            continue
+        if r.date > aujourdhui:
+            continue
+
+        c = cout_eur(r.minutes_voyageurs, smic_horaire)
+
+        if r.line_id not in par_ligne:
+            par_ligne[r.line_id] = {
+                "semaine": _vide(), "mois": _vide(), "annee": _vide(),
+            }
+            par_ligne_jour[r.line_id] = {}
+
+        agg = par_ligne[r.line_id]
+        if du_semaine <= r.date <= aujourdhui:
+            agg["semaine"]["cout_eur"] += c
+            agg["semaine"]["minutes"] += r.minutes_voyageurs
+            agg["semaine"]["incidents"] += r.nb_incidents
+        if du_mois <= r.date <= aujourdhui:
+            agg["mois"]["cout_eur"] += c
+            agg["mois"]["minutes"] += r.minutes_voyageurs
+            agg["mois"]["incidents"] += r.nb_incidents
+        if debut_annee <= r.date <= aujourdhui:
+            agg["annee"]["cout_eur"] += c
+            agg["annee"]["minutes"] += r.minutes_voyageurs
+            agg["annee"]["incidents"] += r.nb_incidents
+
+        if debut_annee <= r.date <= aujourdhui:
+            par_ligne_jour.setdefault(r.line_id, {})[r.date] = c
+
+    # Construire résultat par ligne
+    resultats = []
+    for lid in LIGNES:
+        agg = par_ligne.get(lid)
+        if not agg:
+            agg = {"semaine": _vide(), "mois": _vide(), "annee": _vide()}
+
+        jours = par_ligne_jour.get(lid, {})
+
+        # Coûts par période
+        cout = {
+            "semaine": {"euros": agg["semaine"]["cout_eur"], "minutes": agg["semaine"]["minutes"]},
+            "mois": {"euros": agg["mois"]["cout_eur"], "minutes": agg["mois"]["minutes"]},
+            "annee": {"euros": agg["annee"]["cout_eur"], "minutes": agg["annee"]["minutes"]},
+        }
+
+        # Seuils de gravité par percentile sur les coûts quotidiens de l'année
+        couts_annee = [v for v in jours.values() if v > 0]
+        if couts_annee:
+            seuils = (
+                _percentile(couts_annee, 25),
+                _percentile(couts_annee, 50),
+                _percentile(couts_annee, 75),
+                _percentile(couts_annee, 90),
+            )
+        else:
+            seuils = (0.0, 0.0, 0.0, 0.0)
+
+        # Gravité quotidienne
+        gravite = []
+        d = debut_annee
+        while d <= aujourdhui:
+            if d in jours:
+                c_jour = jours[d]
+                niv = _niveau_gravite(c_jour, seuils)
+                gravite.append({"date": d.isoformat(), "niveau": niv, "cout_eur": c_jour})
+            else:
+                gravite.append({"date": d.isoformat(), "niveau": None, "cout_eur": None})
+            d += timedelta(days=1)
+
+        # Pire / meilleur mois
+        par_mois_cout: dict[int, int] = defaultdict(int)
+        par_mois_min: dict[int, int] = defaultdict(int)
+        for dt, c_val in jours.items():
+            par_mois_cout[dt.month] += c_val
+        for r in lignes_metriques:
+            if r.line_id == lid and debut_annee <= r.date <= aujourdhui:
+                par_mois_min[r.date.month] += r.minutes_voyageurs
+
+        pire_mois = None
+        meilleur_mois = None
+        if par_mois_cout:
+            mois_avec_cout = [(m, c) for m, c in par_mois_cout.items() if c > 0]
+            if mois_avec_cout:
+                pm = max(mois_avec_cout, key=lambda x: (x[1], -x[0]))
+                pire_mois = {"mois": pm[0], "cout_eur": pm[1], "minutes": par_mois_min.get(pm[0], 0)}
+                bm = min(mois_avec_cout, key=lambda x: (x[1], x[0]))
+                if bm[0] != pm[0]:
+                    meilleur_mois = {"mois": bm[0], "cout_eur": bm[1], "minutes": par_mois_min.get(bm[0], 0)}
+
+        # Causes (disruptions)
+        cats = perturbations_par_ligne.get(lid, [])
+        causes_rep = repartition_causes(cats)
+        causes = [
+            {"libelle": r["categorie"], "pourcentage": r["pct"], "n": r["n"]}
+            for r in causes_rep["repartition"]
+        ]
+
+        # Top 3 directions (realtime)
+        dirs_list = directions_par_ligne.get(lid, [])
+        dir_compte = Counter(dirs_list)
+        top_dirs = dir_compte.most_common(3)
+        directions = []
+        if top_dirs:
+            max_dir_inc = top_dirs[0][1]
+            for nom, n in top_dirs:
+                # Niveau 0-4 basé sur la fréquence relative
+                if max_dir_inc > 0:
+                    ratio = n / max_dir_inc
+                    niv = 4 if ratio > 0.9 else 3 if ratio > 0.6 else 2 if ratio > 0.3 else 1
+                else:
+                    niv = 0
+                directions.append({"libelle": nom, "incidents": n, "niveau": niv})
+
+        resultats.append({
+            "id": lid,
+            "cout": cout,
+            "gravite_quotidienne": gravite,
+            "pire_mois": pire_mois,
+            "meilleur_mois": meilleur_mois,
+            "causes": causes,
+            "directions": directions,
+        })
+
+    return {
+        "meta": {
+            "genere_a": genere_a.isoformat(timespec="seconds"),
+            "annee": annee,
+            "au": aujourdhui.isoformat(),
+            "smic_horaire": smic_horaire,
+        },
+        "lignes": resultats,
+    }
+
+
 # ── Requêtes et écriture des fichiers ──────────────────────────
 
 def _ecrire(dossier: Path, nom: str, contenu: dict) -> None:
@@ -319,6 +502,35 @@ async def generer_bilans(db: AsyncSession | None = None, dossier: Path = DOSSIER
             )).all()
         ]
 
+        # Hall of Shame : perturbations par ligne + directions (realtime)
+        perturbations_par_ligne_data = (await session.execute(
+            select(Incident.line_id, Incident.cause, Incident.heure_debut).where(
+                Incident.source == "disruption", Incident.heure_debut >= debut_utc,
+            )
+        )).all()
+        perturbations_par_ligne: dict[str, list[str]] = defaultdict(list)
+        for line_id, cause, heure in perturbations_par_ligne_data:
+            j = journee_paris(heure)
+            if date(aujourdhui.year, 1, 1) <= j <= aujourdhui:
+                perturbations_par_ligne[line_id].append(categoriser_cause(cause))
+
+        directions_data = (await session.execute(
+            select(Incident.line_id, Incident.direction).where(
+                Incident.source == "realtime",
+                Incident.heure_debut >= datetime.combine(date(aujourdhui.year, 1, 1), time(0, 0), tzinfo=PARIS_TZ),
+                Incident.direction.isnot(None),
+                Incident.direction != "",
+            )
+        )).all()
+        directions_par_ligne: dict[str, list[str]] = defaultdict(list)
+        for line_id, direction in directions_data:
+            directions_par_ligne[line_id].append(direction)
+
+        ecrire("hall-of-shame.json", construire_hall_of_shame(
+            aujourdhui, rows, dict(perturbations_par_ligne),
+            dict(directions_par_ligne), smic, genere_a,
+        ))
+
         for p in PERIODES:
             du = aujourdhui - timedelta(days=p - 1)
             categories = [c for j, c in perturbations if du <= j <= aujourdhui]
@@ -338,7 +550,7 @@ async def generer_bilans(db: AsyncSession | None = None, dossier: Path = DOSSIER
                 annee, aujourdhui, rows, par_mois, debut_donnees, smic, genere_a,
             ))
 
-        logger.info("Bilans générés (%d lignes daily_metrics, %d perturbations)", len(rows), len(perturbations))
+        logger.info("Bilans générés (%d lignes daily_metrics, %d perturbations, hall-of-shame inclus)", len(rows), len(perturbations))
 
     try:
         if db is not None:

@@ -1,5 +1,40 @@
 # SESSION — Dernière session de travail
 
+## Session du 2026-09-13 ter (terminée)
+
+### Contexte au démarrage
+- Branche `master`, dernier commit `8ecf3e8`
+- 132/132 tests verts
+- Objectif : refondre la page `/statistiques` en « Hall of Shame » (bulles top 5 + panneau détails)
+
+### Actions effectuées
+- **`frontend/statistiques.html` — réécriture complète** : nouveau design « Hall of Shame » avec :
+  - Hero chiffré (coût + minutes perdues)
+  - Sélecteur période Semaine / Mois / Année (boutons toggle)
+  - 5 bulles triées par coût décroissant (aire ∝ √coût, couleur officielle, `role="listbox"`)
+  - Panneau détails au clic (pire/meilleur mois, calendrier heatmap 12×31, causes barres horizontales, top 3 directions)
+  - Responsive : bulles en wrap, calendrier scrollable, tuiles en colonne sur mobile
+- **`backend/bilans.py` — `construire_hall_of_shame()`** : nouvelle fonction qui génère `hall-of-shame.json` :
+  - Coûts par ligne pour 3 périodes (semaine/mois/année)
+  - Gravité quotidienne par percentile (p25/p50/p75/p90 → niveaux 0-4)
+  - Pire et meilleur mois par ligne
+  - Causes par ligne (via `categoriser_cause`, disruptions)
+  - Top 3 directions par ligne (realtime)
+- **`generer_bilans()` mis à jour** : requêtes supplémentaires pour perturbations par ligne + directions, écriture de `hall-of-shame.json`
+- **Génération manuelle** du `hall-of-shame.json` (180 Ko) pour débloquer la page
+- **132/132 tests verts** — aucune régression
+
+### Fichiers modifiés
+- `frontend/statistiques.html` (réécriture complète)
+- `backend/bilans.py` (ajout `construire_hall_of_shame()` + intégration dans `generer_bilans()`)
+
+### État en fin de session
+- 132/132 tests verts
+- Page `/statistiques` fonctionnelle avec données réelles
+- `hall-of-shame.json` généré et servi
+
+---
+
 ## Session du 2026-09-13 bis (terminée)
 
 ### Contexte au démarrage

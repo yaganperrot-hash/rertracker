@@ -3,13 +3,203 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RETARDS IDF — Statistiques</title>
-<meta name="description" content="Coût estimé, minutes perdues et incidents sur les RER et Transilien d'Île-de-France, sur 7 ou 30 jours.">
+<title>RETARDS IDF — Hall of Shame</title>
+<meta name="description" content="Classement des pires lignes RER et Transilien d'Île-de-France par coût estimé.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="bilan.css?v=2">
 <link rel="stylesheet" href="nav.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+
+:root {
+  --creme: #F4EFE6;
+  --encre: #1a1a17;
+  --brun: #4a463d;
+  --gris: #8a8478;
+  --gris-clair: #a39c8c;
+  --sable: #e8e1d4;
+  --filet: #f0ebe1;
+  --creux: #c9c1b1;
+  --rouge: #E1251B;
+  --rouge-fonce: #A32D2D;
+  --rouge-pale: #FCEBEB;
+  --blanc: #fff;
+  --nav-bg: var(--creme);
+}
+
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--creme);
+  font-family: 'Roboto', -apple-system, sans-serif;
+  color: var(--encre);
+  line-height: 1.4;
+}
+a { color: var(--gris); }
+
+.page { max-width: 860px; margin: 0 auto; padding-block: 32px; padding-inline: 16px; }
+@media (min-width: 600px) { .page { padding-inline: 30px; } }
+
+.eyebrow { font-size: 11px; letter-spacing: 1.5px; color: var(--gris); text-transform: uppercase; }
+
+/* ── Sélecteur période ── */
+.toggle { display: inline-flex; background: var(--sable); border-radius: 8px; padding: 3px; margin-bottom: 14px; font-size: 12px; }
+.toggle button, .toggle a {
+  border: 0; background: none; font: inherit; cursor: pointer; text-decoration: none;
+  padding: 5px 15px; color: var(--gris); border-radius: 6px;
+}
+.toggle button:hover, .toggle a:hover { color: var(--encre); }
+.toggle [aria-pressed="true"] { background: var(--encre); color: var(--creme); }
+.toggle button:focus-visible { outline: 2px solid var(--encre); outline-offset: 1px; }
+.titre-page { margin-bottom: 18px; }
+
+/* ── Hero ── */
+.hero { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 36px; margin-bottom: 8px; }
+.big { font-size: 56px; font-weight: 500; line-height: 1; letter-spacing: -1px; }
+.big small { font-size: 36px; }
+.sub { font-size: 23px; font-weight: 500; color: var(--brun); }
+.sub small { font-size: 15px; color: var(--gris); }
+.hero-inc { font-size: 13px; color: var(--gris); }
+.note { font-size: 12px; color: var(--gris-clair); margin-bottom: 28px; font-style: italic; }
+
+/* ── Bulles Hall of Shame ── */
+.shame-section { margin-bottom: 28px; }
+.bubbles-wrap {
+  display: flex; align-items: flex-end; justify-content: center;
+  gap: 18px; padding: 24px 0 16px; flex-wrap: wrap;
+}
+.bubble {
+  display: flex; flex-direction: column; align-items: center;
+  cursor: pointer; transition: transform 0.15s;
+  border: none; background: none; font: inherit; color: inherit;
+  padding: 0;
+}
+.bubble:hover { transform: scale(1.06); }
+.bubble[aria-selected="true"] { transform: scale(1.08); }
+.bubble-circle {
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; color: #fff; transition: box-shadow 0.15s;
+  flex-shrink: 0;
+}
+.bubble[aria-selected="true"] .bubble-circle {
+  box-shadow: 0 0 0 4px var(--encre);
+}
+.bubble-rank {
+  font-size: 11px; font-weight: 700; color: var(--gris); margin-top: 6px;
+  letter-spacing: 1px;
+}
+.bubble-label { font-size: 12px; font-weight: 500; margin-top: 2px; }
+.bubble-cost { font-size: 11px; color: var(--gris); margin-top: 1px; }
+
+/* ── Panneau détails ── */
+.detail-panel {
+  background: var(--blanc); border-radius: 12px; padding: 20px 22px;
+  margin-bottom: 28px; animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.panel-header {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.panel-header .badge {
+  display: inline-block; color: #fff; font-weight: 500; font-size: 15px;
+  padding: 5px 12px; border-radius: 6px;
+}
+.panel-title { font-size: 18px; font-weight: 500; }
+.panel-close {
+  margin-left: auto; border: none; background: var(--sable); color: var(--gris);
+  width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+}
+.panel-close:hover { background: var(--creux); }
+
+/* Tuiles pire/meilleur mois */
+.month-tiles { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+.month-tile {
+  flex: 1; min-width: 140px; padding: 12px 14px; border-radius: 8px;
+  background: var(--creme);
+}
+.month-tile .mt-label { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--gris); }
+.month-tile .mt-month { font-size: 17px; font-weight: 500; margin-top: 3px; }
+.month-tile .mt-cost { font-size: 13px; color: var(--gris); margin-top: 1px; }
+.month-tile.worst { border-left: 3px solid var(--rouge); }
+.month-tile.best { border-left: 3px solid #2ECC71; }
+
+/* Calendrier heatmap */
+.heatmap-section { margin-bottom: 20px; }
+.heatmap-section .eyebrow { margin-bottom: 10px; }
+.heatmap-wrap { overflow-x: auto; padding-bottom: 6px; }
+.heatmap-wrap::-webkit-scrollbar { height: 4px; }
+.heatmap-wrap::-webkit-scrollbar-thumb { background: var(--creux); border-radius: 2px; }
+.heatmap {
+  display: grid;
+  grid-template-columns: 36px repeat(31, 18px);
+  grid-template-rows: repeat(12, 18px);
+  gap: 2px; font-size: 10px;
+}
+.hm-month {
+  display: flex; align-items: center; justify-content: flex-end;
+  padding-right: 4px; color: var(--gris); font-size: 10px; font-weight: 500;
+}
+.hm-cell {
+  border-radius: 3px; width: 18px; height: 18px;
+}
+.hm-empty { background: var(--filet); }
+.hm-null { background: transparent; }
+/* Niveaux de gravité : clair → foncé */
+.hm-0 { background: #EAE3D3; }
+.hm-1 { background: #E4BBA2; }
+.hm-2 { background: #D68A63; }
+.hm-3 { background: #BE4E2E; }
+.hm-4 { background: #8A2817; }
+
+/* Causes barres */
+.causes-section { margin-bottom: 20px; }
+.causes-section .eyebrow { margin-bottom: 10px; }
+.cause-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.cause-label { width: 160px; flex-shrink: 0; font-size: 13px; color: var(--brun); text-align: right; }
+.cause-bar-wrap { flex: 1; height: 20px; background: var(--sable); border-radius: 4px; overflow: hidden; }
+.cause-bar { height: 100%; border-radius: 4px; transition: width 0.3s; }
+.cause-pct { width: 44px; flex-shrink: 0; font-size: 12px; font-weight: 500; color: var(--gris); }
+
+/* Directions */
+.directions-section .eyebrow { margin-bottom: 10px; }
+.dir-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid var(--filet); font-size: 13px;
+}
+.dir-row:last-child { border: none; }
+.dir-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+}
+.dir-label { flex: 1; color: var(--brun); }
+.dir-count { font-weight: 500; color: var(--gris); white-space: nowrap; }
+
+/* ── États ── */
+main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
+.message { font-size: 14px; color: var(--gris); padding: 24px 0; }
+.pied {
+  font-size: 11px; color: var(--gris-clair);
+  margin-top: 36px; padding-top: 12px; border-top: 1px solid var(--sable);
+}
+
+@media (max-width: 480px) {
+  .hero { gap: 8px 24px; }
+  .big { font-size: 44px; }
+  .big small { font-size: 28px; }
+  .sub { font-size: 19px; }
+  .bubbles-wrap { gap: 12px; }
+  .heatmap {
+    grid-template-columns: 30px repeat(31, 14px);
+    grid-template-rows: repeat(12, 14px);
+  }
+  .hm-cell { width: 14px; height: 14px; }
+  .cause-label { width: 100px; font-size: 12px; }
+  .month-tiles { flex-direction: column; }
+}
+</style>
 </head>
 <body>
 
@@ -32,11 +222,11 @@
 <div class="page">
 
   <div class="toggle" role="group" aria-label="Période">
-    <button type="button" data-p="7" aria-pressed="false">7 jours</button>
-    <button type="button" data-p="30" aria-pressed="true">30 jours</button>
-    <a href="/annee">Année</a>
+    <button type="button" data-p="semaine" aria-pressed="false">Semaine</button>
+    <button type="button" data-p="mois" aria-pressed="true">Mois</button>
+    <button type="button" data-p="annee" aria-pressed="false">Année</button>
   </div>
-  <p class="eyebrow titre-page" id="periode-titre">30 derniers jours · toutes lignes</p>
+  <p class="eyebrow titre-page" id="periode-titre">30 derniers jours · Hall of Shame</p>
 
   <main id="contenu">
     <section class="hero" aria-label="Chiffres de la période">
@@ -49,17 +239,15 @@
         <div class="hero-inc" id="h-inc">—</div>
       </div>
     </section>
-    <p class="note" id="note">Somme exacte du classement par ligne ci-dessous. <a href="/methode.html#bilans">Méthode →</a></p>
+    <p class="note" id="note">Top 5 des lignes les plus coûteuses. <a href="/methode.html#bilans">Méthode →</a></p>
 
-    <section class="card worst carte-pire" id="pire" aria-label="Pire ligne"></section>
+    <section class="shame-section" aria-label="Hall of Shame">
+      <div class="eyebrow" style="margin-bottom:4px">Hall of Shame — Top 5</div>
+      <div class="bubbles-wrap" id="bubbles" role="listbox" aria-label="Classement des pires lignes">
+      </div>
+    </section>
 
-    <div class="eyebrow" style="margin-bottom:14px">Classement par temps perdu</div>
-    <div class="classement" id="classement"></div>
-
-    <div class="two">
-      <section class="card" id="comparaison" aria-label="Comparaison avec la période précédente"></section>
-      <section class="card" id="causes" aria-label="Causes"></section>
-    </div>
+    <div id="detail-panel-container"></div>
   </main>
 
   <p class="message" id="message" hidden></p>
@@ -72,143 +260,363 @@
 <script>
 (function () {
   const B = window.Bilan;
-  const PERIODES = [7, 30];  // « Année » : lien vers /annee dans le même sélecteur
   const $ = id => document.getElementById(id);
-  const main = $('contenu');
-  let requete = 0;
+  const NBSP = '\u00a0';
 
-  function periodeURL() {
-    const p = parseInt(new URLSearchParams(location.search).get('p'), 10);
-    return PERIODES.includes(p) ? p : 30;
+  // Gravité → couleur heatmap
+  const GRAVITE_COULEURS = ['#EAE3D3', '#E4BBA2', '#D68A63', '#BE4E2E', '#8A2817'];
+
+  const PERIODES = {
+    semaine: { label: '7 derniers jours', jours: 7, cle: 'semaine' },
+    mois:    { label: '30 derniers jours', jours: 30, cle: 'mois' },
+    annee:   { label: 'Année en cours', jours: 365, cle: 'annee' },
+  };
+
+  let donnees = null;      // hall-of-shame.json chargé
+  let periodeActuelle = 'mois';
+  let ligneSelectionnee = null;
+
+  // ── Formats ────────────────────────────────────────────────
+
+  function fmtNombre(n) { return Number(n || 0).toLocaleString('fr-FR'); }
+  function fmtEuros(n) { return fmtNombre(n) + NBSP + '€'; }
+  function fmtEurosCompact(n) {
+    n = n || 0;
+    if (n >= 1e6) return (n / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + NBSP + 'M€';
+    if (n >= 1e4) return fmtNombre(Math.round(n / 1e3)) + NBSP + 'k€';
+    return fmtEuros(n);
+  }
+  function fmtMinutes(n) {
+    n = n || 0;
+    if (n >= 1e7) return { valeur: (n / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + NBSP + 'M', suffixe: 'de minutes perdues' };
+    var v = n >= 1e5 ? Math.round(n / 1e3) * 1e3 : n;
+    return { valeur: fmtNombre(v), suffixe: n <= 1 ? 'minute perdue' : 'minutes perdues' };
   }
 
-  function renderHero(d) {
-    $('h-cout').textContent = B.fmtNombre(d.total.cout_eur);
-    const m = B.fmtMinutes(d.total.minutes);
+  const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+                'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+  const MOIS_COURT = ['jan', 'fév', 'mar', 'avr', 'mai', 'jun', 'jul', 'aoû', 'sep', 'oct', 'nov', 'déc'];
+
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, function(c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  // ── Hero ──────────────────────────────────────────────────
+
+  function renderHero(lignes) {
+    var p = PERIODES[periodeActuelle];
+    var totalEur = 0, totalMin = 0, totalInc = 0;
+    lignes.forEach(function(l) {
+      var c = l.cout[p.cle];
+      totalEur += c.euros;
+      totalMin += c.minutes;
+    });
+
+    $('h-cout').textContent = fmtNombre(totalEur);
+    var m = fmtMinutes(totalMin);
     $('h-min').textContent = m.valeur;
     $('h-min-suffixe').textContent = m.suffixe;
-    const n = d.total.incidents;
-    $('h-inc').textContent = n === 0
-      ? 'Aucun incident recensé'
-      : `${B.fmtIncidents(n)} recensé${n > 1 ? 's' : ''}`;
+    $('h-inc').textContent = 'Top 5 des lignes les plus coûteuses';
+    $('periode-titre').textContent = p.label + ' · Hall of Shame';
   }
 
-  function renderNote(d) {
-    const m = d.meta;
-    let couverture = '';
-    if (!m.debut_donnees) {
-      couverture = ' Aucune donnée collectée pour l\'instant.';
-    } else if (m.jours_couverts < m.periode_jours) {
-      couverture = ` Données disponibles depuis le ${B.fmtDate(m.debut_donnees)} (${m.jours_couverts} j sur ${m.periode_jours}).`;
-    }
-    $('note').innerHTML = 'Somme exacte du classement par ligne ci-dessous. ' +
-      '<a href="/methode.html#bilans">Méthode →</a>' + B.esc(couverture);
+  // ── Bulles ────────────────────────────────────────────────
+
+  function renderBulles(lignes) {
+    var p = PERIODES[periodeActuelle].cle;
+    // Trier par coût décroissant, prendre top 5
+    var sorted = lignes.slice().sort(function(a, b) {
+      return (b.cout[p].euros || 0) - (a.cout[p].euros || 0);
+    });
+    var top5 = sorted.slice(0, 5);
+
+    // Rayon proportionnel à √coût
+    var maxCout = Math.max.apply(null, top5.map(function(l) { return l.cout[p].euros || 1; }));
+    var MAX_R = 60, MIN_R = 24;
+
+    var container = $('bubbles');
+    container.innerHTML = '';
+
+    top5.forEach(function(ligne, i) {
+      var info = B.LIGNES[ligne.id];
+      if (!info) return;
+      var cout = ligne.cout[p].euros || 0;
+      var r = cout > 0 ? Math.max(MIN_R, Math.round(Math.sqrt(cout / maxCout) * MAX_R)) : MIN_R;
+      var diam = r * 2;
+
+      var btn = document.createElement('button');
+      btn.className = 'bubble';
+      btn.setAttribute('role', 'option');
+      btn.setAttribute('aria-label', info.nom + ' — ' + fmtEurosCompact(cout));
+      btn.setAttribute('aria-selected', ligne.id === ligneSelectionnee ? 'true' : 'false');
+      btn.dataset.id = ligne.id;
+
+      btn.innerHTML =
+        '<span class="bubble-rank">#' + (i + 1) + '</span>' +
+        '<span class="bubble-circle" style="width:' + diam + 'px;height:' + diam + 'px;background:' + info.fond + ';color:' + info.texte + ';font-size:' + Math.max(12, Math.round(r * 0.35)) + 'px">' +
+          esc(info.lbl) +
+        '</span>' +
+        '<span class="bubble-label">' + esc(info.nom) + '</span>' +
+        '<span class="bubble-cost">' + esc(fmtEurosCompact(cout)) + '</span>';
+
+      btn.addEventListener('click', function() {
+        selectLigne(ligne.id);
+      });
+
+      container.appendChild(btn);
+    });
   }
 
-  function renderPire(d) {
-    const el = $('pire');
-    const N = d.meta.periode_jours;
-    const p = d.pire_ligne;
-    const titre = `<div class="eyebrow" style="margin-bottom:7px">Pire ligne · ${N} j</div>`;
-    if (!p || !B.LIGNES[p.id]) {
-      el.style.borderLeftColor = '';
-      el.innerHTML = `<div>${titre}<div class="pire-detail">Aucune ligne touchée sur la période.</div></div>`;
+  // ── Sélection d'une ligne ─────────────────────────────────
+
+  function selectLigne(id) {
+    if (ligneSelectionnee === id) {
+      ligneSelectionnee = null;
+      $('detail-panel-container').innerHTML = '';
+      document.querySelectorAll('.bubble').forEach(function(b) {
+        b.setAttribute('aria-selected', 'false');
+      });
       return;
     }
-    const m = B.fmtMinutes(p.minutes);
-    const delta = B.fmtDelta(p.delta_pct_minutes);
-    const info = p.delta_pct_minutes === null
-      ? 'période précédente incomplète'
-      : `minutes perdues vs ${N} jours précédents`;
-    el.style.borderLeftColor = B.LIGNES[p.id].fond;
-    el.innerHTML = `<div>${titre}<div class="pire-corps">${B.badge(p.id)}` +
-      `<span class="pire-detail">${B.esc(m.valeur)} ${B.esc(m.suffixe)} · ${B.esc(B.fmtIncidents(p.incidents))}</span></div></div>` +
-      `<span class="delta ${delta.classe}" title="${B.esc(info)}">${B.esc(delta.texte)}</span>`;
+    ligneSelectionnee = id;
+
+    document.querySelectorAll('.bubble').forEach(function(b) {
+      b.setAttribute('aria-selected', b.dataset.id === id ? 'true' : 'false');
+    });
+
+    var ligne = donnees.find(function(l) { return l.id === id; });
+    if (!ligne) return;
+
+    renderDetailPanel(ligne);
   }
 
-  function renderComparaison(d) {
-    const N = d.meta.periode_jours;
-    const dp = d.delta_pct;
-    const mini = pct => {
-      const x = B.fmtDelta(pct);
-      return `<span class="mini ${x.classe}" title="vs ${N} jours précédents">${B.esc(x.texte)}</span>`;
-    };
-    const pire = d.pire_ligne && B.LIGNES[d.pire_ligne.id] ? B.LIGNES[d.pire_ligne.id].nom : '—';
-    $('comparaison').innerHTML =
-      `<div class="eyebrow" style="margin-bottom:12px">${N} j <span style="color:var(--creux)">vs</span> ${N} j précédents</div>` +
-      '<div>' +
-      `<div class="line"><span class="k">Incidents</span><span class="v">${B.fmtNombre(d.total.incidents)} ${mini(dp && dp.incidents)}</span></div>` +
-      `<div class="line"><span class="k">Coût</span><span class="v">${B.esc(B.fmtEurosCompact(d.total.cout_eur))} ${mini(dp && dp.cout_eur)}</span></div>` +
-      `<div class="line"><span class="k">Pire ligne</span><span class="v">${B.esc(pire)}</span></div>` +
-      '</div>' +
-      (dp ? '' : '<p class="carte-note">Période précédente incomplète : comparaison indisponible.</p>');
+  // ── Panneau détails ───────────────────────────────────────
+
+  function renderDetailPanel(ligne) {
+    var info = B.LIGNES[ligne.id];
+    if (!info) return;
+    var p = PERIODES[periodeActuelle].cle;
+
+    var html = '<div class="detail-panel">';
+
+    // Header
+    html += '<div class="panel-header">' +
+      '<span class="badge" style="background:' + info.fond + ';color:' + info.texte + '">' + esc(info.lbl) + '</span>' +
+      '<span class="panel-title">' + esc(info.nom) + ' — ' + esc(fmtEurosCompact(ligne.cout[p].euros)) + '</span>' +
+      '<button class="panel-close" aria-label="Fermer" id="panel-close">&times;</button>' +
+    '</div>';
+
+    // Pire / Meilleur mois
+    if (ligne.pire_mois || ligne.meilleur_mois) {
+      html += '<div class="month-tiles">';
+      if (ligne.pire_mois) {
+        html += '<div class="month-tile worst">' +
+          '<div class="mt-label">Pire mois</div>' +
+          '<div class="mt-month">' + esc(MOIS[ligne.pire_mois.mois - 1]) + '</div>' +
+          '<div class="mt-cost">' + esc(fmtEuros(ligne.pire_mois.cout_eur)) + ' · ' + esc(fmtNombre(ligne.pire_mois.minutes)) + ' min</div>' +
+        '</div>';
+      }
+      if (ligne.meilleur_mois) {
+        html += '<div class="month-tile best">' +
+          '<div class="mt-label">Meilleur mois</div>' +
+          '<div class="mt-month">' + esc(MOIS[ligne.meilleur_mois.mois - 1]) + '</div>' +
+          '<div class="mt-cost">' + esc(fmtEuros(ligne.meilleur_mois.cout_eur)) + ' · ' + esc(fmtNombre(ligne.meilleur_mois.minutes)) + ' min</div>' +
+        '</div>';
+      }
+      html += '</div>';
+    }
+
+    // Calendrier heatmap
+    html += renderHeatmap(ligne);
+
+    // Causes
+    html += renderCauses(ligne);
+
+    // Directions
+    html += renderDirections(ligne);
+
+    html += '</div>';
+
+    $('detail-panel-container').innerHTML = html;
+
+    document.getElementById('panel-close').addEventListener('click', function() {
+      selectLigne(ligne.id); // toggle off
+    });
+
+    // Scroll le panneau en vue
+    $('detail-panel-container').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  function renderCauses(d) {
-    const c = d.causes;
-    const titre = '<div class="eyebrow" style="margin-bottom:12px">Causes</div>';
-    if (!c.total) {
-      $('causes').innerHTML = titre + '<p class="carte-note">Aucune perturbation déclarée sur la période.</p>';
-      return;
+  // ── Heatmap calendrier ────────────────────────────────────
+
+  function renderHeatmap(ligne) {
+    var gravite = ligne.gravite_quotidienne || [];
+    // Construire un dictionnaire date → {niveau, cout_eur}
+    var parDate = {};
+    gravite.forEach(function(g) {
+      parDate[g.date] = g;
+    });
+
+    var aujourdhui = new Date();
+    var annee = aujourdhui.getFullYear();
+
+    var html = '<div class="heatmap-section">' +
+      '<div class="eyebrow">Gravité quotidienne · ' + annee + '</div>' +
+      '<div class="heatmap-wrap"><div class="heatmap">';
+
+    for (var m = 0; m < 12; m++) {
+      html += '<div class="hm-month">' + MOIS_COURT[m] + '</div>';
+      var nbJours = new Date(annee, m + 1, 0).getDate();
+      for (var j = 1; j <= 31; j++) {
+        if (j > nbJours) {
+          html += '<div class="hm-cell hm-null"></div>';
+          continue;
+        }
+        var dateStr = annee + '-' + String(m + 1).padStart(2, '0') + '-' + String(j).padStart(2, '0');
+        var dateObj = new Date(annee, m, j);
+        var g = parDate[dateStr];
+
+        if (!g || g.niveau === null || dateObj > aujourdhui) {
+          html += '<div class="hm-cell hm-empty" title="' + esc(dateStr) + '"></div>';
+        } else {
+          var niv = Math.min(4, Math.max(0, g.niveau));
+          var title = dateStr + ' — ' + fmtEuros(g.cout_eur) + ' (niveau ' + niv + ')';
+          html += '<div class="hm-cell hm-' + niv + '" title="' + esc(title) + '"></div>';
+        }
+      }
     }
-    const pct = v => `${v} %`;
-    const rep = c.repartition;
-    const affichees = rep.length <= 4 ? rep : rep.slice(0, 3);
-    let lignes = affichees.map(r =>
-      `<div class="line"><span class="k">${B.esc(r.categorie)}</span><span class="v">${pct(r.pct)}</span></div>`).join('');
-    if (rep.length > 4) {
-      const reste = rep.slice(3);
-      const noms = reste.slice(0, 2).map((r, i) => i ? r.categorie.toLowerCase() : r.categorie).join(' · ') +
-        (reste.length > 2 ? ' …' : '');
-      const somme = 100 - affichees.reduce((s, r) => s + r.pct, 0);
-      lignes += `<div class="line reste"><span class="k">${B.esc(noms)}</span><span class="v">${pct(somme)}</span></div>`;
-    }
-    const n = c.total;
-    $('causes').innerHTML = titre + `<div>${lignes}</div>` +
-      `<p class="carte-note">Sur ${B.fmtNombre(n)} perturbation${n > 1 ? 's' : ''} déclarée${n > 1 ? 's' : ''} par l'opérateur.</p>`;
+
+    html += '</div></div></div>';
+    return html;
   }
+
+  // ── Causes ────────────────────────────────────────────────
+
+  function renderCauses(ligne) {
+    var causes = ligne.causes || [];
+    if (!causes.length) return '';
+
+    var maxPct = Math.max.apply(null, causes.map(function(c) { return c.pourcentage; }));
+
+    var html = '<div class="causes-section">' +
+      '<div class="eyebrow">Causes des perturbations</div>';
+
+    causes.forEach(function(c) {
+      var w = maxPct > 0 ? (c.pourcentage / maxPct * 100) : 0;
+      html += '<div class="cause-row">' +
+        '<span class="cause-label">' + esc(c.libelle) + '</span>' +
+        '<div class="cause-bar-wrap"><div class="cause-bar" style="width:' + w.toFixed(1) + '%;background:var(--brun)"></div></div>' +
+        '<span class="cause-pct">' + c.pourcentage + NBSP + '%</span>' +
+      '</div>';
+    });
+
+    html += '</div>';
+    return html;
+  }
+
+  // ── Directions ────────────────────────────────────────────
+
+  function renderDirections(ligne) {
+    var dirs = ligne.directions || [];
+    if (!dirs.length) return '';
+
+    var html = '<div class="directions-section">' +
+      '<div class="eyebrow">Directions les plus touchées</div>';
+
+    dirs.forEach(function(d) {
+      var niv = Math.min(4, Math.max(0, d.niveau || 0));
+      var couleur = GRAVITE_COULEURS[niv];
+      html += '<div class="dir-row">' +
+        '<span class="dir-dot" style="background:' + couleur + '" title="Niveau ' + niv + '"></span>' +
+        '<span class="dir-label">' + esc(d.libelle) + '</span>' +
+        '<span class="dir-count">' + d.incidents + ' incident' + (d.incidents > 1 ? 's' : '') + '</span>' +
+      '</div>';
+    });
+
+    html += '</div>';
+    return html;
+  }
+
+  // ── Chargement des données ────────────────────────────────
 
   function afficherMessage(texte) {
-    main.hidden = true;
-    main.removeAttribute('aria-busy');
+    $('contenu').hidden = true;
+    $('contenu').removeAttribute('aria-busy');
     $('message').textContent = texte;
     $('message').hidden = false;
   }
 
-  async function load(p) {
-    const id = ++requete;
-    document.querySelectorAll('.toggle button').forEach(b =>
-      b.setAttribute('aria-pressed', String(+b.dataset.p === p)));
-    $('periode-titre').textContent = `${p} derniers jours · toutes lignes`;
-    history.replaceState(null, '', p === 30 ? location.pathname : `?p=${p}`);
-    main.setAttribute('aria-busy', 'true');
-
-    let d;
-    try {
-      d = await B.chargerJSON(`/data/statistiques-${p}.json`);
-    } catch (e) {
-      if (id === requete) afficherMessage('Données indisponibles.');
+  function render() {
+    if (!donnees || !donnees.length) {
+      afficherMessage('Aucune donnée disponible.');
       return;
     }
-    if (id !== requete) return;  // une période plus récente a été demandée entre-temps
-    if (!d) { afficherMessage('Bilan en cours de calcul, réessayer dans quelques minutes.'); return; }
-
     $('message').hidden = true;
-    main.hidden = false;
-    renderHero(d);
-    renderNote(d);
-    renderPire(d);
-    B.renderClassement($('classement'), d.lignes);
-    renderComparaison(d);
-    renderCauses(d);
-    $('pied').textContent = B.pied(d.meta);
-    main.removeAttribute('aria-busy');
+    $('contenu').hidden = false;
+    $('contenu').removeAttribute('aria-busy');
+
+    renderHero(donnees);
+    renderBulles(donnees);
+
+    // Re-render le panneau si une ligne est sélectionnée
+    if (ligneSelectionnee) {
+      var ligne = donnees.find(function(l) { return l.id === ligneSelectionnee; });
+      if (ligne) renderDetailPanel(ligne);
+      else $('detail-panel-container').innerHTML = '';
+    }
   }
 
-  document.querySelectorAll('.toggle button').forEach(b =>
-    b.addEventListener('click', () => load(+b.dataset.p)));
+  async function chargerDonnees() {
+    $('contenu').setAttribute('aria-busy', 'true');
+    try {
+      var resp = await fetch('/data/hall-of-shame.json');
+      if (resp.status === 404) {
+        donnees = null;
+      } else if (!resp.ok) {
+        throw new Error('HTTP ' + resp.status);
+      } else {
+        var json = await resp.json();
+        donnees = json.lignes || [];
+        if (json.meta) {
+          $('pied').textContent = 'Données API PRIM · IDF Mobilités · mis à jour à ' +
+            new Date(json.meta.genere_a).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }).replace(':', ' h ') +
+            ' · base SMIC brut ' + (json.meta.smic_horaire || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + NBSP + '€/h';
+        }
+      }
+    } catch (e) {
+      donnees = null;
+    }
 
-  load(periodeURL());
+    if (!donnees) {
+      afficherMessage('Bilan en cours de calcul, réessayer dans quelques minutes.');
+      return;
+    }
+
+    render();
+  }
+
+  // ── Sélecteur de période ──────────────────────────────────
+
+  function setPeriode(p) {
+    periodeActuelle = p;
+    document.querySelectorAll('.toggle button').forEach(function(b) {
+      b.setAttribute('aria-pressed', b.dataset.p === p ? 'true' : 'false');
+    });
+    ligneSelectionnee = null;
+    $('detail-panel-container').innerHTML = '';
+    render();
+  }
+
+  document.querySelectorAll('.toggle button').forEach(function(b) {
+    b.addEventListener('click', function() { setPeriode(b.dataset.p); });
+  });
+
+  // ── Init ──────────────────────────────────────────────────
+
+  chargerDonnees();
+
 })();
 </script>
 </body>
