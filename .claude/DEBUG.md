@@ -345,7 +345,8 @@ une ligne ne remonte aucun résultat. Permettra de confirmer si c'est légitime 
 partiellement la clé, donc impossible de la relire à l'arrivée
 **Fix** : supprimer `PRIM_KEY.txt` après récupération **et régénérer la clé côté portail PRIM** —
 un `git rm` ne la retire pas de l'historique (elle reste dans `c591442`)
-**Status** : ❌ Ouvert — action requise
+**Status** : ❌ Ouvert — action requise. Au 2026-09-14 `PRIM_KEY.txt` est **toujours suivi** dans `HEAD` et
+poussé sur GitHub ; la clé de `.env` répond toujours HTTP 200 (non régénérée)
 
 ### [2026-09-11] Coût du jour : accueil vs bilans, écart d'arrondi
 **Fichier(s)** : `frontend/index.html`
@@ -404,7 +405,37 @@ relevé (incidents ouverts avec durée sous-estimée)
 Possibles pistes : erreur JS silencieuse dans `select()` ou `updatePanel()`, cache navigateur,
 `formatDuree` non trouvé (mais `duree.js` est chargé avant `pick.js`)
 **Fix** : à diagnostiquer — vérifier la console navigateur (`F12`) au prochain clic
-**Status** : 🔄 En cours — en attente de diagnostic console
+**Status** : 🔄 En cours — en attente de diagnostic console (non repris le 2026-09-14)
+
+---
+
+## Session 2026-09-14
+
+### [2026-09-14] Compteur du jour à 0 sur le Mac du travail
+**Fichier(s)** : — (base locale)
+**Symptôme** : `/api/stats/today` à 0 € / 0 incident ; l'autre PC affichait ~50 k € 40 min plus tôt
+**Cause** : pas un bug — chaque PC a sa propre base. Celle du Mac n'avait rien reçu depuis le 2026-09-11 17 h 02
+(serveur non lancé). Vérifié : séquence d'ids continue, aucune suppression récente, clé PRIM valide
+**Fix** : pull + relance du serveur ; outil de transfert `backend/transfert.py` (export/import JSON fusionné)
+pour ne plus perdre une demi-journée de collecte en changeant de PC
+**Status** : ✅ Résolu (contourné — les bases restent séparées, trou du 12-13/09 sur le Mac)
+
+### [2026-09-14] `.env` local écrasait le polling de 15 min
+**Fichier(s)** : `.env` (non versionné), `backend/config.py`
+**Symptôme** : après le pull, le serveur du Mac relevait toutes les 5 min → ~2 700 req/j pour un quota de 1 000
+**Cause** : le défaut est passé à 15 min dans `config.py` sur l'autre PC, mais `POLLING_INTERVAL_MINUTES=5`
+restait dans le `.env` du Mac (non versionné, donc jamais mis à jour par git). `.env.example` indique 12
+**Fix** : `.env` du Mac passé à 15. À vérifier sur tout nouveau poste ; aligner `.env.example` (12) et
+`CLAUDE.md` (« polling toutes les 5 min ») sur 15
+**Status** : 🔄 Corrigé sur le Mac — `.env.example` et `CLAUDE.md` restent à aligner
+
+### [2026-09-14] Conflit au pull sur `publications/`
+**Fichier(s)** : `publications/2026-09-11.txt`
+**Symptôme** : `git pull` bloqué par un fichier non suivi local portant le même nom qu'un fichier distant
+**Cause** : le récap de 20 h est généré par chaque PC où le serveur tourne, avec sa propre base → deux
+versions différentes du même jour (Mac : 314 474 €, bilan du 10/09 faute de données ; autre PC : 427 006 €)
+**Fix** : version distante gardée. Piste : ne générer le récap que sur un PC, ou le commiter systématiquement
+**Status** : ✅ Contourné
 
 ---
 

@@ -1,5 +1,43 @@
 # SESSION — Dernière session de travail
 
+## Session du 2026-09-14 (terminée) — Mac du travail
+
+### Contexte au démarrage
+- Branche `master` locale à `599560b`, **14 commits de retard** sur `origin/master` (travail fait sur l'autre PC)
+- Serveur local arrêté ; base `retards_idf` de ce Mac vide depuis le 2026-09-11 17 h 02
+- Compteur de l'accueil à 0 alors que l'autre PC affichait ~50 k € le matin même
+
+### Actions effectuées
+- **Diagnostic « compteur à 0 »** : pas de perte de données (séquence d'ids continue, suppressions = nettoyage du
+  10-11/09 sauvegardé), clé PRIM valide (HTTP 200). Cause : chaque PC a sa propre base PostgreSQL — ce Mac
+  n'avait simplement pas collecté depuis le 11/09
+- **Mise à jour git** : pull fast-forward jusqu'à `9e81c5f`. Conflit évité sur `publications/2026-09-11.txt`
+  (version locale = bilan du 10/09 faute de données ; version distante gardée, copie locale en scratchpad)
+- **`.env` de ce Mac** : `POLLING_INTERVAL_MINUTES=5` écrasait le nouveau défaut → passé à **15** (quota 1 000 req/j)
+- Serveur relancé (détaché via `nohup`, log `logs/uvicorn.log`) : collecte OK, 132/132 tests verts
+- **Transfert de données entre PC** — `backend/transfert.py` (nouveau) :
+  - `python -m backend.transfert export [AAAA-MM-JJ]` → `transferts/incidents-AAAA-MM-JJ.json` (journée de service
+    depuis 7 h Paris : incidents commencés ou mis à jour dans la fenêtre)
+  - `python -m backend.transfert import <fichier>` → upsert sur `navitia_id` (pire retard, première heure vue,
+    état le plus récent), puis `compute_daily_metrics` des journées touchées + `generer_bilans`
+  - Testé : réimport dans la même base = zéro changement (1 471 incidents, 319 960 €) ; fusion sur une copie
+    jetable de la base (`retards_idf_test_transfert`, supprimée) : retard plus grave pris, moins grave ignoré,
+    incident absent ajouté
+- Fin de journée : serveur arrêté, **470 incidents du 2026-09-14 exportés**, commit `1124bbf` poussé
+
+### Fichiers modifiés
+- `backend/transfert.py` (nouveau), `transferts/incidents-2026-09-14.json` (nouveau)
+- `.env` (non suivi) : polling 15 min
+
+### État en fin de session
+- **À faire sur l'autre PC, avant de lancer le serveur** :
+  `git pull` puis `./venv/bin/python -m backend.transfert import transferts/incidents-2026-09-14.json`
+- Ce Mac n'a aucune donnée pour le 12 et le 13/09 (collectées sur l'autre PC uniquement)
+- Toujours ouverts : bug 23 (clic pastille, non investigué), clé PRIM à régénérer (`PRIM_KEY.txt` encore suivi)
+- Incohérence mineure : `CLAUDE.md` indique encore « polling toutes les 5 min » dans « Source de données »
+
+---
+
 ## Session du 2026-09-13 sexies (terminée)
 
 ### Contexte au démarrage
