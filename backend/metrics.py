@@ -234,6 +234,57 @@ async def get_today_stats(db: AsyncSession) -> dict:
     }
 
 
+def _freq_minute(line_id: str, hour: int | None) -> float:
+    """Passengers per minute for a given line and hour (same formula as _minutes_voyageurs)."""
+    voyageurs_jour = FREQUENTATION.get(line_id, 0)
+    if voyageurs_jour == 0:
+        return 0.0
+    if hour is not None:
+        weight = HOURLY_WEIGHTS.get(hour, 0.0)
+        return voyageurs_jour * weight / 18 / 60
+    return voyageurs_jour / 18 / 60
+
+
+async def _retard_moyen_pondere(line_id: str, start: date, end: date, db: AsyncSession) -> float:
+    """Retard moyen pondéré par la fréquentation horaire (minutes).
+
+    = Σ(durée_i × poids_horaire_i) / Σ(poids_horaire_i)
+    Un retard de 48 min en heure de pointe pèse plus qu'un retard de 5 min à 22 h.
+    """
+    start_utc = datetime.combine(start, time(7, 0), tzinfo=PARIS_TZ).astimezone(timezone.utc)
+    end_utc = datetime.combine(end + timedelta(days=1), time(7, 0), tzinfo=PARIS_TZ).astimezone(timezone.utc)
+    now_utc = datetime.now(timezone.utc)
+    upper = min(end_utc, now_utc)
+
+    stmt = select(Incident).where(
+        Incident.line_id == line_id,
+        Incident.heure_debut >= start_utc,
+        Incident.heure_debut < upper,
+        or_(
+            Incident.source == "realtime",
+            Incident.is_cancelled == True,
+        ),
+    )
+    incidents = (await db.execute(stmt)).scalars().all()
+
+    sum_dur_x_poids = 0.0
+    sum_poids = 0.0
+    for inc in incidents:
+        dur = _effective_duration(inc, now_utc)
+        if dur <= 0:
+            continue
+        hour = _incident_hour_paris(inc)
+        poids = _freq_minute(line_id, hour)
+        if poids <= 0:
+            continue
+        sum_dur_x_poids += dur * poids
+        sum_poids += poids
+
+    if sum_poids == 0:
+        return 0.0
+    return sum_dur_x_poids / sum_poids
+
+
 async def get_line_stats(line_id: str, period: int, db: AsyncSession) -> dict:
     end = datetime.now(PARIS_TZ).date()
     start = end - timedelta(days=period - 1)
@@ -246,6 +297,8 @@ async def get_line_stats(line_id: str, period: int, db: AsyncSession) -> dict:
     rows = (await db.execute(stmt)).scalars().all()
     smic = get_settings().smic_horaire
 
+    retard_moyen = await _retard_moyen_pondere(line_id, start, end, db)
+
     return {
         "line_id": line_id,
         "period_days": period,
@@ -256,6 +309,8 @@ async def get_line_stats(line_id: str, period: int, db: AsyncSession) -> dict:
         "total_minutes_voyageurs": sum(r.minutes_voyageurs for r in rows),
         "total_cout_eur": sum(cout_eur(r.minutes_voyageurs, smic) for r in rows),
         "jours_perturbes": sum(1 for r in rows if r.est_jour_perturbe),
+        "retard_moyen_min": round(retard_moyen, 1),
+        "retard_moyen_eur": round(retard_moyen * smic / 60, 2),
         "daily": [
             {
                 "date": r.date.isoformat(),

@@ -60,13 +60,13 @@
     } catch (_) { return null; }
   }
 
-  // ── Calcul par usager moyen ──
-  function perUser(totalMinutesVoyageurs, lineId) {
-    const freq = (frequentation || {})[lineId];
-    if (!freq || freq === 0) return { minutes: 0, cout: 0 };
-    const minutes = totalMinutesVoyageurs / freq;
-    const cout = minutes * smicHoraire / 60;
-    return { minutes, cout };
+  // ── Retard moyen pondéré (calculé par le backend) ──
+  function perUser(data) {
+    if (!data) return { minutes: 0, cout: 0 };
+    return {
+      minutes: data.retard_moyen_min || 0,
+      cout: data.retard_moyen_eur || 0,
+    };
   }
 
   // ── Formatage nombres FR ──
@@ -144,7 +144,7 @@
     html += '    <div class="pp-name" id="pp-name"></div>';
     html += '    <div class="pp-status" id="pp-status"></div>';
     html += '  </div>';
-    html += '  <div class="pp-label">Un usager moyen y a perdu</div>';
+    html += '  <div class="pp-label">Un usager retard\u00E9 a perdu en moyenne</div>';
     html += '  <div class="pp-amount"><span id="pp-eur"></span><span class="pp-unit">\u20AC <span id="pp-scope"></span></span></div>';
     html += '  <div class="pp-time">soit <b id="pp-min"></b> minutes de vie \u00B7 au SMIC brut</div>';
     html += '  <div class="pp-line-stats">';
@@ -235,8 +235,7 @@
       const days = PERIOD_DAYS[currentPeriod];
       const data = await loadLineStats(currentLine, days);
 
-      const mv = data ? (data.total_minutes_voyageurs || 0) : 0;
-      const user = perUser(mv, currentLine);
+      const user = perUser(data);
 
       ppEur.textContent = fmtEur(user.cout);
       ppScope.textContent = PERIOD_LABEL[currentPeriod];
@@ -287,8 +286,7 @@
       const days = PERIOD_DAYS[currentPeriod];
       await loadReference();
       const data = await loadLineStats(currentLine, days);
-      const mv = data ? (data.total_minutes_voyageurs || 0) : 0;
-      const user = perUser(mv, currentLine);
+      const user = perUser(data);
 
       const W = 1080, H = 1080;
       const canvas = document.createElement('canvas');
@@ -319,7 +317,7 @@
       // Label
       ctx.fillStyle = '#555';
       ctx.font = '400 28px Roboto, sans-serif';
-      ctx.fillText('Un usager moyen y a perdu', cx, cy + 220);
+      ctx.fillText('Un usager retard\u00E9 a perdu en moyenne', cx, cy + 220);
 
       // Montant
       ctx.fillStyle = '#000';
@@ -351,7 +349,7 @@
         if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
           navigator.share({
             title: meta.name + ' \u2014 RETARDS IDF',
-            text: 'Un usager moyen du ' + meta.name + ' a perdu ' + fmtEur(user.cout) + ' \u20AC ' + PERIOD_LABEL[currentPeriod],
+            text: 'Un usager retard\u00E9 du ' + meta.name + ' a perdu en moyenne ' + fmtEur(user.cout) + ' \u20AC ' + PERIOD_LABEL[currentPeriod],
             files: [file],
           }).catch(() => {});
         } else {
