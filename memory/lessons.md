@@ -35,6 +35,12 @@
 - Le `.env` n'est pas versionné : quand un défaut change dans `config.py` (ex. polling 5 → 15 min), vérifier que le `.env` de chaque PC ne l'écrase pas.
 - Changer de PC en cours de journée : `python -m backend.transfert export` (serveur arrêté), commit + push, puis `import` sur l'autre PC avant de lancer son serveur. Les ids (`rt_{train}_{AAAAMMJJ}`, id de disruption PRIM) sont identiques d'un PC à l'autre, donc la fusion ne crée pas de doublon.
 
+## Métriques "par usager" — piège de la dilution
+- Diviser `minutes_voyageurs` par la fréquentation totale du jour donne un chiffre minuscule : on répartit le retard sur TOUS les voyageurs, y compris les 99% non impactés.
+- Diviser le coût total collectif par le nombre d'incidents n'a pas de sens non plus : c'est un coût agrégé de milliers de voyageurs.
+- La bonne formule pour "retard moyen vécu par un usager retardé" : `Σ(durée_i × poids_horaire_i) / Σ(poids_horaire_i)` — moyenne des durées pondérée par le flux de voyageurs à l'heure de l'incident.
+- Ce calcul nécessite de requêter les incidents individuels (pas les DailyMetric agrégés), mais reste performant même sur 782 incidents.
+
 ## Tester une opération sur la base sans risque
 - Copie jetable : `createdb X && pg_dump -t incidents -t daily_metrics retards_idf | psql -d X`, puis lancer le script avec `DATABASE_URL=postgresql://…/X` (la variable d'environnement prime sur `.env`). Attention : `generer_bilans()` écrit dans `frontend/data/` quelle que soit la base → régénérer depuis la vraie base après le test.
 - Un réimport de ses propres données doit laisser la base strictement identique (même `count`, même `sum`, mêmes totaux du jour) : bon test d'idempotence.

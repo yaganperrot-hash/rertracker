@@ -439,6 +439,18 @@ versions différentes du même jour (Mac : 314 474 €, bilan du 10/09 faute de 
 
 ---
 
+### [2026-09-14] Bug 24 — "Usager moyen" affiche un retard dilué (5 min au lieu de ~30)
+**Fichier(s)** : `frontend/pick.js`, `backend/metrics.py`
+**Symptôme** : panneau picker affiche "5 minutes de vie" pour le RER C malgré des incidents de 48 et 61 min
+**Cause** : `total_minutes_voyageurs / fréquentation_jour` divisait par tous les voyageurs du jour (500k+),
+y compris ceux non impactés → résultat minuscule
+**Fix** : nouveau calcul backend `_retard_moyen_pondere` : `Σ(durée × poids_horaire) / Σ(poids_horaire)`,
+query directe sur les incidents de la période. Frontend lit `retard_moyen_min` / `retard_moyen_eur`.
+Label changé : "Un usager retardé a perdu en moyenne"
+**Status** : ✅ Résolu
+
+---
+
 ## Notes de surveillance
 - Quota PRIM : 1 000 req/jour — polling 15 min, 13 lignes departures + 1 global disruptions ≈ 896 req/jour
 - Bot X : planifié à 20h via APScheduler dans `main.py`

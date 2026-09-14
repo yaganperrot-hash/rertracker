@@ -1,5 +1,39 @@
 # SESSION — Dernière session de travail
 
+## Session du 2026-09-14 bis (terminée) — PC Windows
+
+### Contexte au démarrage
+- Branche `master`, dernier commit `3f0e813`
+- Serveur local actif sur localhost:8000
+- Utilisateur signale que le panneau "usager moyen" affiche des valeurs trop basses (5 min de retard sur RER C alors qu'il y a des incidents de 48 et 61 min)
+
+### Actions effectuées
+- **Diagnostic du calcul "usager moyen"** : l'ancien calcul divisait `total_minutes_voyageurs` par la fréquentation journalière totale de la ligne (ex: 500 000 pour le RER C), diluant le retard sur tous les voyageurs du jour y compris ceux non impactés → résultat minuscule
+- **Choix de l'option B — retard moyen pondéré** : après discussion avec l'utilisateur, choix de calculer la durée moyenne des retards pondérée par la fréquentation horaire. Un retard de 48 min en heure de pointe (poids 2.5) pèse plus qu'un retard de 5 min à 22h (poids 0.2)
+- **Backend (`backend/metrics.py`)** :
+  - Nouvelle fonction `_freq_minute(line_id, hour)` : passagers/min pour une ligne et une heure
+  - Nouvelle fonction `_retard_moyen_pondere(line_id, start, end, db)` : query les incidents individuels, calcule `Σ(durée × poids_horaire) / Σ(poids_horaire)` — pas de changement de schéma DB
+  - `get_line_stats()` retourne deux nouveaux champs : `retard_moyen_min` et `retard_moyen_eur`
+- **Frontend (`frontend/pick.js`)** :
+  - `perUser()` simplifié : lit directement `retard_moyen_min` et `retard_moyen_eur` du backend
+  - Label changé : "Un usager retardé a perdu en moyenne" (au lieu de "Un usager moyen y a perdu")
+  - Canvas de partage et texte de share mis à jour
+- **Itération n°1 échouée** : première tentative avec `total_duree_min / total_incidents` (moyenne simple) → incohérent entre lignes (RER B avec 782 incidents courts donnait 11 min, vs Transilien J avec 175 longs donnait 14 min, alors que le coût total du B est 23× supérieur)
+- **Itération n°2 échouée** : deuxième tentative avec `total_cout_eur / total_incidents` → divisait un coût collectif par le nombre d'incidents, résultat sans sens (1 188 € par incident sur le RER B)
+- **Itération n°3 réussie** : calcul backend pondéré par fréquentation horaire — résultats cohérents (RER B: 8.8 min/1.80€, RER C: 6.6 min/1.36€, Transilien J: 10.9 min/2.23€)
+
+### Fichiers modifiés
+- `backend/metrics.py` (3 ajouts : `_freq_minute`, `_retard_moyen_pondere`, champs dans `get_line_stats`)
+- `frontend/pick.js` (calcul simplifié, labels mis à jour)
+
+### État en fin de session
+- Commit `8a83257` poussé sur `origin/master`
+- Serveur relancé avec le nouveau code
+- Résultats vérifiés : RER B 8.8 min, RER C 6.6 min, Transilien J 10.9 min — cohérents
+- Bug 23 (clic pastille) semble résolu (l'utilisateur clique et voit les données)
+
+---
+
 ## Session du 2026-09-14 (terminée) — Mac du travail
 
 ### Contexte au démarrage
