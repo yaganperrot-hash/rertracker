@@ -8,16 +8,16 @@ sur les lignes RER et Transilien d'Île-de-France.
 
 ## Architecture & Choix techniques
 
-| Composant | Technologie | Raison |
-|-----------|-------------|--------|
-| Backend | Python 3.12 + FastAPI | Async natif, APScheduler intégrable |
-| Base de données | PostgreSQL 16 | Robuste, requêtes analytiques |
-| ORM | SQLAlchemy 2.x async | Async/await natif |
-| Scheduler | APScheduler 3.x | Polling 5 min sans process séparé |
-| Frontend | HTML/CSS/JS vanilla | Zéro dépendance, déploiement simple |
-| Graphiques | Chart.js (CDN) | Léger, pas de build step |
-| Conteneurisation | Docker + docker-compose | Cohérence dev/prod |
-| Déploiement cible | VPS Ubuntu 24 | Simple, contrôlé |
+| Composant | Technologie | 
+|-----------|-------------|
+| Backend | Python 3.12 + FastAPI | 
+| Base de données | PostgreSQL 16 | 
+| ORM | SQLAlchemy 2.x async | 
+| Scheduler | APScheduler 3.x | 
+| Frontend | HTML/CSS/JS vanilla |
+| Graphiques | Chart.js (CDN) | 
+| Conteneurisation | Docker + docker-compose | 
+| Déploiement cible | VPS Ubuntu 24 | 
 
 ---
 
@@ -25,7 +25,7 @@ sur les lignes RER et Transilien d'Île-de-France.
 - **API PRIM IDF Mobilités** : polling toutes les 5 min
 - Endpoint : `https://prim.iledefrance-mobilites.fr/marketplace/v2/navitia/line_reports`
 - Auth : header `apikey: {PRIM_API_KEY}`
-- Quota : 1 000 req/jour (polling 15 min × 13 lignes departures + 1 global disruptions ≈ 896 req/jour ✅)
+- Quota : 1 000 req/jour 
 - **Fréquentation** : `data/frequentation.json` (statique, màj mensuelle)
 
 ---
@@ -80,55 +80,52 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb reta
 ## Structure des dossiers
 ```
 /
-├── CLAUDE.md            ← ce fichier
+├── CLAUDE.md
 ├── TODO.md
-├── .claude/commands/    ← custom slash commands
-├── backend/             ← FastAPI + collecteur + métriques
-├── frontend/            ← HTML/CSS/JS vanilla
-├── data/                ← frequentation.json (statique)
+├── README.md
+├── .claude/             ← SESSION.md, DEBUG.md, TASKS.md, commands/
+├── backend/
+│   ├── main.py          ← FastAPI app + scheduler
+│   ├── api.py           ← endpoints REST
+│   ├── collector.py     ← collecteur PRIM
+│   ├── metrics.py       ← calcul minutes-voyageurs
+│   ├── bilans.py        ← génération JSON bilans
+│   ├── causes.py        ← extraction causes incidents
+│   ├── bot.py           ← récap quotidien X + publications/
+│   ├── transfert.py     ← export/import incidents entre PC
+│   ├── models.py        ← modèles SQLAlchemy
+│   ├── database.py      ← connexion async PostgreSQL
+│   ├── config.py        ← Settings (env vars)
+│   └── migrate_source.py
+├── frontend/
+│   ├── index.html       ← dashboard aujourd'hui
+│   ├── statistiques.html ← bilans 7j / 30j / année
+│   ├── annee.html       ← vue par ligne
+│   ├── ligne.html       ← détail d'une ligne
+│   ├── temps-reel.html  ← vue temps réel
+│   ├── methode.html     ← page méthodologie
+│   ├── bilan.css|js     ← styles/logique bilans
+│   ├── nav.css          ← navigation unifiée
+│   ├── pick.css|js      ← sélecteur de ligne
+│   ├── ticker.js        ← bandeau incidents
+│   ├── duree.js         ← formatage durées
+│   └── data/            ← JSON statiques (gitignored)
+├── data/
+│   └── frequentation.json ← fréquentation mensuelle
+├── docs/maquettes/      ← maquettes de référence
 ├── logs/                ← logs applicatifs
-├── tests/               ← pytest
+├── memory/              ← mémoire persistante Claude Code
+├── publications/        ← récaps quotidiens (AAAA-MM-JJ.txt)
+├── tests/               ← pytest (test_*.py)
+├── transferts/          ← exports JSON incidents inter-PC
 ├── docker-compose.yml
 ├── Dockerfile
 ├── requirements.txt
+├── pytest.ini
 ├── .env.example
 └── .gitignore
 ```
 
----
-
-## État d'avancement
-
-### ✅ Terminé
-- Étape 01 — CLAUDE.md créé
-- Étape 02 — TODO.md créé
-- Étape 03 — git init + .gitignore + structure dossiers
-- Étape 04 — Docker + PostgreSQL (`docker-compose.yml`, `Dockerfile`, `requirements.txt`)
-- Étape 05 — Modèles SQLAlchemy (`backend/models.py`, `backend/database.py`, `backend/config.py`)
-- Étape 06 — Collector PRIM (`backend/collector.py`, `data/frequentation.json`)
-- Étape 07 — Calcul des métriques (`backend/metrics.py`)
-- Étape 08 — Endpoints API REST (`backend/api.py`, `backend/main.py`)
-- Étape 09 — Frontend page principale (`frontend/index.html`)
-- Étape 10 — Frontend page statistiques (`frontend/stats.html`)
-- Étape 12 — Page /methode (`frontend/methode.html`)
-- Étape 13 — Tests unitaires (`tests/test_collector.py`, `tests/test_metrics.py`, `pytest.ini`)
-
-- Étape 11 — Bot X quotidien (`backend/bot.py`, planifié à 20h dans `main.py`)
-- Étape 14 — README.md final (`README.md`)
-- Frontend refonte complète — design light cream + Roboto, API fetch avec fallback mock
-- Accueil — refonte de la hiérarchie (2026-09-10) : coût du jour → cumul du jour → incident en cours →
-  table par ligne (aujourd'hui, triée par coût, lignes épargnées condensées), repli mobile 2 colonnes
-- Bilans (2026-09-11) : `/statistiques` et `/annee` d'après `docs/maquettes/` —
-  `backend/bilans.py`, `backend/causes.py`, `frontend/statistiques.html`, `frontend/annee.html`,
-  `frontend/bilan.css|js` ; `stats.html` supprimée (301) ; SMIC 2026 = 12,31 €/h (`SMIC_HORAIRE`)
-- Navigation unifiée (2026-09-11) : menu de l'accueil sur les 4 pages (`frontend/nav.css`), liens gardés sur
-  mobile (2ᵉ rangée) ; menu = Aujourd'hui · Statistiques · Par ligne · Méthode ; sélecteur
-  « 7 jours · 30 jours · Année » partagé par `/statistiques` et `/annee` (90 j retiré)
-- Zéro donnée en dur (2026-09-11) : coûts du jour / par ligne / par incident calculés par le backend
-  (`cout_eur`, même arrondi que les bilans), paramètres affichés servis par `/api/reference` (SMIC, relevés,
-  quota PRIM, fréquentation), bandeau des incidents réel sur toutes les pages (`frontend/ticker.js`)
-- Récap quotidien enregistré dans le projet (2026-09-11) : à 20 h, `publications/AAAA-MM-JJ.txt` (bilan du
-  jour même, montant arrondi par ligne comme le site) ; posté aussi sur X seulement si les clés sont renseignées
 
 ### 🔄 En maintenance — voir `TODO.md`
 
@@ -170,23 +167,17 @@ l'historique git), puis bugs 9 / 10 / 11 / 17.
 
 ---
 
-## Commandes de session
-
-### « début de session »
-Quand l'utilisateur dit **« début de session »** (ou équivalent), Claude Code doit :
-1. Lire `CLAUDE.md` (ce fichier)
-2. Lire `.claude/SESSION.md` (contexte de la dernière session)
-3. Lire `.claude/DEBUG.md` (bugs connus et leur état)
-4. Lire le fichier `memory/lessons.md` (leçons apprises)
-5. Faire un résumé rapide de l'état du projet et des priorités
-
-### « fin de session »
-Quand l'utilisateur dit **« fin de session »** (ou équivalent), Claude Code doit :
-1. **`.claude/SESSION.md`** — Ajouter une nouvelle entrée avec : contexte au démarrage, actions effectuées, bugs découverts, fichiers modifiés, état en fin de session
-2. **`.claude/DEBUG.md`** — Mettre à jour les bugs existants (résolus/en cours) et ajouter les nouveaux bugs découverts
-3. **`memory/lessons.md`** — Ajouter les nouvelles leçons apprises pendant la session (patterns, pièges, solutions)
-4. **`git commit` + `git push`** — Commiter tous les changements et pousser sur `origin/master`
-
+## Exécution des tâches
+- Avant toute tâche : proposer un plan (tâches découpées et ordonnées) et le soumettre.
+  Ne jamais commencer sans mon accord explicite.
+- Une fois le plan validé : exécuter en autonomie jusqu'au bout, sans redemander
+  d'autorisation à chaque étape.
+- EXCEPTION — stoppe et préviens-moi si : (a) tu dois toucher une zone critique (PROJECT.md),
+  (b) tu découvres que le plan validé était faux ou incomplet, (c) tu devrais sortir du
+  périmètre du projet.
+- Ne modifier QUE le code concerné par la tâche. Ne pas sortir du projet sans accord préalable.
+- Une tâche n'est "finie" que testée ET tests au vert. Un test rouge = tu corriges avant de
+  déclarer terminé. Jamais de "fait" avec des tests qui échouent.
 ---
 
 ## Autorisations Claude Code
