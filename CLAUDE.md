@@ -77,70 +77,32 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb reta
 
 ---
 
-## Structure des dossiers
-```
-/
-├── CLAUDE.md
-├── TODO.md
-├── README.md
-├── .claude/             ← SESSION.md, DEBUG.md, TASKS.md, commands/
-├── backend/
-│   ├── main.py          ← FastAPI app + scheduler
-│   ├── api.py           ← endpoints REST
-│   ├── collector.py     ← collecteur PRIM
-│   ├── metrics.py       ← calcul minutes-voyageurs
-│   ├── bilans.py        ← génération JSON bilans
-│   ├── causes.py        ← extraction causes incidents
-│   ├── bot.py           ← récap quotidien X + publications/
-│   ├── transfert.py     ← export/import incidents entre PC
-│   ├── models.py        ← modèles SQLAlchemy
-│   ├── database.py      ← connexion async PostgreSQL
-│   ├── config.py        ← Settings (env vars)
-│   └── migrate_source.py
-├── frontend/
-│   ├── index.html       ← dashboard aujourd'hui
-│   ├── statistiques.html ← bilans 7j / 30j / année
-│   ├── annee.html       ← vue par ligne
-│   ├── ligne.html       ← détail d'une ligne
-│   ├── temps-reel.html  ← vue temps réel
-│   ├── methode.html     ← page méthodologie
-│   ├── bilan.css|js     ← styles/logique bilans
-│   ├── nav.css          ← navigation unifiée
-│   ├── pick.css|js      ← sélecteur de ligne
-│   ├── ticker.js        ← bandeau incidents
-│   ├── duree.js         ← formatage durées
-│   └── data/            ← JSON statiques (gitignored)
-├── data/
-│   └── frequentation.json ← fréquentation mensuelle
-├── docs/maquettes/      ← maquettes de référence
-├── logs/                ← logs applicatifs
-├── memory/              ← mémoire persistante Claude Code
-├── publications/        ← récaps quotidiens (AAAA-MM-JJ.txt)
-├── tests/               ← pytest (test_*.py)
-├── transferts/          ← exports JSON incidents inter-PC
-├── docker-compose.yml
-├── Dockerfile
-├── requirements.txt
-├── pytest.ini
-├── .env.example
-└── .gitignore
-```
+## Conventions de rangement
+- Backend : `backend/` — FastAPI + scheduler. Collecte PRIM, calcul des minutes-voyageurs,
+  génération des JSON bilans, extraction des causes, bot X, exports inter-PC.
+- Frontend : `frontend/` — HTML/CSS/JS vanilla, une page par vue ; nav et sélecteur de ligne
+  factorisés (`nav.css`, `pick.*`).
+- Tests → `tests/` (`test_*.py`, pytest). Config/env → `backend/config.py`.
+- JSON statiques : `data/frequentation.json` (tracké) ; `frontend/data/` (régénéré, gitignored).
+- Spécifique Claude Code : état de session dans `.claude/` (SESSION.md, DEBUG.md, TASKS.md,
+  commands/) ; mémoire persistante dans `memory/` (lessons.md).
+- Invisibles à `git ls-files` (gitignored) : `frontend/data/`, `logs/`, `transferts/`,
+  `publications/`, `.env`.
+- Rien de nouveau à la racine sans raison.
 
 
 ### 🔄 En maintenance — voir `TODO.md`
 
 ---
 
-## Problèmes rencontrés & solutions
-- `pydantic-settings` ajouté à `requirements.txt` (nécessaire pour `BaseSettings` dans FastAPI moderne)
-- `DATABASE_URL` avec préfixe `postgresql://` converti automatiquement en `postgresql+asyncpg://` dans `database.py`
+## Décisions de design
 - **Accueil = fenêtre unique « aujourd'hui »** (journée comptée depuis 7 h, heure de Paris) : hero, cumul et table
-  lisent les mêmes minutes-voyageurs du jour. Tout cumul pluri-jours (semaine, année) va sur une autre page —
-  décision du 2026-09-10. Charte : fond crème, Roboto, couleurs de ligne, accents noir + rouge uniquement.
+  lisent les mêmes minutes-voyageurs du jour. Tout cumul pluri-jours (semaine, année) va sur une autre page.
+  Charte : fond crème, Roboto, couleurs de ligne, accents noir + rouge uniquement.
 - **Bilans = JSON statiques** (`frontend/data/`, ignoré par git) régénérés toutes les 10 min par le scheduler,
   servis avec `Cache-Control: max-age=600`. Coût arrondi **par ligne × jour** puis sommé : un total affiché est
-  toujours la somme exacte de son détail. Deux unités à l'écran sur ces pages : € et minutes. Couleurs de
-  ligne = celles de l'accueil (pas celles des maquettes). Causes : « Motif : … » PRIM lu en priorité.
+  toujours la somme exacte de son détail. Deux unités à l'écran : € et minutes. Couleurs de ligne = celles de
+  l'accueil. Causes : « Motif : … » PRIM lu en priorité.
 
 ---
 
@@ -172,13 +134,20 @@ l'historique git), puis bugs 9 / 10 / 11 / 17.
   Ne jamais commencer sans mon accord explicite.
 - Une fois le plan validé : exécuter en autonomie jusqu'au bout, sans redemander
   d'autorisation à chaque étape.
-- EXCEPTION — stoppe et préviens-moi si : (a) tu dois toucher une zone critique (PROJECT.md),
-  (b) tu découvres que le plan validé était faux ou incomplet, (c) tu devrais sortir du
-  périmètre du projet.
+- EXCEPTION — stoppe et préviens-moi si : (a) tu dois toucher une ZONE CRITIQUE (voir liste
+  ci-dessous), (b) tu découvres que le plan validé était faux ou incomplet, (c) tu devrais
+  sortir du périmètre du projet.
 - Ne modifier QUE le code concerné par la tâche. Ne pas sortir du projet sans accord préalable.
 - Une tâche n'est "finie" que testée ET tests au vert. Un test rouge = tu corriges avant de
   déclarer terminé. Jamais de "fait" avec des tests qui échouent.
----
+
+### Zones critiques — confirmation obligatoire avant modification
+- **Config PRIM** : intervalle de polling, quota, endpoint, gestion de la clé API
+  (un mauvais réglage = throttle / dépassement du quota 1 000 req/jour).
+- **Gestion des secrets** : `.env`, clés API — jamais de secret en clair dans le code ou committé.
+- **Base de données** : modèles SQLAlchemy, migrations, `database.py` (risque sur les données).
+- **Logique de calcul** : `metrics.py`, `bilans.py`, `causes.py` — cœur métier (minutes-voyageurs,
+  coûts) ; une régression fausse tous les chiffres affichés.
 
 ## Autorisations Claude Code
 
@@ -187,7 +156,12 @@ Claude Code dispose de **toutes les autorisations** sur ce projet, sous deux con
 2. **Lancement** : une fois que l'utilisateur a dit « lance-toi » (ou équivalent), Claude Code agit en autonomie totale — **aucune confirmation supplémentaire** n'est requise.
 
 Droits inclus sans demande :
-- `git add`, `git commit`, `git push` (y compris `--force` si nécessaire)
-- Création, édition, suppression de fichiers dans le projet
+- `git add`, `git commit`, `git push`
+- Création, édition de fichiers dans le projet
 - Exécution de commandes shell (`pytest`, `docker`, `pip`, `uvicorn`, etc.)
 - Création de branches, tags, PRs
+
+EXCEPTION — demander confirmation même en mode autonome (irréversible / destructif) :
+- `git push --force` (utiliser `--force-with-lease` par défaut), `git reset --hard`, suppression de branche distante
+- Suppression de fichiers (`rm`, `rm -rf`, suppression via l'outil d'édition)
+- Toute réécriture d'historique git (`rebase`, `filter-repo`, `commit --amend` déjà poussé)

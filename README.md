@@ -105,9 +105,9 @@ docker-compose logs -f backend
 
 ## Lignes couvertes
 
-| RER | Transilien | Métro |
-|-----|-----------|-------|
-| A · B · C · D · E | H · J · K · L · N · P · R · U | 1 · 2 · 3 · 3bis · 4 · 5 · 6 · 7 · 7bis · 8 · 9 · 10 · 11 · 12 · 13 · 14 |
+| RER | Transilien |
+|-----|-----------|
+| A · B · C · D · E | H · J · K · L · N · P · R · U |
 
 ---
 
@@ -160,38 +160,43 @@ Le serveur doit tourner à 20h00 (tolérance d'1 h en cas de retard du scheduler
 ```
 /
 ├── backend/
-│   ├── main.py          # FastAPI + scheduler (collect + metrics + bilans + bot)
-│   ├── api.py           # Endpoints REST
-│   ├── collector.py     # Polling API PRIM
-│   ├── metrics.py       # Calcul agrégats quotidiens
-│   ├── bilans.py        # Bilans /statistiques et /annee → frontend/data/*.json
-│   ├── causes.py        # Motifs PRIM → catégories de causes, texte lisible
-│   ├── bot.py           # Post quotidien X (Twitter)
-│   ├── models.py        # SQLAlchemy (Incident, DailyMetric)
-│   ├── database.py      # Session async
-│   └── config.py        # Settings (pydantic-settings)
+│   ├── main.py            # FastAPI + scheduler
+│   ├── api.py             # Endpoints REST
+│   ├── collector.py       # Polling API PRIM
+│   ├── metrics.py         # Calcul minutes-voyageurs
+│   ├── bilans.py          # Génération JSON bilans
+│   ├── causes.py          # Extraction causes incidents
+│   ├── bot.py             # Récap quotidien X + publications/
+│   ├── transfert.py       # Export/import incidents entre PC
+│   ├── models.py          # SQLAlchemy (Incident, DailyMetric)
+│   ├── database.py        # Session async PostgreSQL
+│   ├── config.py          # Settings (pydantic-settings)
+│   └── migrate_source.py
 ├── frontend/
-│   ├── index.html       # Compteur live
-│   ├── statistiques.html  # Bilan 7 / 30 jours
-│   ├── annee.html       # Bilan annuel (Chart.js)
-│   ├── bilan.css / bilan.js  # Communs aux deux bilans
-│   ├── nav.css          # Menu de navigation, commun aux 4 pages
-│   ├── methode.html     # Transparence méthodologique
-│   └── data/            # JSON des bilans, générés (ignorés par git)
+│   ├── index.html         # Dashboard « aujourd'hui »
+│   ├── statistiques.html  # Bilans 7j / 30j / année
+│   ├── annee.html         # Vue par ligne (année)
+│   ├── ligne.html         # Détail d'une ligne
+│   ├── temps-reel.html    # Vue temps réel
+│   ├── methode.html       # Page méthodologie
+│   ├── bilan.css / .js    # Styles + logique bilans
+│   ├── nav.css            # Navigation unifiée
+│   ├── pick.css / .js     # Sélecteur de ligne
+│   ├── ticker.js          # Bandeau incidents
+│   ├── duree.js           # Formatage durées
+│   └── data/              # JSON statiques (gitignored)
 ├── data/
-│   └── frequentation.json  # Fréquentation par ligne (màj mensuelle)
-├── publications/        # Récaps quotidiens du bot, un fichier par jour (AAAA-MM-JJ.txt)
-├── docs/maquettes/      # Maquettes de référence des bilans
-├── tests/
-│   ├── test_bilans.py
-│   ├── test_bot.py
-│   ├── test_causes.py
-│   ├── test_collector.py
-│   └── test_metrics.py
+│   └── frequentation.json # Fréquentation mensuelle
+├── docs/maquettes/        # Maquettes de référence
+├── publications/          # Récaps quotidiens (AAAA-MM-JJ.txt)
+├── tests/                 # pytest (test_*.py)
+├── transferts/            # Exports JSON incidents inter-PC
 ├── docker-compose.yml
 ├── Dockerfile
 ├── requirements.txt
-└── .env.example
+├── pytest.ini
+├── .env.example
+└── .gitignore
 ```
 
 ---
@@ -210,4 +215,4 @@ pytest tests/ -v
 - **API PRIM** — Île-de-France Mobilités
 - Endpoint : `https://prim.iledefrance-mobilites.fr/marketplace/`
 - Licence : Open Data Etalab
-- Quota : 20 000 req/jour — polling 5 min ≈ 7 488 req/jour (13 lignes × 2 appels par relevé)
+- Quota : 1 000 req/jour — polling 15 min, 13 lignes (≈ 896 req/jour)

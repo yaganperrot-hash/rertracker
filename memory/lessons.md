@@ -1,5 +1,9 @@
 # Leçons apprises
 
+## Pièges Python / FastAPI
+- `pydantic-settings` est un package séparé depuis Pydantic v2 — `BaseSettings` n'est plus dans `pydantic`. Toujours l'ajouter à `requirements.txt`.
+- `DATABASE_URL` avec préfixe `postgresql://` ne fonctionne pas avec asyncpg — convertir en `postgresql+asyncpg://` au runtime dans `database.py`.
+
 ## Pastilles / badges de ligne
 - Ne jamais utiliser `grid-template-columns: repeat(N, 1fr)` pour des cercles : les colonnes `1fr` étirent les éléments. Utiliser `display:flex; flex-wrap:wrap` avec `flex:none` sur chaque pastille.
 - Taille fixe en px par contexte (grille: 88px, en-tête panneau: 40px, tableau: 28px). Font = ~0.42 × diamètre.
