@@ -120,6 +120,9 @@ Chaque PC a sa propre base PostgreSQL. Pour ne pas perdre les données collecté
 - **Import** : `python -m backend.transfert import transferts/<fichier>.json` (fusionne, recalcule métriques + bilans)
 - `/start` importe automatiquement les fichiers `transferts/*.json` présents.
 - `/wrap` exporte automatiquement la journée en cours avant le commit.
+- **Un seul serveur à la fois** : les deux PC partagent la clé PRIM et son quota de 1 000 req/jour (810 pour un
+  serveur au réglage par défaut). Toute affirmation sur la limite PRIM se vérifie dans les en-têtes
+  `x-ratelimit-*-day` d'une réponse, jamais de mémoire.
 
 ---
 
