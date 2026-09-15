@@ -39,6 +39,21 @@ def _jour_service(dt: datetime) -> date:
     return (dt.astimezone(PARIS_TZ) - timedelta(hours=7)).date()
 
 
+def _ecrire_json(chemin: Path, contenu: dict) -> None:
+    """Toujours en UTF-8 : sinon Windows écrit en cp1252 et le Mac ne relit pas le fichier."""
+    chemin.write_text(json.dumps(contenu, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
+def _lire_json(chemin: Path) -> dict:
+    """UTF-8, avec repli cp1252 pour les anciens exports faits sous Windows (13/09)."""
+    try:
+        texte = chemin.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        print(f"{chemin.name} n'est pas en UTF-8 : lecture en cp1252")
+        texte = chemin.read_text(encoding="cp1252")
+    return json.loads(texte)
+
+
 async def exporter(jour: date) -> Path:
     debut = datetime.combine(jour, time(7, 0), tzinfo=PARIS_TZ)
     fin = debut + timedelta(days=1)
@@ -55,13 +70,13 @@ async def exporter(jour: date) -> Path:
     ]
     DOSSIER.mkdir(exist_ok=True)
     chemin = DOSSIER / f"incidents-{jour.isoformat()}.json"
-    chemin.write_text(json.dumps({"jour": jour.isoformat(), "incidents": donnees}, ensure_ascii=False, indent=1))
+    _ecrire_json(chemin, {"jour": jour.isoformat(), "incidents": donnees})
     print(f"{len(donnees)} incidents exportes -> {chemin}")
     return chemin
 
 
 async def importer(chemin: Path) -> None:
-    contenu = json.loads(chemin.read_text())
+    contenu = _lire_json(chemin)
     jours: set[date] = set()
     async with AsyncSessionLocal() as session:
         for brut in contenu["incidents"]:
