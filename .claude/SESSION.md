@@ -4,7 +4,8 @@
 
 ### ⚠️ PC Windows — AVANT tout import de transfert et avant de lancer le serveur
 `/start` importe les `transferts/*.json` automatiquement : **ne pas le laisser faire tel quel**. Ordre obligatoire :
-1. Serveur du Mac arrêté (quota PRIM commun ; il tournait encore à 16 h 20), serveur Windows arrêté, `git pull`.
+1. Serveur du Mac arrêté le 15/09 à 17 h 29 (fait ; export final identique : 715 incidents, 222 req PRIM restantes).
+   Serveur Windows arrêté, `git pull`.
 2. Corriger le bug 29 (encodage de `backend/transfert.py`, fix proposé dans DEBUG.md, à valider) : les exports du Mac
    (`incidents-2026-09-14.json`, `incidents-2026-09-15.json`) sont en UTF-8, Windows les lirait en cp1252.
 3. Importer `incidents-2026-09-13.json` puis `incidents-2026-09-14.json` (exportés avant le correctif des IDs).
@@ -30,6 +31,6 @@ Fiabilité des données collectées sous le quota PRIM (1 000 req/jour).
 
 ### Prochaine étape
 1. Mac, demain matin : `POLLING_INTERVAL_MINUTES=20` dans `.env`. Plus aucune requête PRIM manuelle le 15/09.
-2. PC Windows : procédure ci-dessus. Si le Mac collecte encore après cet export, refaire un export avant de changer de PC.
+2. PC Windows : procédure ci-dessus (le Mac ne collecte plus, l'export poussé est complet).
 3. Restes non traités : formule uniforme dans `README.md`, endpoint `/line_reports` global dans `CLAUDE.md`, bug 23
    (picker), vérification visuelle du bandeau et de la page Méthode.
