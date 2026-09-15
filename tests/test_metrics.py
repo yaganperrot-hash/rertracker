@@ -270,7 +270,10 @@ class TestGetLineStats:
         )
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [row]
-        mock_db.execute = AsyncMock(return_value=mock_result)
+        # 1ʳᵉ requête : daily_metrics ; suivantes (retard moyen pondéré) : aucun incident
+        vide = MagicMock()
+        vide.scalars.return_value.all.return_value = []
+        mock_db.execute = AsyncMock(side_effect=[mock_result] + [vide] * 5)
 
         result = await get_line_stats("RER_C", 30, mock_db)
 
