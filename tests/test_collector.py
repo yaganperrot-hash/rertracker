@@ -6,8 +6,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
+import backend.collector as collector
 from backend.collector import (
     MODES_PHYSIQUES,
+    QUOTA_ALERTE,
+    _journaliser_quota,
+    _suivre_quota,
+    collecte_autorisee,
     PRIM_BASE_URL,
     _parse_dt,
     _extract_line_id,
@@ -112,6 +117,41 @@ class TestExtractLineId:
         for navitia_id, expected in LIGNES_CIBLES.items():
             result = _extract_line_id(self._make_impacted(navitia_id))
             assert result == expected, f"{navitia_id} should map to {expected}"
+
+
+class TestQuotaEtPauseNocturne:
+    """Quota PRIM de 1 000 req/jour : pas de relevé la nuit, reste lu dans les en-têtes."""
+
+    def test_pas_de_releve_la_nuit(self):
+        # 03:00 à Paris (CEST = UTC+2)
+        assert collecte_autorisee(datetime(2026, 9, 15, 1, 0, tzinfo=timezone.utc)) is False
+
+    def test_releves_de_6h_a_minuit(self):
+        assert collecte_autorisee(datetime(2026, 9, 15, 4, 0, tzinfo=timezone.utc)) is True    # 06:00 Paris
+        assert collecte_autorisee(datetime(2026, 9, 15, 21, 59, tzinfo=timezone.utc)) is True  # 23:59 Paris
+
+    def test_quota_lu_dans_les_en_tetes(self, monkeypatch):
+        monkeypatch.setattr(collector, "quota_restant", None)
+        _suivre_quota(httpx.Response(200, headers={"x-ratelimit-remaining-day": "417"}))
+        assert collector.quota_restant == 417
+
+    def test_reponse_sans_en_tete_ignoree(self, monkeypatch):
+        monkeypatch.setattr(collector, "quota_restant", 417)
+        _suivre_quota(AsyncMock())
+        _suivre_quota(httpx.Response(200))
+        assert collector.quota_restant == 417
+
+    def test_avertissement_sous_le_seuil(self, monkeypatch, caplog):
+        monkeypatch.setattr(collector, "quota_restant", QUOTA_ALERTE - 1)
+        with caplog.at_level(logging.INFO, logger="backend.collector"):
+            _journaliser_quota()
+        assert [r.levelno for r in caplog.records] == [logging.WARNING]
+
+    def test_info_au_dessus_du_seuil(self, monkeypatch, caplog):
+        monkeypatch.setattr(collector, "quota_restant", QUOTA_ALERTE)
+        with caplog.at_level(logging.INFO, logger="backend.collector"):
+            _journaliser_quota()
+        assert [r.levelno for r in caplog.records] == [logging.INFO]
 
 
 class TestCollectDisruptions:

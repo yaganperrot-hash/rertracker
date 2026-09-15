@@ -356,7 +356,7 @@
           <div class="source-name">
             <a href="https://prim.iledefrance-mobilites.fr" target="_blank" rel="noopener">API PRIM — IDF Mobilités</a>
           </div>
-          <div class="source-desc">Départs temps réel et perturbations déclarées (Navitia) · relevé toutes les <span class="ref-polling">—</span> min · <span class="ref-req">—</span> req/jour</div>
+          <div class="source-desc">Départs temps réel et perturbations déclarées (Navitia) · relevé toutes les <span class="ref-polling">—</span> min, de <span class="ref-collecte-debut">—</span> h à minuit · <span class="ref-req">—</span> req/jour sur <span class="ref-quota">—</span> autorisées</div>
         </div>
       </div>
       <div class="source-item">
@@ -538,6 +538,8 @@
       set('.ref-smic-source', ref.smic_source);
       set('.ref-polling', n(ref.polling_interval_minutes));
       set('.ref-req', n(ref.requetes_prim_jour));
+      set('.ref-quota', n(ref.quota_prim_jour));
+      set('.ref-collecte-debut', n(ref.collecte_heure_debut));
       set('.ref-retard-min', n(ref.retard_min_minutes));
       set('.ref-suppression', n(ref.suppression_minutes));
       set('.ref-fantome', n(ref.fantome_min_minutes));

@@ -9,13 +9,15 @@ class Settings(BaseSettings):
     twitter_api_secret: str = ""
     twitter_access_token: str = ""
     twitter_access_secret: str = ""
-    polling_interval_minutes: int = 5
+    polling_interval_minutes: int = 20    # 15 req/relevé × 54 relevés (6 h → minuit) = 810 req/jour
     log_level: str = "INFO"
     max_open_incident_minutes: int = 180
     cancel_default_impact_minutes: int = 5
     smic_horaire: float = 12.31           # € brut / heure, en vigueur depuis le 1er juin 2026 — base du coût estimé
     smic_source: str = "depuis le 1er juin 2026 · source : arrêté du 22 mai 2026"  # affiché sur /methode.html
     bilans_interval_minutes: int = 10     # période de régénération des JSON de bilans
+    prim_quota_jour: int = 1000           # quota PRIM par clé — en-tête x-ratelimit-limit-day, remis à zéro à minuit UTC
+    collecte_heure_debut: int = 6         # aucun relevé PRIM de minuit à cette heure (poids horaires nuls, quota épargné)
 
     class Config:
         env_file = ".env"

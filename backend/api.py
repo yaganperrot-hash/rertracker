@@ -76,7 +76,7 @@ async def stats_line(line_id: str, db: DbDep, period: int = Query(default=30, ge
 async def reference():
     """Paramètres de calcul affichés par les pages (méthode) : une seule source, la config."""
     s = get_settings()
-    releves_jour = 24 * 60 // s.polling_interval_minutes
+    releves_jour = (24 - s.collecte_heure_debut) * 60 // s.polling_interval_minutes  # pas de relevé la nuit
     return {
         "smic_horaire": s.smic_horaire,
         "smic_source": s.smic_source,
@@ -84,6 +84,8 @@ async def reference():
         "bilans_interval_minutes": s.bilans_interval_minutes,
         # À chaque relevé : un appel perturbations par mode (RER, Transilien) + un appel départs par ligne
         "requetes_prim_jour": releves_jour * (len(MODES_PHYSIQUES) + len(LIGNES_CIBLES)),
+        "quota_prim_jour": s.prim_quota_jour,
+        "collecte_heure_debut": s.collecte_heure_debut,
         "frequentation": FREQUENTATION,
         "poids_horaires": HOURLY_WEIGHTS,
         "retard_min_minutes": MIN_DELAY_MINUTES,

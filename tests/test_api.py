@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 from backend.api import _serialize_incident, reference
 from backend.collector import LIGNES_CIBLES
-from backend.config import get_settings
+from backend.config import Settings, get_settings
 from backend.metrics import FREQUENTATION, cout_eur, incident_minutes_voyageurs
 
 NOW = datetime(2026, 9, 11, 6, 30, tzinfo=timezone.utc)  # 8 h 30 à Paris
@@ -47,14 +47,23 @@ class TestReference:
         s = get_settings()
         ref = await reference()
         assert ref["smic_horaire"] == s.smic_horaire
-        assert "quota_prim_jour" not in ref  # quota PRIM réel inconnu : jamais affiché
+        assert ref["quota_prim_jour"] == s.prim_quota_jour
+        assert ref["collecte_heure_debut"] == s.collecte_heure_debut
         assert ref["frequentation"] == FREQUENTATION
 
     async def test_requetes_prim_par_jour(self):
-        # À chaque relevé : 2 appels perturbations (RER, Transilien) + 1 appel départs par ligne
+        # Relevés de collecte_heure_debut à minuit ; à chacun 2 appels perturbations + 1 appel départs par ligne
         s = get_settings()
         ref = await reference()
-        assert ref["requetes_prim_jour"] == (1440 // s.polling_interval_minutes) * (2 + len(LIGNES_CIBLES))
+        releves = (24 - s.collecte_heure_debut) * 60 // s.polling_interval_minutes
+        assert ref["requetes_prim_jour"] == releves * (2 + len(LIGNES_CIBLES))
+
+    def test_reglage_par_defaut_sous_le_quota(self):
+        # Quota PRIM : 1 000 req/jour (en-tête x-ratelimit-limit-day). Défauts : 20 min, de 6 h à minuit → 810
+        d = Settings(_env_file=None)
+        releves = (24 - d.collecte_heure_debut) * 60 // d.polling_interval_minutes
+        assert releves * (2 + len(LIGNES_CIBLES)) == 810
+        assert 810 <= d.prim_quota_jour
 
     async def test_parametres_du_calcul(self):
         # La page Méthode affiche ces valeurs : elles doivent être celles du code

@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.config import get_settings, SLUG_TO_ID
 from backend.database import init_db
-from backend.collector import collect_disruptions, collect_rt_delays
+from backend.collector import collect_disruptions, collect_rt_delays, collecte_autorisee
 from backend.metrics import compute_daily_metrics
 from backend.bilans import generer_bilans
 from backend.api import router
@@ -54,8 +54,11 @@ async def _startup_collect():
     try:
         # Finaliser la veille (incidents ouverts, serveur éteint la nuit…)
         await _finalize_yesterday()
-        await collect_disruptions()
-        await collect_rt_delays()
+        if collecte_autorisee():
+            await collect_disruptions()
+            await collect_rt_delays()
+        else:
+            logger.info("Pause nocturne : aucun relevé PRIM avant %d h", settings.collecte_heure_debut)
         await compute_daily_metrics()
         await generer_bilans()
         logger.info("Initial collect + metrics + bilans OK")
@@ -76,6 +79,9 @@ async def lifespan(app: FastAPI):
 
     # Cycle régulier : un seul job qui enchaîne collecte → métriques (pas de race)
     async def _collect_cycle():
+        # Pause nocturne : quota PRIM de 1 000 req/jour, et la nuit ne pèse rien dans le calcul
+        if not collecte_autorisee():
+            return
         await collect_disruptions()
         await collect_rt_delays()
         await compute_daily_metrics()

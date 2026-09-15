@@ -1,5 +1,6 @@
 import logging
 import re
+from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -14,6 +15,33 @@ from backend.models import Incident
 logger = logging.getLogger(__name__)
 
 PRIM_BASE_URL = "https://prim.iledefrance-mobilites.fr/marketplace/v2/navitia"
+
+QUOTA_ALERTE = 150  # warning quand il reste moins de requêtes PRIM pour la journée
+quota_restant: int | None = None  # dernier x-ratelimit-remaining-day lu (compteur unique pour tous les endpoints)
+
+
+def collecte_autorisee(maintenant: datetime | None = None) -> bool:
+    """Relevés PRIM de collecte_heure_debut à minuit, heure de Paris : la nuit ne pèse rien dans le calcul."""
+    maintenant = maintenant or datetime.now(timezone.utc)
+    return maintenant.astimezone(PARIS_TZ).hour >= get_settings().collecte_heure_debut
+
+
+def _suivre_quota(resp) -> None:
+    """Retient le quota restant renvoyé par PRIM dans chaque réponse (y compris un 429)."""
+    global quota_restant
+    headers = getattr(resp, "headers", None)
+    if not isinstance(headers, Mapping):
+        return
+    valeur = headers.get("x-ratelimit-remaining-day")
+    if valeur is not None and str(valeur).isdigit():
+        quota_restant = int(valeur)
+
+
+def _journaliser_quota() -> None:
+    if quota_restant is None:
+        return
+    niveau = logging.WARNING if quota_restant < QUOTA_ALERTE else logging.INFO
+    logger.log(niveau, "Quota PRIM restant aujourd'hui : %d requêtes", quota_restant)
 
 # Mapping Navitia line ID → internal line_id
 LIGNES_CIBLES: dict[str, str] = {
@@ -88,6 +116,7 @@ async def collect_disruptions() -> None:
                 nb_appels += 1
                 try:
                     resp = await client.get(url, headers=headers, params=params)
+                    _suivre_quota(resp)
                     resp.raise_for_status()
                     data = resp.json()
                 except httpx.HTTPError as exc:
@@ -230,6 +259,7 @@ async def collect_rt_delays() -> None:
                     "disable_geojson": "true",
                     "data_freshness": "realtime",
                 })
+                _suivre_quota(resp)
                 resp.raise_for_status()
                 data = resp.json()
                 obs_dt = datetime.now(timezone.utc)
@@ -284,6 +314,7 @@ async def collect_rt_delays() -> None:
                 fetched_ids_by_line.pop(line_id, None)
 
     logger.info("Fetched %d RT delays from PRIM (%d trains fantômes écartés)", len(all_delays), ghosts)
+    _journaliser_quota()
 
     # Diagnostic : lignes sans aucun retard RT
     rt_lines = {info[0] for info in all_delays.values()}
