@@ -484,7 +484,7 @@ fixe (45 s) → texte long illisible
 « incidents sans heure de fin exclus », « 7 488 req/jour sur 1 000 autorisées »
 **Fix** : textes réalignés ; `/api/reference` sert poids horaires, seuil retard (2 min), suppression (5 min),
 seuil fantôme (60 min) ; req/jour = relevés × (2 + 13) ; limite « Interruptions non chiffrées » (piste b abandonnée) ;
-`prim_quota_jour` retiré — quota réel inconnu
+quota d'abord retiré à tort comme « inconnu », rétabli le jour même (bug 30)
 **Status** : ✅ Résolu
 
 ### [2026-09-15] Bug 29 — Export de transfert écrit dans l'encodage du système
@@ -501,6 +501,18 @@ Inversement, le PC Windows lira mal les exports UTF-8 du Mac
 **Fix** : `side_effect` — 1ʳᵉ requête daily_metrics, suivantes vides
 **Status** : ✅ Résolu
 
+### [2026-09-15] Bug 30 — Quota PRIM en voie d'épuisement à 5 min
+**Fichier(s)** : `.env`, `backend/config.py`, `backend/main.py`, `backend/collector.py`, `backend/api.py`
+**Symptôme** : à 10 h 44, 450 requêtes restantes sur 1 000 ; relevé de 10 h 38 à 1 seul retard temps réel et une
+erreur sur les perturbations RER. Au rythme de 5 min, quota épuisé vers 13 h 15
+**Cause** : premier jour à 5 min (les 13 et 14/09 tournaient à 15 min) × 15 req/relevé ≈ 180 req/h, plus ≈ 60 requêtes
+de tests manuels. La doc venait de déclarer le quota « inconnu » alors que PRIM le renvoie dans chaque réponse
+(`x-ratelimit-limit-day: 1000`)
+**Fix** : `.env` du Mac à 30 min pour finir la journée ; défaut 20 min + pause de minuit à 6 h (`collecte_heure_debut`)
+→ 810 req/jour ; quota restant loggué à chaque relevé (warning sous 150) ; quota rétabli dans `/api/reference`, la page
+Méthode et la doc ; 7 tests
+**Status** : ✅ Résolu — ⚠️ `.env` du Mac à remettre à 20 min demain ; `.env` du PC Windows à passer à 20
+
 ### [2026-09-15] Interruptions sous-estimées dans le coût (limite de méthode)
 **Symptôme** : interruption RER D du 15/09 : 0 train supprimé détecté, seuls les retards autour sont chiffrés
 **Cause** : perturbations exclues du coût (double comptage) ; trains d'un tronçon coupé absents du flux temps réel
@@ -509,7 +521,7 @@ Inversement, le PC Windows lira mal les exports UTF-8 du Mac
 ---
 
 ## Notes de surveillance
-- Quota PRIM : réel inconnu (1 000 req/jour cité, jamais confirmé ; 429 le 2026-09-12 après ≈ 1 000 req en 3 h 30) —
-  polling 5 min, 13 lignes departures + 2 appels perturbations (RER, Transilien) ≈ 4 320 req/jour
+- Quota PRIM : 1 000 req/jour confirmé (en-têtes `x-ratelimit-*`, compteur unique, remise à zéro minuit UTC) —
+  relevé 20 min de 6 h à minuit × 15 req = 810 req/jour ; reste loggué à chaque relevé, warning sous 150
 - Bot X : planifié à 20h via APScheduler dans `main.py`
 - Logs applicatifs : `logs/` (monté en volume Docker)

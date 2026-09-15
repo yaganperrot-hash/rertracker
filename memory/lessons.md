@@ -36,7 +36,7 @@
 
 ## Travail sur deux PC
 - Chaque PC a **sa propre base PostgreSQL** : seul git est partagé. Un compteur à 0 sur un PC alors que l'autre affiche des chiffres n'est pas une perte de données — demander d'abord sur quel PC les chiffres ont été vus.
-- Un seul serveur à la fois : les deux PC partagent la même clé PRIM, deux collectes simultanées doublent les requêtes (≈ 4 320 req/j chacune à 5 min). Le quota réel est inconnu — 429 constaté le 2026-09-12 après ≈ 1 000 requêtes en 3 h 30.
+- Un seul serveur à la fois : les deux PC partagent la même clé PRIM et son quota de 1 000 req/jour ; un serveur au réglage par défaut en consomme déjà 810.
 - En début de session : `git fetch` + `git pull --ff-only`. Les `publications/*.txt` générés localement entrent en conflit avec ceux du distant → garder la version du PC dont la base est la plus complète.
 - Le `.env` n'est pas versionné : quand un défaut change dans `config.py` (ex. polling 5 → 15 min), vérifier que le `.env` de chaque PC ne l'écrase pas.
 - Changer de PC en cours de journée : `python -m backend.transfert export` (serveur arrêté), commit + push, puis `import` sur l'autre PC avant de lancer son serveur. Les ids (`rt_{train}_{AAAAMMJJ}`, id de disruption PRIM) sont identiques d'un PC à l'autre, donc la fusion ne crée pas de doublon.
@@ -60,6 +60,13 @@
   l'effet PRIM ne mesure rien, d'où le filtre > 12 h.
 - `data_freshness` d'un départ : `base_schedule` sur une ligne de bus (pas de temps réel) — un ID qui ne remonte
   jamais de retard est d'abord un ID à vérifier.
+- Quota lisible dans chaque réponse : `x-ratelimit-limit-day` (1 000) et `x-ratelimit-remaining-day`, un seul compteur
+  pour tous les endpoints. Le lire avant d'affirmer quoi que ce soit sur la limite : le 2026-09-15, la doc l'a déclaré
+  « inconnu » le matin, et le quota était à moitié consommé à 10 h 44.
+- « Ça tenait les autres jours » : vérifier le rythme réel en base (relevés distincts par heure) avant de le croire —
+  les 13 et 14/09 tournaient à 15 min, pas à 5.
+- Pendant une interruption, les trains du tronçon coupé disparaissent des départs `realtime` ; le détail par arrêt
+  (`deleted`, `no_boarding`) n'existe que via `/vehicle_journeys/{id}`, pas dans `line_reports`.
 
 ## Migration de données + transferts entre PC
 - Un script qui corrige des étiquettes en base doit être lancé entre les imports : d'abord les exports faits

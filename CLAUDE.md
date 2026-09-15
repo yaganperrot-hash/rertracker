@@ -22,11 +22,13 @@ sur les lignes RER et Transilien d'Île-de-France.
 ---
 
 ## Source de données
-- **API PRIM IDF Mobilités** : polling toutes les 5 min
+- **API PRIM IDF Mobilités** : relevé toutes les 20 min, de 6 h à minuit (heure de Paris)
 - Endpoint : `https://prim.iledefrance-mobilites.fr/marketplace/v2/navitia/line_reports`
 - Auth : header `apikey: {PRIM_API_KEY}`
-- Quota : **réel inconnu** (1 000 req/jour souvent cité, jamais confirmé ; HTTP 429 constaté le 2026-09-12 après
-  ≈ 1 000 requêtes en 3 h 30). Actuellement ≈ 4 320 req/jour (5 min × [2 perturbations + 13 départs]).
+- Quota : **1 000 req/jour par clé**, confirmé par les en-têtes de chaque réponse (`x-ratelimit-limit-day`,
+  `x-ratelimit-remaining-day`) — compteur unique pour tous les endpoints, remis à zéro à minuit UTC (2 h l'été).
+  Budget : 15 req/relevé × 54 relevés = 810 req/jour. Reste loggué à chaque relevé (warning sous 150).
+  Chaque requête manuelle (tests, diagnostics) est prise sur ce budget.
 - **Fréquentation** : `data/frequentation.json` (statique, màj mensuelle)
 
 ---
@@ -45,7 +47,7 @@ TWITTER_API_SECRET=
 TWITTER_ACCESS_TOKEN=
 TWITTER_ACCESS_SECRET=
 DATABASE_URL=postgresql://user:password@db:5432/retards_idf
-POLLING_INTERVAL_MINUTES=5
+POLLING_INTERVAL_MINUTES=20
 LOG_LEVEL=INFO
 ```
 
@@ -158,7 +160,7 @@ l'historique git), puis bugs 9 / 10 / 11 / 17.
 
 ### Zones critiques — confirmation obligatoire avant modification
 - **Config PRIM** : intervalle de polling, quota, endpoint, gestion de la clé API
-  (un mauvais réglage = throttle / HTTP 429 — quota réel inconnu, voir « Source de données »).
+  (un mauvais réglage = quota de 1 000 req/jour épuisé → HTTP 429, plus aucune collecte jusqu'à minuit UTC).
 - **Gestion des secrets** : `.env`, clés API — jamais de secret en clair dans le code ou committé.
 - **Base de données** : modèles SQLAlchemy, migrations, `database.py` (risque sur les données).
 - **Logique de calcul** : `metrics.py`, `bilans.py`, `causes.py` — cœur métier (minutes-voyageurs,

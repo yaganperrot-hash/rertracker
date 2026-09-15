@@ -16,6 +16,11 @@ _(aucun)_
      la coupure seulement), puis décider du temps compté par train supprimé (forfait 5 min ou attente du suivant).
   Contexte 2026-09-15 : la perturbation PRIM ne liste ni gares ni trains (tronçon en texte libre) ; piste b
   (chiffrer l'interruption depuis le message) abandonnée, expliquée dans `methode.html` → Limites.
+  **Test du 2026-09-15 à 10 h 42** (L Versailles RD–Saint-Cloud, D Corbeil–Malesherbes) : les trains du tronçon coupé
+  disparaissent des départs `realtime` (présents en `base_schedule`) puis réapparaissent après la coupure ;
+  `/vehicle_journeys/{id}` détaille chaque arrêt (`deleted` / `no_boarding` / `delayed`) → suppression partielle
+  mesurable. Mais ce détail n'est PAS dans `line_reports` : il faut des requêtes en plus, incompatible avec le budget
+  actuel (810 / 1 000 req/jour). À reprendre si du quota se libère.
 
 ## Terminé
 - [x] Étape 01 — CLAUDE.md structuré créé — 2026-03-11
