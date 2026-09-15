@@ -5,6 +5,7 @@ P, R et N : tout ce qui est enregistré sous J / K / U appartient en réalité �
 (L, N, P et R pointaient sur des bus ou sur rien : aucune donnée à corriger.)
 
     ./venv/bin/python -m backend.relabel_transilien
+    ./venv/bin/python -m backend.relabel_transilien --statut   # lecture seule : déjà appliqué ou non
 
 Une seule fois par base, serveur arrêté, juste après le pull du correctif et avant de relancer le
 serveur. Ordre des transferts : importer d'abord ceux exportés AVANT le correctif (anciennes
@@ -15,6 +16,7 @@ empêche donc toute seconde exécution.
 Sauvegardes : incidents_backup_20260915, daily_metrics_backup_20260915.
 """
 import asyncio
+import sys
 
 from sqlalchemy import text
 
@@ -27,6 +29,14 @@ CORRECTION = {"TRANSILIEN_J": "TRANSILIEN_P", "TRANSILIEN_K": "TRANSILIEN_R", "T
 
 _CASE = "CASE line_id " + " ".join(f"WHEN '{a}' THEN '{b}'" for a, b in CORRECTION.items()) + " END"
 _ANCIENS = ", ".join(f"'{a}'" for a in CORRECTION)
+
+
+async def deja_applique() -> bool:
+    """Lecture seule : ne crée pas la table témoin si elle n'existe pas encore."""
+    async with AsyncSessionLocal() as session:
+        if await session.scalar(text("SELECT to_regclass('migrations_appliquees')")) is None:
+            return False
+        return bool(await session.scalar(text("SELECT 1 FROM migrations_appliquees WHERE nom = :nom"), {"nom": NOM}))
 
 
 async def reetiqueter() -> None:
@@ -63,5 +73,18 @@ async def reetiqueter() -> None:
     print("Bilans régénérés")
 
 
+def main(argv: list[str]) -> None:
+    if argv == ["--statut"]:
+        if asyncio.run(deja_applique()):
+            print("Réétiquetage : déjà appliqué sur cette base")
+        else:
+            print("Réétiquetage : pas encore appliqué sur cette base")
+    elif not argv:
+        asyncio.run(reetiqueter())
+    else:
+        print(__doc__)
+        sys.exit(1)
+
+
 if __name__ == "__main__":
-    asyncio.run(reetiqueter())
+    main(sys.argv[1:])
