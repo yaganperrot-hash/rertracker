@@ -730,6 +730,8 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
   // ── Init ──────────────────────────────────────────────────
 
   chargerDonnees();
+  Ticker.charger();
+  setInterval(Ticker.charger, 300000);
 
 })();
 </script>

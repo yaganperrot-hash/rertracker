@@ -285,6 +285,8 @@
   }
   fetchToday();
   setInterval(fetchToday, 300000);
+  Ticker.charger();
+  setInterval(Ticker.charger, 300000);
 
   /* ── Date/heure ── */
   function updateDate() {
