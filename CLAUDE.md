@@ -44,7 +44,7 @@ TWITTER_API_SECRET=
 TWITTER_ACCESS_TOKEN=
 TWITTER_ACCESS_SECRET=
 DATABASE_URL=postgresql://user:password@db:5432/retards_idf
-POLLING_INTERVAL_MINUTES=12
+POLLING_INTERVAL_MINUTES=5
 LOG_LEVEL=INFO
 ```
 
@@ -103,6 +103,15 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb reta
   servis avec `Cache-Control: max-age=600`. Coût arrondi **par ligne × jour** puis sommé : un total affiché est
   toujours la somme exacte de son détail. Deux unités à l'écran : € et minutes. Couleurs de ligne = celles de
   l'accueil. Causes : « Motif : … » PRIM lu en priorité.
+
+---
+
+## Transfert inter-PC (temporaire — retirer après migration VPS)
+Chaque PC a sa propre base PostgreSQL. Pour ne pas perdre les données collectées en changeant de poste :
+- **Export** : `python -m backend.transfert export [AAAA-MM-JJ]` → `transferts/incidents-<date>.json`
+- **Import** : `python -m backend.transfert import transferts/<fichier>.json` (fusionne, recalcule métriques + bilans)
+- `/start` importe automatiquement les fichiers `transferts/*.json` présents.
+- `/wrap` exporte automatiquement la journée en cours avant le commit.
 
 ---
 

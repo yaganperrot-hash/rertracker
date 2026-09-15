@@ -3,6 +3,13 @@ description: Fin de session — met à jour l'état, archive, commit + push.
 ---
 Clôture la session. Dans l'ordre :
 
+0. **Transfert inter-PC** (temporaire — retirer après migration VPS) :
+   Exporte la journée en cours avant tout le reste :
+   ```bash
+   python -m backend.transfert export
+   ```
+   Commite le fichier `transferts/incidents-<date>.json` généré avec les autres changements.
+
 1. `.claude/SESSION.md` : d'abord copier l'état courant vers `.claude/archive/session-<AAAA-MM-JJ>.md`,
    puis réécrire SESSION.md avec le SEUL état courant (objectif, avancement, blocage, prochaine étape).
    Pas d'empilement d'entrées dans le fichier vivant.

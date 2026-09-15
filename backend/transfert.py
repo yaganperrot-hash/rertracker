@@ -56,7 +56,7 @@ async def exporter(jour: date) -> Path:
     DOSSIER.mkdir(exist_ok=True)
     chemin = DOSSIER / f"incidents-{jour.isoformat()}.json"
     chemin.write_text(json.dumps({"jour": jour.isoformat(), "incidents": donnees}, ensure_ascii=False, indent=1))
-    print(f"{len(donnees)} incidents exportés → {chemin}")
+    print(f"{len(donnees)} incidents exportes -> {chemin}")
     return chemin
 
 
