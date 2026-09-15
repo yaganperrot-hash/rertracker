@@ -356,7 +356,7 @@
           <div class="source-name">
             <a href="https://prim.iledefrance-mobilites.fr" target="_blank" rel="noopener">API PRIM — IDF Mobilités</a>
           </div>
-          <div class="source-desc">Perturbations temps réel GTFS-RT / Navitia · relevé toutes les <span class="ref-polling">—</span> min · <span class="ref-req">—</span> req/jour sur <span class="ref-quota">—</span> autorisées</div>
+          <div class="source-desc">Départs temps réel et perturbations déclarées (Navitia) · relevé toutes les <span class="ref-polling">—</span> min · <span class="ref-req">—</span> req/jour</div>
         </div>
       </div>
       <div class="source-item">
@@ -375,7 +375,7 @@
       </div>
     </div>
     <p style="margin-top:16px">
-      Incidents comptabilisés sur les <strong>lignes RER (A, B, C, D, E)</strong>, <strong>Transilien (H, J, K, L, N, P, R, U)</strong> et <strong>Métro (1–14, 3bis, 7bis)</strong>. Tramway et bus sont exclus.
+      Incidents comptabilisés sur les <strong>lignes RER (A, B, C, D, E)</strong> et <strong>Transilien (H, J, K, L, N, P, R, U)</strong>. Métro, tramway et bus sont exclus.
     </p>
   </section>
 
@@ -390,15 +390,15 @@
       Le calcul se fait toujours en minutes ; l'affichage convertit ensuite en heures, jours ou années pour rendre les ordres de grandeur lisibles (ex. 2 847 340 min-voy. ≈ 5 ans 152 jours).
     </p>
     <div class="formula-block">
-      minutes-voyageurs = durée_incident (min) × fréquentation_par_minute<br>
-      fréquentation_par_minute = voyageurs_par_jour ÷ 18h ÷ 60 min<br>
+      minutes-voyageurs = retard du train (min) × voyageurs_par_minute<br>
+      voyageurs_par_minute = voyageurs_par_jour × poids_de_l'heure ÷ 18 ÷ 60<br>
       coût = minutes-voyageurs × <span class="ref-smic">—</span> €/h ÷ 60
       <div class="formula-note">
-        Hypothèse conservative : répartition uniforme sur 6h–24h. En réalité les heures de pointe concentrent davantage de voyageurs, ce qui sous-estime l'impact réel.
+        Le poids de l'heure suit la fréquentation : <span class="ref-poids-8">—</span> à 8 h (pointe), <span class="ref-poids-14">—</span> à 14 h (creux), 0 entre minuit et 6 h. L'heure retenue est celle du début du retard. Un train supprimé compte pour <span class="ref-suppression">—</span> min de retard.
       </div>
     </div>
     <p>
-      <strong>Exemple — RER A, incident de 45 minutes :</strong><br>
+      <strong>Exemple — RER A, retard de 45 minutes à 8 h :</strong><br>
       <span class="ref-exemple">—</span> <strong class="ref-exemple-cout"></strong>
     </p>
   </section>
@@ -415,19 +415,19 @@
         <div class="scope-list">
           <div class="scope-item">
             <span class="scope-icon yes">✓</span>
-            <span>Incidents officiellement déclarés dans l'API PRIM par SNCF ou RATP</span>
+            <span>Retards mesurés train par train dans le flux temps réel PRIM, dès <span class="ref-retard-min">—</span> min</span>
           </div>
           <div class="scope-item">
             <span class="scope-icon yes">✓</span>
-            <span>Heures de pointe et heures creuses (répartition uniforme 6h–24h)</span>
+            <span>Trains supprimés (disparus du flux avant leur départ), comptés <span class="ref-suppression">—</span> min chacun</span>
           </div>
           <div class="scope-item">
             <span class="scope-icon yes">✓</span>
-            <span>Jours ouvrés et week-ends</span>
+            <span>Heures de pointe et heures creuses, pondérées selon la fréquentation</span>
           </div>
           <div class="scope-item">
             <span class="scope-icon yes">✓</span>
-            <span>Tous types : NO_SERVICE, SIGNIFICANT_DELAYS, REDUCED_SERVICE, MODIFIED_SERVICE</span>
+            <span>Jours ouvrés et week-ends — journée comptée de 7 h à 7 h (heure de Paris)</span>
           </div>
         </div>
       </div>
@@ -436,19 +436,19 @@
         <div class="scope-list">
           <div class="scope-item">
             <span class="scope-icon no">✗</span>
-            <span>Retards inférieurs à 5 minutes non déclarés officiellement</span>
+            <span>Retards de moins de <span class="ref-retard-min">—</span> min</span>
           </div>
           <div class="scope-item">
             <span class="scope-icon no">✗</span>
-            <span>Incidents non déclarés dans l'API (retards masqués)</span>
+            <span>Interruptions et perturbations déclarées par l'opérateur : affichées et classées par cause, mais sans coût (voir Limites)</span>
+          </div>
+          <div class="scope-item">
+            <span class="scope-icon no">✗</span>
+            <span>Trains « fantômes » : retard d'au moins <span class="ref-fantome">—</span> min dont le départ estimé glisse d'un relevé à l'autre</span>
           </div>
           <div class="scope-item">
             <span class="scope-icon no">✗</span>
             <span>Coûts indirects : rendez-vous manqués, productivité perdue, stress</span>
-          </div>
-          <div class="scope-item">
-            <span class="scope-icon no">✗</span>
-            <span>Incidents sans heure de fin (pas de durée calculable)</span>
           </div>
         </div>
       </div>
@@ -488,10 +488,10 @@
     </div>
     <div class="limits-list">
       <div class="limit-item">
-        <strong>Dépendance aux déclarations opérateur.</strong> Seules les perturbations officiellement déclarées dans l'API PRIM sont comptabilisées. Les retards réels sont probablement sous-estimés.
+        <strong>Interruptions non chiffrées.</strong> Quand le trafic est interrompu, l'interruption elle-même n'a pas de coût, pour trois raisons. Les messages de l'opérateur ne décrivent le tronçon touché qu'en texte libre (« entre Corbeil-Essonnes et Malesherbes »), sans liste de gares ni de trains. La fréquentation n'est connue que par ligne, pas par tronçon : il faudrait inventer la part des voyageurs concernés. Enfin, les retards des trains qui circulent encore sont déjà comptés — ajouter l'interruption compterait deux fois les mêmes voyageurs. Le coût repose donc sur les retards mesurés et les trains détectés comme supprimés, ce qui sous-estime l'impact d'une interruption. Les messages de l'opérateur servent à la répartition des causes.
       </div>
       <div class="limit-item">
-        <strong>Fréquentation uniforme.</strong> La formule suppose une répartition sur 18h. En réalité les heures de pointe (7h–9h, 17h–19h) concentrent 40–50 % du trafic.
+        <strong>Fréquentation par ligne.</strong> Chaque retard est multiplié par la fréquentation de toute la ligne à cette heure, sans distinguer les gares ni les branches : un retard sur une branche peu fréquentée est surestimé, un retard sur le tronc commun sous-estimé.
       </div>
       <div class="limit-item">
         <strong>Un incident = une ligne.</strong> Un incident affectant plusieurs lignes est compté une fois par ligne, ce qui peut sur-estimer le nombre d'incidents distincts.
@@ -526,7 +526,7 @@
   setInterval(Ticker.charger, 300000);
 
   /* Chiffres de la méthode lus dans la config du backend (/api/reference) : taux SMIC,
-     rythme des relevés, quota PRIM et exemple calculé sur la fréquentation réelle. */
+     rythme des relevés, paramètres du calcul et exemple calculé sur la fréquentation réelle. */
   (async function () {
     try {
       const r = await fetch('/api/reference');
@@ -538,16 +538,21 @@
       set('.ref-smic-source', ref.smic_source);
       set('.ref-polling', n(ref.polling_interval_minutes));
       set('.ref-req', n(ref.requetes_prim_jour));
-      set('.ref-quota', n(ref.quota_prim_jour));
+      set('.ref-retard-min', n(ref.retard_min_minutes));
+      set('.ref-suppression', n(ref.suppression_minutes));
+      set('.ref-fantome', n(ref.fantome_min_minutes));
+      set('.ref-poids-8', n(ref.poids_horaires['8']));
+      set('.ref-poids-14', n(ref.poids_horaires['14']));
 
-      // Exemple : RER A, incident de 45 min, avec la formule affichée juste au-dessus
+      // Exemple : RER A, retard de 45 min à 8 h, avec la formule affichée juste au-dessus
       const voyJour = ref.frequentation.RER_A;
-      if (voyJour) {
+      const poids = ref.poids_horaires['8'];
+      if (voyJour && poids) {
         const DUREE = 45;
-        const parMin = voyJour / 18 / 60;
+        const parMin = voyJour * poids / 18 / 60;
         const mv = Math.round(DUREE * parMin);
         const cout = Math.floor(mv * Math.round(ref.smic_horaire * 100) / 6000);  // arrondi du backend
-        set('.ref-exemple', `${n(voyJour)} voy./jour ÷ 18h ÷ 60 = ${n(Math.round(parMin))} voy./min · ` +
+        set('.ref-exemple', `${n(voyJour)} voy./jour × ${n(poids)} ÷ 18 ÷ 60 = ${n(Math.round(parMin))} voy./min · ` +
           `${DUREE} × ${n(Math.round(parMin))} = ${n(mv)} min-voy. · coût estimé =`);
         set('.ref-exemple-cout', `${n(cout)} €`);
       }

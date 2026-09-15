@@ -47,11 +47,22 @@ class TestReference:
         s = get_settings()
         ref = await reference()
         assert ref["smic_horaire"] == s.smic_horaire
-        assert ref["quota_prim_jour"] == s.prim_quota_jour
+        assert "quota_prim_jour" not in ref  # quota PRIM réel inconnu : jamais affiché
         assert ref["frequentation"] == FREQUENTATION
 
     async def test_requetes_prim_par_jour(self):
-        # 2 appels (perturbations + départs) par ligne à chaque relevé
+        # À chaque relevé : 2 appels perturbations (RER, Transilien) + 1 appel départs par ligne
         s = get_settings()
         ref = await reference()
-        assert ref["requetes_prim_jour"] == (1440 // s.polling_interval_minutes) * 2 * len(LIGNES_CIBLES)
+        assert ref["requetes_prim_jour"] == (1440 // s.polling_interval_minutes) * (2 + len(LIGNES_CIBLES))
+
+    async def test_parametres_du_calcul(self):
+        # La page Méthode affiche ces valeurs : elles doivent être celles du code
+        from backend.collector import GHOST_MIN_DELAY_MINUTES, MIN_DELAY_MINUTES
+        from backend.metrics import HOURLY_WEIGHTS
+        s = get_settings()
+        ref = await reference()
+        assert ref["poids_horaires"] == HOURLY_WEIGHTS
+        assert ref["retard_min_minutes"] == MIN_DELAY_MINUTES
+        assert ref["suppression_minutes"] == s.cancel_default_impact_minutes
+        assert ref["fantome_min_minutes"] == GHOST_MIN_DELAY_MINUTES

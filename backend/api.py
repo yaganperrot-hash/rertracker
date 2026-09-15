@@ -10,10 +10,13 @@ from backend.config import get_settings
 from backend.database import get_db
 from backend.models import Incident, DailyMetric
 from backend.metrics import (
-    FREQUENTATION, compute_daily_metrics, cout_eur, get_line_stats, get_today_stats,
+    FREQUENTATION, HOURLY_WEIGHTS, compute_daily_metrics, cout_eur, get_line_stats, get_today_stats,
     incident_minutes_voyageurs,
 )
-from backend.collector import LIGNES_CIBLES, collect_disruptions, collect_rt_delays
+from backend.collector import (
+    GHOST_MIN_DELAY_MINUTES, LIGNES_CIBLES, MIN_DELAY_MINUTES, MODES_PHYSIQUES,
+    collect_disruptions, collect_rt_delays,
+)
 from backend.causes import categoriser_cause, resume_perturbation, texte_lisible
 
 router = APIRouter(prefix="/api")
@@ -79,10 +82,13 @@ async def reference():
         "smic_source": s.smic_source,
         "polling_interval_minutes": s.polling_interval_minutes,
         "bilans_interval_minutes": s.bilans_interval_minutes,
-        # À chaque relevé : un appel perturbations + un appel départs temps réel par ligne
-        "requetes_prim_jour": releves_jour * 2 * len(LIGNES_CIBLES),
-        "quota_prim_jour": s.prim_quota_jour,
+        # À chaque relevé : un appel perturbations par mode (RER, Transilien) + un appel départs par ligne
+        "requetes_prim_jour": releves_jour * (len(MODES_PHYSIQUES) + len(LIGNES_CIBLES)),
         "frequentation": FREQUENTATION,
+        "poids_horaires": HOURLY_WEIGHTS,
+        "retard_min_minutes": MIN_DELAY_MINUTES,
+        "suppression_minutes": s.cancel_default_impact_minutes,
+        "fantome_min_minutes": GHOST_MIN_DELAY_MINUTES,
     }
 
 
