@@ -497,6 +497,15 @@ du 13 dans git est encore en cp1252. Tests : `tests/test_transfert.py` ; les 3 f
 (246, 470, 715 incidents, accents intacts)
 **Status** : ✅ Résolu le 2026-09-15
 
+### [2026-09-15] `/start` réimportait tous les transferts, sans tenir compte du réétiquetage Transilien
+**Fichier(s)** : `.claude/commands/start.md`, `backend/relabel_transilien.py`
+**Risque** : les exports du 13 et du 14 portent les anciennes étiquettes (J/K/U = P/R/N). Importés dans une base déjà
+réétiquetée, leurs incidents absents de la base y entraient avec la mauvaise lettre (la table témoin bloque
+seulement une seconde exécution du script)
+**Fix** : `relabel_transilien --statut` (lecture seule) ; `/start` choisit l'ordre selon le statut et n'importe plus
+les fichiers d'avant le 15/09 dans une base déjà corrigée. Tests : `tests/test_relabel_transilien.py`
+**Status** : ✅ Résolu le 2026-09-15
+
 ### [2026-09-15] test_daily_structure rouge depuis le retard moyen pondéré
 **Fichier(s)** : `tests/test_metrics.py`
 **Cause** : le mock renvoyait la ligne `DailyMetric` à toutes les requêtes, y compris celle des incidents (`8a83257`)

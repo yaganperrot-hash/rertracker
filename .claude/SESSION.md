@@ -2,17 +2,12 @@
 
 ## 2026-09-15 — Mac, fin d'après-midi (historique : `.claude/archive/`)
 
-### ⚠️ PC Windows — AVANT tout import de transfert et avant de lancer le serveur
-`/start` importe les `transferts/*.json` automatiquement : **ne pas le laisser faire tel quel**. Ordre obligatoire :
-1. Serveur du Mac arrêté le 15/09 à 17 h 29 (fait ; export final identique : 715 incidents, 222 req PRIM restantes).
-   Serveur Windows arrêté, `git pull`.
-2. ~~Bug 29~~ corrigé (15/09, 17 h 32) : l'import lit l'UTF-8 et, en repli, le cp1252 du fichier du 13 ; l'export
-   écrit en UTF-8. Rien à faire après le `git pull`.
-3. Importer `incidents-2026-09-13.json` puis `incidents-2026-09-14.json` (exportés avant le correctif des IDs).
-4. `python -m backend.relabel_transilien` (une seule fois ; J→P, K→R, U→N sur l'historique).
-5. Seulement ensuite importer `incidents-2026-09-15.json` (après le correctif : ses J/K/U sont de vrais J/K/U).
-6. `POLLING_INTERVAL_MINUTES=20` dans `.env`, lancer le serveur, contrôler « Fetched N disruptions (2 calls) » et
-   « Quota PRIM restant ».
+### PC Windows — prochaine session
+Serveur du Mac arrêté le 15/09 à 17 h 29 (export final : 715 incidents, 222 req PRIM restantes). Serveur Windows
+arrêté, puis **`/start` fait la manip** : pull, statut du réétiquetage, imports du 13 et du 14, `relabel_transilien`,
+import du 15 (bug 29 corrigé : le fichier du 13 en cp1252 est relu). Vérifier son compte rendu fichier par fichier.
+Ensuite `POLLING_INTERVAL_MINUTES=20` dans `.env`, lancer le serveur, contrôler « Fetched N disruptions (2 calls) » et
+« Quota PRIM restant ».
 
 ### Objectif
 Fiabilité des données collectées sous le quota PRIM (1 000 req/jour).
