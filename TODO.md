@@ -8,6 +8,14 @@ _(aucun)_
 - [ ] Vérifier visuellement le rendu des durées lisibles (bureau + mobile 390 px)
 - [ ] Renseigner les clés Twitter/X dans `.env`
 - [ ] Vérifier les causes des perturbations (catégorisation `causes.py` vs motifs réels PRIM)
+- [ ] **Piste c — trains supprimés pendant une interruption** (en attente d'une interruption en cours).
+  Dès qu'une perturbation `NO_SERVICE` est active :
+  1. récupérer pour la ligne touchée les départs prévus (`base_schedule`) et temps réel (`realtime`) ;
+  2. vérifier si les trains du tronçon coupé disparaissent du temps réel ou y restent marqués supprimés ;
+  3. si PRIM les expose : proposer une détection limitée aux lignes en interruption (quelques requêtes pendant
+     la coupure seulement), puis décider du temps compté par train supprimé (forfait 5 min ou attente du suivant).
+  Contexte 2026-09-15 : la perturbation PRIM ne liste ni gares ni trains (tronçon en texte libre) ; piste b
+  (chiffrer l'interruption depuis le message) abandonnée, expliquée dans `methode.html` → Limites.
 
 ## Terminé
 - [x] Étape 01 — CLAUDE.md structuré créé — 2026-03-11

@@ -327,7 +327,7 @@ coroutine au lieu de dict ; mock disruption manquait `"status": "active"` et ava
 **Symptôme** : `404 Not Found` sur certains IDs Navitia
 **Cause** : IDs Navitia incorrects pour ces lignes dans la couverture PRIM
 **Fix** : IDs corrigés par le commit `7adb7e3` — **plus aucun 404 dans les logs** au 2026-09-10
-**Status** : 🔄 En cours — à requalifier
+**Status** : ✅ Requalifié le 2026-09-15 — plus de 404, mais IDs toujours faux (bus / autres lignes) : voir bug 25
 
 ### [2026-09-10 → 2026-09-11] Bug 11 — Transilien L, N, P, R remontent 0 incident
 **Fichier(s)** : `backend/collector.py` (LIGNES_CIBLES)
@@ -336,7 +336,7 @@ L, N, P et R sont à zéro
 **Cause** : inconnue — probablement légitime ou payload vide
 **Fix** : logging diagnostic ajouté dans `collect_disruptions` et `collect_rt_delays` quand
 une ligne ne remonte aucun résultat. Permettra de confirmer si c'est légitime ou un bug de parsing
-**Status** : 🔄 Diagnostic en place — à surveiller dans les logs
+**Status** : ✅ Résolu le 2026-09-15 — cause : identifiants PRIM faux (bug 25)
 
 ### [2026-09-10] Clé PRIM en clair dans l'historique git
 **Fichier(s)** : `PRIM_KEY.txt` (commit `c591442`)
@@ -451,7 +451,65 @@ Label changé : "Un usager retardé a perdu en moyenne"
 
 ---
 
+## Session 2026-09-15 — Mac
+
+### [2026-09-15] Bug 25 — Identifiants PRIM des Transilien faux depuis le 2026-04-29
+**Fichier(s)** : `backend/collector.py` (LIGNES_CIBLES), `backend/relabel_transilien.py` (nouveau)
+**Symptôme** : L, N, P, R jamais aucun incident ; « J », « K », « U » remontaient des données
+**Cause** : commit `7adb7e3` — J/K/U pointaient sur les lignes P/R/N, L/N/P sur des bus (« Remplacement »,
+codes 6434/6438/6435), R sur un ID sans départ. Vérifié via `pt_objects?q=Transilien&type[]=line`
+**Fix** : IDs corrigés + test sur les 13 IDs ; historique réétiqueté J→P, K→R, U→N (202 incidents, 5 jours de
+métriques recalculés, sauvegardes `*_backup_20260915`, table témoin `migrations_appliquees`)
+**Status** : ✅ Résolu sur le Mac — ⚠️ migration à lancer sur le PC Windows (ordre : voir SESSION.md)
+
+### [2026-09-15] Bug 26 — Aucune perturbation collectée depuis le 2026-09-12
+**Fichier(s)** : `backend/collector.py` (`collect_disruptions`)
+**Symptôme** : « Fetched 0 disruptions » à chaque relevé ; dernière perturbation en base le 11/09 ; interruption
+RER D Corbeil–Malesherbes du 15/09 (7 h 13 → 9 h) absente
+**Cause** : l'appel global `/line_reports` (commit `e93c8ef`) renvoie HTTP 200 avec 0 line_report, sans erreur
+**Fix** : 2 appels `physical_modes/{RapidTransit,LocalTrain}/line_reports`, dédoublonnés par id ; warning si
+0 line_report ; 3 tests. 14 perturbations au premier relevé, interruption RER D récupérée
+**Status** : ✅ Résolu (perturbations du 12 au 15/09 perdues)
+
+### [2026-09-15] Bug 27 — Bandeau figé sur « Chargement des données en cours… »
+**Fichier(s)** : `frontend/index.html`, `frontend/statistiques.html`, `frontend/ticker.js`
+**Cause** : les deux pages chargeaient `ticker.js` sans jamais appeler `Ticker.charger()` ; défilement à durée
+fixe (45 s) → texte long illisible
+**Fix** : `Ticker.charger()` + rafraîchissement 5 min ; vitesse constante `VITESSE_PX_S = 45` sur toutes les pages
+**Status** : ✅ Résolu (rendu non vérifié dans un navigateur)
+
+### [2026-09-15] Bug 28 — Page Méthode contraire au code
+**Fichier(s)** : `frontend/methode.html`, `backend/api.py`, `backend/config.py`
+**Symptôme** : métro annoncé, formule uniforme ÷ 18 h, « perturbations déclarées comptabilisées », seuil 5 min,
+« incidents sans heure de fin exclus », « 7 488 req/jour sur 1 000 autorisées »
+**Fix** : textes réalignés ; `/api/reference` sert poids horaires, seuil retard (2 min), suppression (5 min),
+seuil fantôme (60 min) ; req/jour = relevés × (2 + 13) ; limite « Interruptions non chiffrées » (piste b abandonnée) ;
+`prim_quota_jour` retiré — quota réel inconnu
+**Status** : ✅ Résolu
+
+### [2026-09-15] Bug 29 — Export de transfert écrit dans l'encodage du système
+**Fichier(s)** : `backend/transfert.py` (`write_text` / `read_text` sans `encoding`)
+**Symptôme** : `UnicodeDecodeError` à l'import sur le Mac des fichiers du 13 et du 15 exportés sous Windows (cp1252).
+Inversement, le PC Windows lira mal les exports UTF-8 du Mac
+**Contournement** : copies converties en UTF-8 dans le scratchpad pour l'import
+**Fix proposé** : `encoding="utf-8"` à l'écriture, lecture UTF-8 avec repli cp1252 — non validé
+**Status** : ❌ Ouvert — bloquant pour l'import du 15/09 sur le PC Windows
+
+### [2026-09-15] test_daily_structure rouge depuis le retard moyen pondéré
+**Fichier(s)** : `tests/test_metrics.py`
+**Cause** : le mock renvoyait la ligne `DailyMetric` à toutes les requêtes, y compris celle des incidents (`8a83257`)
+**Fix** : `side_effect` — 1ʳᵉ requête daily_metrics, suivantes vides
+**Status** : ✅ Résolu
+
+### [2026-09-15] Interruptions sous-estimées dans le coût (limite de méthode)
+**Symptôme** : interruption RER D du 15/09 : 0 train supprimé détecté, seuls les retards autour sont chiffrés
+**Cause** : perturbations exclues du coût (double comptage) ; trains d'un tronçon coupé absents du flux temps réel
+**Status** : 🔄 Piste c dans `TODO.md` — tester PRIM à la prochaine interruption en cours
+
+---
+
 ## Notes de surveillance
-- Quota PRIM : 1 000 req/jour officiel mais toléré largement — polling 5 min, 13 lignes departures + 1 global disruptions
+- Quota PRIM : réel inconnu (1 000 req/jour cité, jamais confirmé ; 429 le 2026-09-12 après ≈ 1 000 req en 3 h 30) —
+  polling 5 min, 13 lignes departures + 2 appels perturbations (RER, Transilien) ≈ 4 320 req/jour
 - Bot X : planifié à 20h via APScheduler dans `main.py`
 - Logs applicatifs : `logs/` (monté en volume Docker)

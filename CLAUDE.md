@@ -25,7 +25,8 @@ sur les lignes RER et Transilien d'Île-de-France.
 - **API PRIM IDF Mobilités** : polling toutes les 5 min
 - Endpoint : `https://prim.iledefrance-mobilites.fr/marketplace/v2/navitia/line_reports`
 - Auth : header `apikey: {PRIM_API_KEY}`
-- Quota : 1 000 req/jour 
+- Quota : **réel inconnu** (1 000 req/jour souvent cité, jamais confirmé ; HTTP 429 constaté le 2026-09-12 après
+  ≈ 1 000 requêtes en 3 h 30). Actuellement ≈ 4 320 req/jour (5 min × [2 perturbations + 13 départs]).
 - **Fréquentation** : `data/frequentation.json` (statique, màj mensuelle)
 
 ---
@@ -86,9 +87,14 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb reta
 - JSON statiques : `data/frequentation.json` (tracké) ; `frontend/data/` (régénéré, gitignored).
 - Spécifique Claude Code : état de session dans `.claude/` (SESSION.md, DEBUG.md, TASKS.md,
   commands/) ; mémoire persistante dans `memory/` (lessons.md).
-- Invisibles à `git ls-files` (gitignored) : `frontend/data/`, `logs/`, `transferts/`,
-  `publications/`, `.env`.
+- Invisibles à `git ls-files` (gitignored) : `frontend/data/`, `logs/`, `.env`. `transferts/` et
+  `publications/` sont versionnés.
 - Rien de nouveau à la racine sans raison.
+- Fichiers texte : toujours `encoding="utf-8"` explicite en lecture comme en écriture — le projet tourne sur Mac
+  et sur Windows (cp1252 par défaut).
+- Identifiants PRIM : les vérifier sur l'API (`pt_objects?q=…&type[]=line`, mode « RER » / « Train Transilien »),
+  jamais les recopier — les lignes « Remplacement … » (bus) portent la même lettre.
+- Collecte PRIM : une réponse HTTP 200 vide est une panne — chaque appel loggue un warning quand il ne renvoie rien.
 
 
 ### 🔄 En maintenance — voir `TODO.md`
@@ -152,7 +158,7 @@ l'historique git), puis bugs 9 / 10 / 11 / 17.
 
 ### Zones critiques — confirmation obligatoire avant modification
 - **Config PRIM** : intervalle de polling, quota, endpoint, gestion de la clé API
-  (un mauvais réglage = throttle / dépassement du quota 1 000 req/jour).
+  (un mauvais réglage = throttle / HTTP 429 — quota réel inconnu, voir « Source de données »).
 - **Gestion des secrets** : `.env`, clés API — jamais de secret en clair dans le code ou committé.
 - **Base de données** : modèles SQLAlchemy, migrations, `database.py` (risque sur les données).
 - **Logique de calcul** : `metrics.py`, `bilans.py`, `causes.py` — cœur métier (minutes-voyageurs,

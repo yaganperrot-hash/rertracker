@@ -96,7 +96,7 @@ docker-compose logs -f backend
 | GET | `/api/stats/line/{line_id}?period=30` | Stats d'une ligne sur N jours |
 | GET | `/api/incidents/current` | Incidents ouverts en ce moment |
 | GET | `/api/incidents/history` | Historique (filtres : ligne, dates) |
-| GET | `/api/reference` | Paramètres de calcul (SMIC, relevés, quota PRIM, fréquentation) |
+| GET | `/api/reference` | Paramètres de calcul (SMIC, relevés, poids horaires, seuils, fréquentation) |
 | POST | `/api/admin/collect` | Déclencher une collecte manuelle |
 
 **Exemple `line_id`** : `RER_A`, `RER_B`, `TRANSILIEN_J`, etc.
@@ -171,6 +171,7 @@ Le serveur doit tourner à 20h00 (tolérance d'1 h en cas de retard du scheduler
 │   ├── models.py          # SQLAlchemy (Incident, DailyMetric)
 │   ├── database.py        # Session async PostgreSQL
 │   ├── config.py          # Settings (pydantic-settings)
+│   ├── relabel_transilien.py  # Migration unique : J/K/U → P/R/N (IDs PRIM corrigés le 15/09)
 │   └── migrate_source.py
 ├── frontend/
 │   ├── index.html         # Dashboard « aujourd'hui »
@@ -215,4 +216,5 @@ pytest tests/ -v
 - **API PRIM** — Île-de-France Mobilités
 - Endpoint : `https://prim.iledefrance-mobilites.fr/marketplace/`
 - Licence : Open Data Etalab
-- Quota : 1 000 req/jour — polling 15 min, 13 lignes (≈ 896 req/jour)
+- Quota : réel inconnu (HTTP 429 constaté le 2026-09-12 après ≈ 1 000 requêtes en 3 h 30) — polling 5 min,
+  2 appels perturbations + 13 appels départs par relevé (≈ 4 320 req/jour)

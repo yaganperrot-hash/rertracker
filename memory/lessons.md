@@ -24,7 +24,9 @@
 ## Cohérence cross-pages
 - Les styles hero/cumul sont dupliqués dans chaque HTML (pas de CSS partagé). Toute modification de taille/couleur doit être propagée sur les 5 pages : `index.html`, `temps-reel.html`, `statistiques.html`, `ligne.html`, `methode.html`.
 - Valeurs de référence (accueil) : compteur `clamp(52px, 10.4vw, 112px)` 900, cumul `clamp(24px, 4vw, 35px)` 700 red, subtitle `clamp(16px, 2.4vw, 22px)` 500, labels 10-11px.
-- Le ticker CSS+JS est aussi dupliqué dans chaque page. Vitesse = 45s.
+- Le ticker CSS est dupliqué dans chaque page, le JS partagé (`ticker.js`). Chaque page doit appeler
+  `Ticker.charger()` (ou `Ticker.render()`), sinon le bandeau reste sur « Chargement… ». Vitesse constante
+  `VITESSE_PX_S = 45` : une durée CSS fixe fait défiler un texte long beaucoup trop vite.
 - Pour déborder un élément hors de son conteneur max-width : `margin-inline: calc(-50vw + 50%)`.
 
 ## APScheduler — race conditions
@@ -34,7 +36,7 @@
 
 ## Travail sur deux PC
 - Chaque PC a **sa propre base PostgreSQL** : seul git est partagé. Un compteur à 0 sur un PC alors que l'autre affiche des chiffres n'est pas une perte de données — demander d'abord sur quel PC les chiffres ont été vus.
-- Un seul serveur à la fois : les deux PC partagent la même clé PRIM, deux collectes simultanées (~896 req/j chacune) dépassent le quota de 1 000.
+- Un seul serveur à la fois : les deux PC partagent la même clé PRIM, deux collectes simultanées doublent les requêtes (≈ 4 320 req/j chacune à 5 min). Le quota réel est inconnu — 429 constaté le 2026-09-12 après ≈ 1 000 requêtes en 3 h 30.
 - En début de session : `git fetch` + `git pull --ff-only`. Les `publications/*.txt` générés localement entrent en conflit avec ceux du distant → garder la version du PC dont la base est la plus complète.
 - Le `.env` n'est pas versionné : quand un défaut change dans `config.py` (ex. polling 5 → 15 min), vérifier que le `.env` de chaque PC ne l'écrase pas.
 - Changer de PC en cours de journée : `python -m backend.transfert export` (serveur arrêté), commit + push, puis `import` sur l'autre PC avant de lancer son serveur. Les ids (`rt_{train}_{AAAAMMJJ}`, id de disruption PRIM) sont identiques d'un PC à l'autre, donc la fusion ne crée pas de doublon.
@@ -48,3 +50,23 @@
 ## Tester une opération sur la base sans risque
 - Copie jetable : `createdb X && pg_dump -t incidents -t daily_metrics retards_idf | psql -d X`, puis lancer le script avec `DATABASE_URL=postgresql://…/X` (la variable d'environnement prime sur `.env`). Attention : `generer_bilans()` écrit dans `frontend/data/` quelle que soit la base → régénérer depuis la vraie base après le test.
 - Un réimport de ses propres données doit laisser la base strictement identique (même `count`, même `sum`, mêmes totaux du jour) : bon test d'idempotence.
+
+## PRIM / Navitia
+- `line_reports` global (sans filtre) répond 200 avec 0 résultat ; `physical_modes/physical_mode:RapidTransit` (5 RER)
+  et `physical_mode:LocalTrain` (8 Transilien) renvoient tout, en 1 appel chacun.
+- Une interruption (`NO_SERVICE`) ne liste que la ligne dans `impacted_objects` : ni gares, ni tronçon, ni trains —
+  le tronçon n'existe qu'en texte libre. Inexploitable pour chiffrer une coupure.
+- La plupart des perturbations d'une ligne sont des pannes d'ascenseur en `SIGNIFICANT_DELAYS` valables 1 an :
+  l'effet PRIM ne mesure rien, d'où le filtre > 12 h.
+- `data_freshness` d'un départ : `base_schedule` sur une ligne de bus (pas de temps réel) — un ID qui ne remonte
+  jamais de retard est d'abord un ID à vérifier.
+
+## Migration de données + transferts entre PC
+- Un script qui corrige des étiquettes en base doit être lancé entre les imports : d'abord les exports faits
+  avant le correctif, puis le script, puis ceux faits après. Sinon les données déjà justes sont « corrigées » à tort.
+- Table témoin (`migrations_appliquees`) + sauvegarde `CREATE TABLE … AS SELECT` : migration rejouable sans risque.
+
+## Exploitation
+- Jamais de `git stash` (ni de checkout) pendant qu'un serveur démarre en parallèle : il peut importer l'ancien code.
+- Une page qui décrit le calcul (Méthode) dérive du code : servir chaque paramètre par `/api/reference` et tester
+  que les valeurs servies sont celles du code.
