@@ -427,7 +427,7 @@ pour ne plus perdre une demi-journée de collecte en changeant de PC
 restait dans le `.env` du Mac (non versionné, donc jamais mis à jour par git). `.env.example` indique 12
 **Fix** : `.env` du Mac passé à 15. À vérifier sur tout nouveau poste ; aligner `.env.example` (12) et
 `CLAUDE.md` (« polling toutes les 5 min ») sur 15
-**Status** : 🔄 Corrigé sur le Mac — `.env.example` et `CLAUDE.md` restent à aligner
+**Status** : ✅ Résolu — polling à 5 min partout (config, .env.example, CLAUDE.md)
 
 ### [2026-09-14] Conflit au pull sur `publications/`
 **Fichier(s)** : `publications/2026-09-11.txt`
@@ -452,6 +452,6 @@ Label changé : "Un usager retardé a perdu en moyenne"
 ---
 
 ## Notes de surveillance
-- Quota PRIM : 1 000 req/jour — polling 15 min, 13 lignes departures + 1 global disruptions ≈ 896 req/jour
+- Quota PRIM : 1 000 req/jour officiel mais toléré largement — polling 5 min, 13 lignes departures + 1 global disruptions
 - Bot X : planifié à 20h via APScheduler dans `main.py`
 - Logs applicatifs : `logs/` (monté en volume Docker)

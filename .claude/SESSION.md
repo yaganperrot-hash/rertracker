@@ -1,29 +1,30 @@
 # SESSION — État courant
 
-## Session du 2026-09-14 ter — PC Windows (ménage CLAUDE.md)
+## Session du 2026-09-15 — PC Windows
 
 ### Objectif
-Nettoyer et réorganiser `CLAUDE.md` : alléger le fichier, mettre à jour l'arborescence, ventiler la section « Problèmes rencontrés » vers les bons fichiers.
+Session courte : alignement config polling, automatisation transfert inter-PC, ajout tâche causes.
 
 ### Actions effectuées
-- **Arborescence CLAUDE.md mise à jour** : ancien arbre (15 lignes, racine seule) remplacé par un arbre détaillé (backend/ 12 fichiers, frontend/ 12 fichiers, 7 dossiers ajoutés). Puis remplacé par « Conventions de rangement » (prose, plus maintenable).
-- **Section « Problèmes rencontrés » ventilée** :
-  - Décisions de design → restent dans CLAUDE.md (renommé « Décisions de design »)
-  - Pièges Python/FastAPI (`pydantic-settings`, `DATABASE_URL` prefix) → `memory/lessons.md`
-  - Bugs → déjà dans `.claude/DEBUG.md`
-- **Sections ajoutées par l'utilisateur** : « Exécution des tâches » (plan obligatoire, zones critiques), « Autorisations » (exceptions destructives listées)
-- **Dossier `.claude/archive/` créé** pour archiver les anciennes sessions
-- **README.md** : arbre dupliqué corrigé (2 sections « Structure du projet » → 1 seule, à jour)
+- **Polling aligné à 5 min** partout : `config.py` (déjà), `.env.example`, `CLAUDE.md`, `DEBUG.md` — l'API PRIM tolère largement
+- **Transfert inter-PC automatisé** :
+  - `CLAUDE.md` : section « Transfert inter-PC » (temporaire, à retirer après VPS)
+  - `/start` : importe automatiquement les `transferts/*.json` en début de session
+  - `/wrap` : exporte automatiquement la journée en cours avant commit
+- **TODO.md** : ajout tâche « Vérifier les causes des perturbations »
+- **Export** : 74 incidents du 2026-09-15 exportés dans `transferts/`
 
 ### Fichiers modifiés
-- `CLAUDE.md` (arborescence, sections réorganisées)
-- `memory/lessons.md` (ajout pièges Python/FastAPI)
-- `.claude/SESSION.md` (archivé puis réécrit)
-- `.claude/archive/session-2026-09-14.md` (nouveau)
-- `README.md` (arbre dédoublonné et mis à jour)
+- `CLAUDE.md` (polling 5 min, section transfert inter-PC)
+- `.env.example` (polling 5 min)
+- `.claude/DEBUG.md` (polling résolu, note surveillance mise à jour)
+- `.claude/commands/start.md` (import auto transferts)
+- `.claude/commands/wrap.md` (export auto transferts)
+- `TODO.md` (tâche causes ajoutée)
+- `transferts/incidents-2026-09-15.json` (export)
 
 ### Blocages
 Aucun.
 
 ### Prochaine étape
-Voir `TODO.md` et `.claude/DEBUG.md`. Priorités : régénérer la clé PRIM, bug 23 (clic pastille picker).
+Voir `TODO.md`. Priorités : régénérer la clé PRIM, vérifier les causes des perturbations, bug 23 (picker).

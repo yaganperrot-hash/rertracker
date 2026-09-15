@@ -7,6 +7,7 @@ _(aucun)_
 - [ ] **Régénérer la clé PRIM** (en clair dans l'historique git, commit `c591442`) — urgent
 - [ ] Vérifier visuellement le rendu des durées lisibles (bureau + mobile 390 px)
 - [ ] Renseigner les clés Twitter/X dans `.env`
+- [ ] Vérifier les causes des perturbations (catégorisation `causes.py` vs motifs réels PRIM)
 
 ## Terminé
 - [x] Étape 01 — CLAUDE.md structuré créé — 2026-03-11
