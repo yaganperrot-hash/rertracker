@@ -68,6 +68,11 @@
 - Un script qui corrige des étiquettes en base doit être lancé entre les imports : d'abord les exports faits
   avant le correctif, puis le script, puis ceux faits après. Sinon les données déjà justes sont « corrigées » à tort.
 - Table témoin (`migrations_appliquees`) + sauvegarde `CREATE TABLE … AS SELECT` : migration rejouable sans risque.
+- La table témoin bloque seulement une 2ᵉ exécution du script : un import automatique (`/start`) d'anciens exports
+  dans une base déjà corrigée réintroduit les mauvaises étiquettes. Donner au script un `--statut` en lecture seule
+  (`to_regclass` : ne crée pas la table) et faire décider l'ordre des imports par ce statut.
+- Un ancien fichier encore versionné dans un autre encodage (le 13/09 en cp1252) : lecture UTF-8 avec repli annoncé
+  plutôt que conversion du fichier.
 
 ## Exploitation
 - Jamais de `git stash` (ni de checkout) pendant qu'un serveur démarre en parallèle : il peut importer l'ancien code.
