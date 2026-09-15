@@ -73,3 +73,5 @@
 - Jamais de `git stash` (ni de checkout) pendant qu'un serveur démarre en parallèle : il peut importer l'ancien code.
 - Une page qui décrit le calcul (Méthode) dérive du code : servir chaque paramètre par `/api/reference` et tester
   que les valeurs servies sont celles du code.
+- Un état horodaté (dernier relevé, quota restant) se relit dans les logs à chaque question, avec `date` : un chiffre
+  donné une heure plus tôt paraît être une panne de collecte alors qu'il est seulement périmé.
