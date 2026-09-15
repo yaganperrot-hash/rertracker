@@ -1,4 +1,5 @@
 """Tests unitaires pour backend/collector.py"""
+import logging
 from datetime import datetime, timezone, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -6,6 +7,7 @@ import httpx
 import pytest
 
 from backend.collector import (
+    MODES_PHYSIQUES,
     PRIM_BASE_URL,
     _parse_dt,
     _extract_line_id,
@@ -72,6 +74,25 @@ class TestExtractLineId:
     def test_unknown_line_returns_none(self):
         result = _extract_line_id(self._make_impacted("line:IDFM:UNKNOWN"))
         assert result is None
+
+    def test_identifiants_prim_verifies(self):
+        # Relevés sur PRIM (pt_objects, mode « RER » / « Train Transilien ») le 2026-09-15.
+        # Les « Remplacement … » (bus) ont d'autres IDs et ne doivent jamais apparaître ici.
+        assert LIGNES_CIBLES == {
+            "line:IDFM:C01742": "RER_A",
+            "line:IDFM:C01743": "RER_B",
+            "line:IDFM:C01727": "RER_C",
+            "line:IDFM:C01728": "RER_D",
+            "line:IDFM:C01729": "RER_E",
+            "line:IDFM:C01737": "TRANSILIEN_H",
+            "line:IDFM:C01739": "TRANSILIEN_J",
+            "line:IDFM:C01738": "TRANSILIEN_K",
+            "line:IDFM:C01740": "TRANSILIEN_L",
+            "line:IDFM:C01736": "TRANSILIEN_N",
+            "line:IDFM:C01730": "TRANSILIEN_P",
+            "line:IDFM:C01731": "TRANSILIEN_R",
+            "line:IDFM:C01741": "TRANSILIEN_U",
+        }
 
     def test_empty_list_returns_none(self):
         assert _extract_line_id([]) is None
@@ -200,6 +221,53 @@ class TestCollectDisruptions:
                 "Aucun execute() appelé → le parsing des disruptions a échoué"
             )
             assert mocks["mock_session"].commit.called
+
+    async def test_un_appel_par_mode_physique(self):
+        """1 appel line_reports pour les RER, 1 pour les Transilien (l'appel global renvoie vide)."""
+        mocks = self._setup_mocks()
+
+        with (
+            patch("backend.collector.get_settings", return_value=mocks["mock_settings"]),
+            patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock) as mock_get,
+            patch("backend.collector.AsyncSessionLocal", return_value=mocks["mock_session"]),
+        ):
+            mock_get.return_value = mocks["mock_resp"]
+            await collect_disruptions()
+
+            assert MODES_PHYSIQUES == ("physical_mode:RapidTransit", "physical_mode:LocalTrain")
+            urls = [c[0][0] for c in mock_get.call_args_list]
+            assert urls == [f"{PRIM_BASE_URL}/physical_modes/{m}/line_reports" for m in MODES_PHYSIQUES]
+
+    async def test_perturbation_des_deux_modes_enregistree_une_fois(self):
+        """La même perturbation renvoyée par les deux appels ne donne qu'un upsert."""
+        mocks = self._setup_mocks()
+
+        with (
+            patch("backend.collector.get_settings", return_value=mocks["mock_settings"]),
+            patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock) as mock_get,
+            patch("backend.collector.AsyncSessionLocal", return_value=mocks["mock_session"]),
+        ):
+            mock_get.return_value = mocks["mock_resp"]
+            await collect_disruptions()
+
+            assert mock_get.call_count == 2
+            assert mocks["mock_session"].execute.call_count == 1
+
+    async def test_avertit_si_prim_renvoie_zero_ligne(self, caplog):
+        """Réponse 200 sans line_report : avertissement par mode, pas de silence."""
+        mocks = self._setup_mocks()
+
+        with (
+            caplog.at_level(logging.WARNING, logger="backend.collector"),
+            patch("backend.collector.get_settings", return_value=mocks["mock_settings"]),
+            patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock) as mock_get,
+            patch("backend.collector.AsyncSessionLocal", return_value=mocks["mock_session"]),
+        ):
+            mock_get.return_value = mocks["mock_resp"]  # line_reports: []
+            await collect_disruptions()
+
+        avertissements = [r for r in caplog.records if "0 line_report" in r.getMessage()]
+        assert len(avertissements) == len(MODES_PHYSIQUES)
 
     async def test_skip_si_pas_de_cle_api(self):
         """Si PRIM_API_KEY n'est pas défini, collect_disruptions ne fait rien."""

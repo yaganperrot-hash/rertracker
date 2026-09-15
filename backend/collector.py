@@ -22,14 +22,16 @@ LIGNES_CIBLES: dict[str, str] = {
     "line:IDFM:C01727": "RER_C",
     "line:IDFM:C01728": "RER_D",
     "line:IDFM:C01729": "RER_E",
+    # Transilien : IDs vérifiés sur PRIM (pt_objects) le 2026-09-15. Avant, J/K/U pointaient
+    # sur P/R/N, L/N/P sur des bus et R sur rien — voir backend/relabel_transilien.py
     "line:IDFM:C01737": "TRANSILIEN_H",
-    "line:IDFM:C01730": "TRANSILIEN_J",
-    "line:IDFM:C01731": "TRANSILIEN_K",
-    "line:IDFM:C02142": "TRANSILIEN_L",
-    "line:IDFM:C02629": "TRANSILIEN_N",
-    "line:IDFM:C02152": "TRANSILIEN_P",
-    "line:IDFM:C01735": "TRANSILIEN_R",
-    "line:IDFM:C01736": "TRANSILIEN_U",
+    "line:IDFM:C01739": "TRANSILIEN_J",
+    "line:IDFM:C01738": "TRANSILIEN_K",
+    "line:IDFM:C01740": "TRANSILIEN_L",
+    "line:IDFM:C01736": "TRANSILIEN_N",
+    "line:IDFM:C01730": "TRANSILIEN_P",
+    "line:IDFM:C01731": "TRANSILIEN_R",
+    "line:IDFM:C01741": "TRANSILIEN_U",
 }
 
 
@@ -60,6 +62,11 @@ def _extract_line_id(impacted_objects: list) -> str | None:
     return None
 
 
+# Perturbations par mode physique : 1 appel pour les 5 RER, 1 pour les 8 Transilien.
+# L'appel global /line_reports (sans filtre) renvoie une liste vide depuis le 2026-09-12.
+MODES_PHYSIQUES = ("physical_mode:RapidTransit", "physical_mode:LocalTrain")
+
+
 async def collect_disruptions() -> None:
     settings = get_settings()
     if not settings.prim_api_key:
@@ -69,41 +76,52 @@ async def collect_disruptions() -> None:
     headers = {"apikey": settings.prim_api_key}
 
     all_disruptions: list[tuple[str, dict]] = []  # (line_id_interne, disruption)
+    vues: set[str] = set()  # une même perturbation peut revenir dans les deux modes
+    nb_appels = 0
 
-    # Appel global unique (1 requête au lieu de N par ligne)
     async with httpx.AsyncClient(timeout=30) as client:
-        url = f"{PRIM_BASE_URL}/line_reports"
-        page = 0
-        while True:
-            params = {"count": 250, "start_page": page, "disable_geojson": "true"}
-            try:
-                resp = await client.get(url, headers=headers, params=params)
-                resp.raise_for_status()
-                data = resp.json()
-            except httpx.HTTPError as exc:
-                logger.error("PRIM API error (disruptions global): %s", exc)
-                break
-            except Exception as exc:
-                logger.error("Unexpected error (disruptions global): %s", exc)
-                break
+        for mode in MODES_PHYSIQUES:
+            url = f"{PRIM_BASE_URL}/physical_modes/{mode}/line_reports"
+            page = 0
+            while True:
+                params = {"count": 250, "start_page": page, "disable_geojson": "true"}
+                nb_appels += 1
+                try:
+                    resp = await client.get(url, headers=headers, params=params)
+                    resp.raise_for_status()
+                    data = resp.json()
+                except httpx.HTTPError as exc:
+                    logger.error("PRIM API error (disruptions %s): %s", mode, exc)
+                    break
+                except Exception as exc:
+                    logger.error("Unexpected error (disruptions %s): %s", mode, exc)
+                    break
 
-            disruptions = data.get("disruptions", [])
-            for d in disruptions:
-                if d.get("status") not in ("active", "future"):
-                    continue
-                line_id = _extract_line_id(d.get("impacted_objects", []))
-                if line_id:
-                    all_disruptions.append((line_id, d))
+                line_reports = data.get("line_reports", [])
+                # Réponse 200 mais vide : panne silencieuse (cas de l'appel global du 12 au 15/09)
+                if page == 0 and not line_reports:
+                    logger.warning("PRIM : 0 line_report pour %s — perturbations non collectées", mode)
 
-            # Pagination : s'arrêter si moins de résultats que demandé
-            line_reports = data.get("line_reports", [])
-            if len(line_reports) < 250:
-                break
-            page += 1
-            if page > 10:  # sécurité anti-boucle infinie
-                break
+                for d in data.get("disruptions", []):
+                    if d.get("status") not in ("active", "future"):
+                        continue
+                    did = d.get("id")
+                    if did and did in vues:
+                        continue
+                    line_id = _extract_line_id(d.get("impacted_objects", []))
+                    if line_id:
+                        if did:
+                            vues.add(did)
+                        all_disruptions.append((line_id, d))
 
-    logger.info("Fetched %d disruptions from PRIM (1 global call, %d pages)", len(all_disruptions), page + 1)
+                # Pagination : s'arrêter si moins de résultats que demandé
+                if len(line_reports) < 250:
+                    break
+                page += 1
+                if page > 10:  # sécurité anti-boucle infinie
+                    break
+
+    logger.info("Fetched %d disruptions from PRIM (%d calls)", len(all_disruptions), nb_appels)
 
     # Diagnostic : lignes sans aucune disruption
     lines_with = {lid for lid, _ in all_disruptions}
