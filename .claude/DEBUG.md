@@ -492,8 +492,10 @@ quota d'abord retiré à tort comme « inconnu », rétabli le jour même (bug 3
 **Symptôme** : `UnicodeDecodeError` à l'import sur le Mac des fichiers du 13 et du 15 exportés sous Windows (cp1252).
 Inversement, le PC Windows lira mal les exports UTF-8 du Mac
 **Contournement** : copies converties en UTF-8 dans le scratchpad pour l'import
-**Fix proposé** : `encoding="utf-8"` à l'écriture, lecture UTF-8 avec repli cp1252 — non validé
-**Status** : ❌ Ouvert — bloquant pour l'import du 15/09 sur le PC Windows
+**Fix** : `_ecrire_json` écrit en UTF-8 ; `_lire_json` lit en UTF-8 avec repli cp1252 (annoncé à l'écran) — le fichier
+du 13 dans git est encore en cp1252. Tests : `tests/test_transfert.py` ; les 3 fichiers de `transferts/` relus
+(246, 470, 715 incidents, accents intacts)
+**Status** : ✅ Résolu le 2026-09-15
 
 ### [2026-09-15] test_daily_structure rouge depuis le retard moyen pondéré
 **Fichier(s)** : `tests/test_metrics.py`
