@@ -96,7 +96,7 @@ docker-compose logs -f backend
 | GET | `/api/stats/line/{line_id}?period=30` | Stats d'une ligne sur N jours |
 | GET | `/api/incidents/current` | Incidents ouverts en ce moment |
 | GET | `/api/incidents/history` | Historique (filtres : ligne, dates) |
-| GET | `/api/reference` | Paramètres de calcul (SMIC, relevés, quota PRIM, poids horaires, seuils, fréquentation) |
+| GET | `/api/reference` | Paramètres de calcul (SMIC, relevés, quotas PRIM, fréquentation, offre, exemple calculé) |
 | POST | `/api/admin/collect` | Déclencher une collecte manuelle |
 
 **Exemple `line_id`** : `RER_A`, `RER_B`, `TRANSILIEN_J`, etc.
@@ -162,9 +162,11 @@ Le serveur doit tourner à 20h00 (tolérance d'1 h en cas de retard du scheduler
 ├── backend/
 │   ├── main.py            # FastAPI + scheduler
 │   ├── api.py             # Endpoints REST
-│   ├── collector.py       # Polling API PRIM
-│   ├── metrics.py         # Calcul minutes-voyageurs
+│   ├── collector.py       # Polling API PRIM (Estimated Timetable + perturbations Navitia)
+│   ├── metrics.py         # Calcul minutes-voyageurs (voyageur par voyageur)
 │   ├── profils.py         # Profils horaires depuis l'open data (build hors ligne) + jours types
+│   ├── offre.py           # Offre GTFS : départs par gare, intervalles, missions (build hors ligne)
+│   ├── frequentation.py   # Montées par train : comptages SNCF + validations IDFM (build hors ligne)
 │   ├── recalcul.py        # Reconstruction des métriques depuis les incidents bruts
 │   ├── bilans.py          # Génération JSON bilans
 │   ├── causes.py          # Extraction causes incidents
@@ -190,7 +192,9 @@ Le serveur doit tourner à 20h00 (tolérance d'1 h en cas de retard du scheduler
 │   ├── duree.js           # Formatage durées
 │   └── data/              # JSON statiques (gitignored)
 ├── data/
-│   ├── frequentation.json      # Fréquentation mensuelle
+│   ├── frequentation.json      # Ancienne fréquentation par ligne (plus utilisée par le calcul)
+│   ├── frequentation_gares.json # Montées dans un train par ligne, gare, jour type et heure
+│   ├── offre_theorique.json    # Offre GTFS : départs par gare, intervalles, missions, noms d'arrêts
 │   └── profils_horaires.json   # Profils horaires par réseau et jour type + vacances scolaires
 ├── docs/maquettes/        # Maquettes de référence
 ├── publications/          # Récaps quotidiens (AAAA-MM-JJ.txt)

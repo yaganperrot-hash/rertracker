@@ -3,33 +3,34 @@
 ## 2026-09-16 — PC Mac, fin de session (historique : `.claude/archive/`)
 
 ### Objectif
-Remplacer les poids horaires inventés par des profils de fréquentation réels, et publier les
-premières cartes image pour X / Instagram.
+Rapprocher le calcul des minutes-voyageurs de la réalité en remplaçant chaque estimation maison
+par une donnée mesurée.
 
 ### Avancement
-- **Bug 30 — profils horaires réels.** Les 18 poids étaient écrits à la main, sans source,
-  et totalisaient 19.2 alors que la formule divisait par 18 : tous les chiffres étaient majorés
-  de 6,7 %. Remplacés par les validations open data IDFM, par réseau et par jour type.
-  Nouvelle formule `voyageurs_jour × part_horaire ÷ 60`, les 24 parts sommant à 1 — le diviseur
-  arbitraire disparaît. Historique recalculé : 9 773 907 → 8 791 900 min-voyageurs (−10 %).
-- **Bug 31 — vacances scolaires.** Calendrier zone C (Éducation nationale) intégré ;
-  `categorie_jour()` rend les cinq jours types JOHV / JOVS / SAHV / SAVS / DIJFP.
-  Effet nul sur les chiffres actuels, jouera à partir du 17 octobre (Toussaint).
-- `backend/profils.py` (construction hors ligne), `backend/recalcul.py` (reconstruction des
-  métriques depuis les incidents bruts), `data/profils_horaires.json` (versionné).
-- `methode.html` : formule, sources, périmètre et six limites alignés sur le code.
-- `frontend/carte.html` : maquette de carte récap 1080×1080, rendue par capture headless du
-  Chrome local (pas de dépendance Playwright). **Maquette seule — aucun envoi.**
-- Polling Mac passé de 30 à 20 min. 168 tests au vert. 4 commits poussés.
+- **Collecte sur le flux SIRI Estimated Timetable** (13 appels par ligne à la place de `/departures`) :
+  tous les trains sur ~2 h, retard à l'arrivée et suppression arrêt par arrêt, attente mesurée du train
+  suivant. Nouvelle colonne `incidents.arrets` (JSONB). Bug 32 (0 suppression détectée) résolu.
+  Quotas : **deux compteurs de 1 000 req/jour** (Navitia / Estimated Timetable), vérifiés sur deux relevés
+  (−2 et −13). `CLAUDE.md` corrigé.
+- **`backend/offre.py`** (GTFS IDFM) : départs par gare et heure, intervalles, missions, noms d'arrêts SIRI.
+- **`backend/frequentation.py`** : voyageurs montant dans un train par ligne × gare × jour type × heure —
+  comptages SNCF (correspondances comprises), validations IDFM pour les gares non comptées (partie RATP
+  des RER A et B), rapport vacances mesuré. `data/frequentation.json` n'est plus utilisé
+  (il était faux : K 50 000 voy./jour contre 15 654 comptés, C/H/J/L sous-estimées).
+- **`backend/metrics.py`** : perte de chaque voyageur i → j = retard mesuré à l'arrivée en j, ou attente
+  au premier arrêt supprimé ; destinations au prorata des montées du jour (seule hypothèse restante).
+  Historique reconstitué depuis la mission GTFS.
+- Page Méthode réécrite ; exemple calculé par le backend (`/api/reference` → `exemple_calcul`).
+- Historique recalculé sur le Mac : 9 320 901 → 11 653 782 min-voyageurs. 218 tests verts.
+- Décisions : seuil de retard gardé à 2 min ; SMIC gardé (valeur du temps officielle écartée).
 
 ### Blocages
 - Clé PRIM toujours à régénérer (en clair dans l'historique git, commit `c591442`).
 - Bug 23 (picker) : en attente de diagnostic console navigateur.
 
 ### Prochaine étape
-1. **PC Windows** : après `git pull`, lancer `python -m backend.recalcul` — sa base est encore
-   calculée avec les anciens poids, sinon les deux PC afficheront des chiffres différents.
-2. Valider la maquette `carte.html`, puis reprendre le plan X/Instagram (script de génération,
-   envoi X avec repli texte seul, module Instagram inerte sans `PUBLIC_BASE_URL`).
-3. Régénérer la clé PRIM sur le portail IDF Mobilités.
-4. Tester le picker dans un navigateur (F12).
+1. **PC Windows** : `git pull`, serveur arrêté, `python -m backend.recalcul`, puis relancer le serveur
+   (la colonne `arrets` est ajoutée au démarrage). Un seul serveur à la fois.
+2. Contrôler quelques jours de collecte : incidents supprimés et leurs attentes, trains à 0 min-voy.
+3. Régénérer chaque mois `offre_theorique.json` puis `frequentation_gares.json` (GTFS sur 30 jours).
+4. Valider la maquette `carte.html` ; régénérer la clé PRIM ; tester le picker (F12).

@@ -588,6 +588,33 @@ contient pas les trains supprimés (ils disparaissent du flux) : un train suppri
 - `DatedVehicleJourneyRef` contient l'uuid du trip_id GTFS (133/141 sur le RER A) ; `JourneyNote` = code mission.
 **Status** : ✅ Bascule faite (accord du 2026-09-16), commit 7a48b8e
 
+### [2026-09-16] Bug 33 — Châtelet - Les Halles sans fréquentation
+**Fichier(s)** : `backend/frequentation.py`
+**Symptôme** : gare « inconnue » pour les RER A et B au premier build
+**Cause** : identifiant GTFS de la gare 474151, publié 71264 (« CHATELET », réseau 801 seulement) dans les validations
+**Fix** : `zdc_par_nom` — rattachement par les mots du libellé, réseau de la ligne d'abord ; test dédié
+**Status** : ✅ Résolu
+
+### [2026-09-16] Bug 34 — Trains retardés près du terminus à 0 min-voyageurs
+**Fichier(s)** : `backend/metrics.py` (`arrets_du_train`)
+**Symptôme** : train relevé pour la première fois avec un seul arrêt → aucun voyageur compté
+**Cause** : le flux Estimated Timetable ne remonte qu'~50 min dans le passé ; un train encore à l'heure au relevé
+précédent n'avait pas d'arrêts enregistrés
+**Fix** : début de parcours complété par la mission GTFS (retard inconnu = 0 à ces arrêts, voyageurs comptés
+avec le retard mesuré à leur descente) ; test dédié
+**Status** : ✅ Résolu
+
+### [2026-09-16] `frequentation.json` faux sur plusieurs lignes (limite de méthode)
+**Symptôme** : K 50 000 voy./jour (15 654 comptés), C 350 000 (≈ 500 000), H/J/L sous-estimées de moitié ; mêmes
+voyageurs le samedi et le dimanche qu'en semaine
+**Fix** : remplacé par `data/frequentation_gares.json` (comptages SNCF + validations IDFM, par jour type)
+**Status** : ✅ Résolu — fichier conservé mais plus lu par le calcul (suppression à décider)
+
+### [2026-09-16] Rapport vacances du RER C biaisé par les travaux d'été (limite de méthode)
+**Symptôme** : un jour de semaine de vacances pèse 54 % d'un jour ordinaire sur le C (73 à 83 % ailleurs)
+**Cause** : seul le 3e trimestre des validations est publié ; le C est partiellement fermé l'été
+**Status** : 🔄 Documenté sur la page Méthode — à revoir quand un autre trimestre sera publié
+
 ---
 
 ## Notes de surveillance

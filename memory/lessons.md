@@ -101,6 +101,19 @@
 - Un chiffre « plausible » écrit à la main (courbe horaire, forfait) doit porter sa source ou être
   signalé comme estimation : sans source, personne ne peut le contester ni le corriger.
 
+## Mesure plutôt qu'estimation (2026-09-16)
+- Un modèle « voyageurs par jour × part de l'heure » appliqué **par train** suppose sans le dire un train par minute :
+  vérifier l'unité de chaque produit (voyageurs d'un train, pas d'une minute de ligne) en comparant à l'offre réelle.
+- Le flux SIRI Estimated Timetable de PRIM : arrêts **non triés** dans la réponse, ~50 min de passé visible,
+  statut `CANCELLED` par arrêt, `JourneyNote` = code mission, `DatedVehicleJourneyRef` contient l'uuid du trip GTFS,
+  `STIF:StopArea:SP:<n>:` = `IDFM:monomodalStopPlace:<n>` du GTFS. Appel `LineRef=ALL` : 59 Mo, à éviter.
+- GTFS IDFM (117 Mo, 30 jours) : lire `stop_times.txt` en flux depuis le zip ; `route_id` = ligne PRIM sans `line:` ;
+  le fichier ne contient pas de code UIC — rapprocher les comptages SNCF par les **mots du nom** de gare.
+- Comptages SNCF : plusieurs campagnes pour une même gare (ex. J 2025 et 2026) — garder la plus récente, sinon on
+  additionne deux années (J affiché à 280 000 au lieu de 205 000).
+- Une vérification de quota se fait **par flux** : chaque produit PRIM a son propre `x-ratelimit-remaining-day`.
+- Un serveur relancé par Claude Code survit à la session avec `nohup … & disown` (logs en `>>` dans `logs/uvicorn.log`).
+
 ## Exploitation
 - **Ne jamais tuber un script long dans `head`** : la fermeture du tube envoie un SIGPIPE et tue le
   script avant qu'il écrive son fichier de sortie. Rediriger vers un log puis `tail`, et vérifier le
