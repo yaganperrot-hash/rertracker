@@ -80,3 +80,31 @@
   que les valeurs servies sont celles du code.
 - Un état horodaté (dernier relevé, quota restant) se relit dans les logs à chaque question, avec `date` : un chiffre
   donné une heure plus tôt paraît être une panne de collecte alors qu'il est seulement périmé.
+
+## Open data IDF Mobilités et Éducation nationale (2026-09-16)
+- Les validations du réseau ferré sont publiées **par arrêt et par réseau**, jamais par ligne.
+  `code_stif_res` regroupe le Transilien par gare parisienne : 852 = N + U (Montparnasse),
+  853 = H + K (Paris-Nord), 854 = J + L (Saint-Lazare). Les cinq RER ont chacun leur code (801→805).
+  Vérifier un regroupement sur des gares discriminantes (La Verrière, Meaux, Montereau) avant de s'y fier.
+- Agréger des profils de gare en profil de ligne demande de **pondérer par le volume de chaque gare** :
+  la moyenne simple écrase le résultat vers les petites gares de grande banlieue, au pic plus creusé.
+- ODS ne sait pas caster un champ texte en nombre (`sum(int(x))` rejeté) : exporter et sommer côté Python.
+- `/records` plafonne à 100 par page ; `/exports/json` rend tout d'un coup, filtre `where` compris.
+- Calendrier scolaire (`fr-en-calendrier-scolaire`) : les bornes sont en **UTC à 22 h**, soit minuit
+  heure de Paris le lendemain — sans conversion chaque période glisse d'un jour. La borne haute est
+  le jour de **rentrée**, donc exclue. Filtrer `population != "Enseignants"`.
+
+## Logique de calcul
+- Un profil de poids avec un diviseur codé en dur dérive en silence : les poids et le diviseur sont
+  deux vérités à maintenir ensemble. Préférer des **parts normalisées sommant à 1**, le diviseur
+  disparaît et l'écart devient impossible.
+- Un chiffre « plausible » écrit à la main (courbe horaire, forfait) doit porter sa source ou être
+  signalé comme estimation : sans source, personne ne peut le contester ni le corriger.
+
+## Exploitation
+- **Ne jamais tuber un script long dans `head`** : la fermeture du tube envoie un SIGPIPE et tue le
+  script avant qu'il écrive son fichier de sortie. Rediriger vers un log puis `tail`, et vérifier le
+  code retour.
+- Changer la logique de calcul impose de recalculer l'historique **sur chaque PC** : les métriques
+  dérivent des incidents bruts, mais chaque base a les siennes. Le JSON de profils est versionné, la
+  base ne l'est pas.

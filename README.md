@@ -164,6 +164,8 @@ Le serveur doit tourner à 20h00 (tolérance d'1 h en cas de retard du scheduler
 │   ├── api.py             # Endpoints REST
 │   ├── collector.py       # Polling API PRIM
 │   ├── metrics.py         # Calcul minutes-voyageurs
+│   ├── profils.py         # Profils horaires depuis l'open data (build hors ligne) + jours types
+│   ├── recalcul.py        # Reconstruction des métriques depuis les incidents bruts
 │   ├── bilans.py          # Génération JSON bilans
 │   ├── causes.py          # Extraction causes incidents
 │   ├── bot.py             # Récap quotidien X + publications/
@@ -180,6 +182,7 @@ Le serveur doit tourner à 20h00 (tolérance d'1 h en cas de retard du scheduler
 │   ├── ligne.html         # Détail d'une ligne
 │   ├── temps-reel.html    # Vue temps réel
 │   ├── methode.html       # Page méthodologie
+│   ├── carte.html         # Carte récap 1080×1080 (maquette réseaux sociaux)
 │   ├── bilan.css / .js    # Styles + logique bilans
 │   ├── nav.css            # Navigation unifiée
 │   ├── pick.css / .js     # Sélecteur de ligne
@@ -187,7 +190,8 @@ Le serveur doit tourner à 20h00 (tolérance d'1 h en cas de retard du scheduler
 │   ├── duree.js           # Formatage durées
 │   └── data/              # JSON statiques (gitignored)
 ├── data/
-│   └── frequentation.json # Fréquentation mensuelle
+│   ├── frequentation.json      # Fréquentation mensuelle
+│   └── profils_horaires.json   # Profils horaires par réseau et jour type + vacances scolaires
 ├── docs/maquettes/        # Maquettes de référence
 ├── publications/          # Récaps quotidiens (AAAA-MM-JJ.txt)
 ├── tests/                 # pytest (test_*.py)

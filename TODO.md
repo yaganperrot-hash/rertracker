@@ -4,6 +4,14 @@
 _(aucun)_
 
 ## À faire
+- [ ] **PC Windows — recalculer l'historique** après `git pull` : `python -m backend.recalcul`.
+  Sa base est encore calculée avec les anciens poids horaires ; sans ça les deux PC afficheront des
+  chiffres différents pour les mêmes jours.
+- [ ] **Régénérer `data/profils_horaires.json` à chaque trimestre** publié par IDFM :
+  `python -m backend.profils build`, puis `python -m backend.recalcul` sur chaque PC.
+  Le nom du jeu de données porte le trimestre (`…-3eme-trimestre`) — à mettre à jour dans `backend/profils.py`.
+- [ ] Valider la maquette `frontend/carte.html`, puis reprendre le plan X/Instagram :
+  script `backend/carte.py`, envoi X avec repli texte seul, module Instagram inerte sans `PUBLIC_BASE_URL`.
 - [ ] **Régénérer la clé PRIM** (en clair dans l'historique git, commit `c591442`) — urgent
 - [ ] Vérifier visuellement le rendu des durées lisibles (bureau + mobile 390 px)
 - [ ] Renseigner les clés Twitter/X dans `.env`
