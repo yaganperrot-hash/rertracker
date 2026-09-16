@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.config import get_settings
 from backend.database import AsyncSessionLocal
 from backend.models import Incident, DailyMetric
+from backend.profils import CHEMIN as _PROFILS_PATH, categorie_jour
 
 logger = logging.getLogger(__name__)
 
@@ -31,37 +32,41 @@ def _load_frequentation() -> dict[str, int]:
 
 FREQUENTATION: dict[str, int] = _load_frequentation()
 
-# Hourly weight profile (sum = 19.2)
-HOURLY_WEIGHTS: dict[int, float] = {
-    6: 0.5,  7: 1.8,  8: 2.5,  9: 1.5, 10: 0.8, 11: 0.7,
-    12: 0.8, 13: 0.7, 14: 0.7, 15: 0.8, 16: 1.2, 17: 2.2,
-    18: 2.0, 19: 1.2, 20: 0.8, 21: 0.5, 22: 0.3, 23: 0.2,
-}
+def _load_profils() -> dict:
+    """Profils horaires réels, construits hors ligne par `python -m backend.profils build`."""
+    try:
+        return json.loads(_PROFILS_PATH.read_text(encoding="utf-8"))
+    except Exception as exc:
+        logger.error("Cannot load profils_horaires.json: %s", exc)
+        return {}
 
 
-def _minutes_voyageurs(duree_min: int, line_id: str, hour: int | None = None) -> int:
-    """Calculate minutes-voyageurs for a given duration and line.
+PROFILS: dict = _load_profils()
 
-    If hour is provided, use the hourly weight profile for that hour.
-    If hour is None (backward compat), use the flat daily average (voyageurs/18/60).
+
+def part_horaire(line_id: str, quand: datetime) -> float | None:
+    """Part des voyageurs du jour qui embarquent pendant l'heure de `quand` (heure de Paris).
+
+    Les 24 parts d'un profil somment à 1 : il n'y a plus de diviseur à tenir à jour.
+    None quand la ligne n'a pas de profil open data (métro, ligne inconnue).
     """
-    voyageurs_jour = FREQUENTATION.get(line_id, 0)
-    if voyageurs_jour == 0 or duree_min <= 0:
+    reseau = PROFILS.get("lignes", {}).get(line_id)
+    if reseau is None:
+        return None
+    profil = PROFILS.get("profils", {}).get(reseau, {}).get(categorie_jour(quand.date()))
+    if not profil or len(profil) != 24:
+        return None
+    return profil[quand.hour]
+
+
+def _minutes_voyageurs(duree_min: int, line_id: str, quand: datetime | None = None) -> int:
+    """Minutes-voyageurs d'un retard : durée × voyageurs par minute à cette heure-là.
+
+    `quand` est l'instant du début du retard, en heure de Paris.
+    """
+    if duree_min <= 0:
         return 0
-
-    if hour is not None:
-        weight = HOURLY_WEIGHTS.get(hour, 0.0)
-        if weight == 0.0:
-            return 0
-        # weight represents the share of daily passengers in that hour
-        # voyageurs_jour * weight / 18 = passengers in that hour
-        # divided by 60 = passengers per minute in that hour
-        freq_minute = voyageurs_jour * weight / 18 / 60
-    else:
-        # Backward compat: flat average over 18h service window
-        freq_minute = voyageurs_jour / 18 / 60
-
-    return round(duree_min * freq_minute)
+    return round(duree_min * _freq_minute(line_id, quand))
 
 
 def _effective_duration(incident, now_utc: datetime) -> int:
@@ -84,11 +89,12 @@ def _effective_duration(incident, now_utc: datetime) -> int:
     return 0
 
 
-def _incident_hour_paris(incident) -> int | None:
-    """Get the Paris-timezone hour of an incident's start."""
+def _incident_dt_paris(incident) -> datetime | None:
+    """Début de l'incident en heure de Paris. Le jour type (semaine/samedi/dimanche)
+    dépend de la date, pas seulement de l'heure — d'où le datetime complet."""
     if incident.heure_debut is None:
         return None
-    return incident.heure_debut.astimezone(PARIS_TZ).hour
+    return incident.heure_debut.astimezone(PARIS_TZ)
 
 
 def incident_minutes_voyageurs(incident, now_utc: datetime) -> tuple[int, int]:
@@ -97,7 +103,7 @@ def incident_minutes_voyageurs(incident, now_utc: datetime) -> tuple[int, int]:
     Même calcul pour les métriques du jour et pour le coût par incident servi par l'API.
     """
     dur = _effective_duration(incident, now_utc)
-    return dur, _minutes_voyageurs(dur, incident.line_id, hour=_incident_hour_paris(incident))
+    return dur, _minutes_voyageurs(dur, incident.line_id, _incident_dt_paris(incident))
 
 
 def cout_eur(minutes_voyageurs: int, smic_horaire: float) -> int:
@@ -234,14 +240,20 @@ async def get_today_stats(db: AsyncSession) -> dict:
     }
 
 
-def _freq_minute(line_id: str, hour: int | None) -> float:
-    """Passengers per minute for a given line and hour (same formula as _minutes_voyageurs)."""
+def _freq_minute(line_id: str, quand: datetime | None) -> float:
+    """Voyageurs par minute sur une ligne à un instant donné (heure de Paris).
+
+    Unique endroit où la fréquentation devient un débit : _minutes_voyageurs et le retard
+    moyen pondéré s'appuient tous deux dessus.
+    """
     voyageurs_jour = FREQUENTATION.get(line_id, 0)
     if voyageurs_jour == 0:
         return 0.0
-    if hour is not None:
-        weight = HOURLY_WEIGHTS.get(hour, 0.0)
-        return voyageurs_jour * weight / 18 / 60
+    if quand is not None:
+        part = part_horaire(line_id, quand)
+        if part is not None:
+            return voyageurs_jour * part / 60
+    # Repli plat sur les 18 h de service : lignes sans profil open data (métro), ou instant inconnu
     return voyageurs_jour / 18 / 60
 
 
@@ -273,8 +285,7 @@ async def _retard_moyen_pondere(line_id: str, start: date, end: date, db: AsyncS
         dur = _effective_duration(inc, now_utc)
         if dur <= 0:
             continue
-        hour = _incident_hour_paris(inc)
-        poids = _freq_minute(line_id, hour)
+        poids = _freq_minute(line_id, _incident_dt_paris(inc))
         if poids <= 0:
             continue
         sum_dur_x_poids += dur * poids

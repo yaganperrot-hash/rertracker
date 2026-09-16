@@ -110,8 +110,8 @@
 **Fichier(s)** : `backend/metrics.py`
 **Symptôme** : Un retard de 10 min à 8h (pointe) comptait autant qu'à 14h (creux)
 **Cause** : `voyageurs_jour / 18 / 60` = moyenne plate
-**Fix** : Profil horaire (18 poids, somme=18.0) — ex: 8h=2.5, 14h=0.7, nuit=0
-**Status** : ✅ Résolu
+**Fix** : Profil horaire (18 poids) — ex: 8h=2.5, 14h=0.7, nuit=0
+**Status** : ✅ Résolu, puis remplacé le 2026-09-16 par les profils réels (cf. bug 30)
 
 ### [2026-09-09] Bug 8 — Compteur frontend fake (random)
 **Fichier(s)** : `frontend/index.html`
@@ -556,3 +556,25 @@ sous la nouvelle étiquette. Le recalcul qui suit reconstruit les bonnes valeurs
   relevé 20 min de 6 h à minuit × 15 req = 810 req/jour ; reste loggué à chaque relevé, warning sous 150
 - Bot X : planifié à 20h via APScheduler dans `main.py`
 - Logs applicatifs : `logs/` (monté en volume Docker)
+
+---
+
+## Bugs résolus — Session 2026-09-16
+
+### [2026-09-16] Bug 30 — Profil horaire inventé et mal normalisé
+**Fichier(s)** : `backend/metrics.py`, `backend/profils.py`, `data/profils_horaires.json`, `frontend/methode.html`
+**Symptôme** : deux défauts cumulés. (1) Les 18 poids horaires totalisaient 19.2 alors que la formule
+divisait par 18 et que la fiche du bug 7 annonçait « somme=18.0 » — tous les chiffres du site étaient
+majorés de 6,7 %. (2) Les poids étaient des valeurs écrites à la main, sans source, identiques pour
+toutes les lignes et tous les jours : un samedi matin était pondéré avec un pic pendulaire de 8 h.
+**Cause** : profil estimé à vue au lieu d'être mesuré, et diviseur codé en dur désolidarisé des poids.
+**Fix** : profils horaires réels construits depuis les validations open data d'IDF Mobilités
+(`python -m backend.profils build`), par réseau et par jour type (semaine / samedi / dimanche et fériés),
+moyenne des profils de gare pondérée par le volume de validations. La formule devient
+`voyageurs_jour × part_horaire ÷ 60`, où les 24 parts somment à 1 : le diviseur arbitraire disparaît et
+l'écart de normalisation ne peut plus se reproduire (test `test_chaque_profil_somme_a_un`).
+Historique recalculé par `python -m backend.recalcul` — cumul total 9 773 907 → 8 791 900 min-voyageurs (−10 %).
+**Limites assumées et documentées sur la page Méthode** : profils groupés pour le Transilien (H+K, J+L,
+N+U — l'open data est publié par réseau, pas par ligne), vacances scolaires non distinguées, et une
+validation reste une entrée dans le réseau, pas un voyageur à bord.
+**Status** : ✅ Résolu

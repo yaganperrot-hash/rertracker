@@ -10,7 +10,7 @@ from backend.config import get_settings
 from backend.database import get_db
 from backend.models import Incident, DailyMetric
 from backend.metrics import (
-    FREQUENTATION, HOURLY_WEIGHTS, compute_daily_metrics, cout_eur, get_line_stats, get_today_stats,
+    FREQUENTATION, PROFILS, compute_daily_metrics, cout_eur, get_line_stats, get_today_stats,
     incident_minutes_voyageurs,
 )
 from backend.collector import (
@@ -87,7 +87,12 @@ async def reference():
         "quota_prim_jour": s.prim_quota_jour,
         "collecte_heure_debut": s.collecte_heure_debut,
         "frequentation": FREQUENTATION,
-        "poids_horaires": HOURLY_WEIGHTS,
+        # Profils horaires réels (validations open data IDFM) : parts sommant à 1 sur 24 h,
+        # par réseau et par jour type. `profils_lignes` dit quelle ligne lit quel réseau.
+        "profils_horaires": PROFILS.get("profils", {}),
+        "profils_lignes": PROFILS.get("lignes", {}),
+        "profils_reseaux": PROFILS.get("reseaux_libelles", {}),
+        "profils_source": PROFILS.get("_source", {}),
         "retard_min_minutes": MIN_DELAY_MINUTES,
         "suppression_minutes": s.cancel_default_impact_minutes,
         "fantome_min_minutes": GHOST_MIN_DELAY_MINUTES,

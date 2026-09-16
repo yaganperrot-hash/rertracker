@@ -68,10 +68,11 @@ class TestReference:
     async def test_parametres_du_calcul(self):
         # La page Méthode affiche ces valeurs : elles doivent être celles du code
         from backend.collector import GHOST_MIN_DELAY_MINUTES, MIN_DELAY_MINUTES
-        from backend.metrics import HOURLY_WEIGHTS
+        from backend.metrics import PROFILS
         s = get_settings()
         ref = await reference()
-        assert ref["poids_horaires"] == HOURLY_WEIGHTS
+        assert ref["profils_horaires"] == PROFILS["profils"]
+        assert ref["profils_lignes"] == PROFILS["lignes"]
         assert ref["retard_min_minutes"] == MIN_DELAY_MINUTES
         assert ref["suppression_minutes"] == s.cancel_default_impact_minutes
         assert ref["fantome_min_minutes"] == GHOST_MIN_DELAY_MINUTES

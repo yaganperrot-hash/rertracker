@@ -8,11 +8,20 @@ import pytest
 from backend.metrics import (
     _minutes_voyageurs,
     _effective_duration,
-    HOURLY_WEIGHTS,
+    PROFILS,
+    part_horaire,
     MAX_OPEN_DURATION_MIN,
     get_today_stats,
     get_line_stats,
 )
+from backend.profils import CATEGORIES, LIGNE_RESEAU, categorie_jour
+
+PARIS = ZoneInfo("Europe/Paris")
+MARDI_8H = datetime(2026, 9, 15, 8, 30, tzinfo=PARIS)
+MARDI_14H = datetime(2026, 9, 15, 14, 30, tzinfo=PARIS)
+MARDI_3H = datetime(2026, 9, 15, 3, 30, tzinfo=PARIS)
+SAMEDI_8H = datetime(2026, 9, 19, 8, 30, tzinfo=PARIS)
+SAMEDI_18H = datetime(2026, 9, 19, 18, 30, tzinfo=PARIS)
 
 
 FREQ = {
@@ -66,36 +75,66 @@ class TestMinutesVoyageurs:
         assert mv_a > mv_u
 
 
-class TestMinutesVoyageursHourly:
-    """Tests for hourly weighting in _minutes_voyageurs."""
+class TestProfilsHoraires:
+    """Pondération par les profils horaires réels (validations open data IDFM)."""
 
-    def test_peak_hour_more_mv(self):
-        """8h (peak) should produce more minutes-voyageurs than 14h (off-peak)."""
-        mv_8h = _minutes_voyageurs(10, "RER_A", hour=8)
-        mv_14h = _minutes_voyageurs(10, "RER_A", hour=14)
-        assert mv_8h > mv_14h, f"8h ({mv_8h}) should be > 14h ({mv_14h})"
+    def test_pointe_du_matin_superieure_au_creux(self):
+        assert _minutes_voyageurs(10, "RER_A", MARDI_8H) > _minutes_voyageurs(10, "RER_A", MARDI_14H)
 
-    def test_night_hour_zero_mv(self):
-        """3h (night, no service) should produce 0 minutes-voyageurs."""
-        mv_3h = _minutes_voyageurs(10, "RER_A", hour=3)
-        assert mv_3h == 0, f"3h should give 0 mv, got {mv_3h}"
+    def test_samedi_matin_moins_cher_que_semaine(self):
+        """Le gain du chantier : un samedi n'a pas de pointe pendulaire à 8 h."""
+        semaine = _minutes_voyageurs(45, "RER_A", MARDI_8H)
+        samedi = _minutes_voyageurs(45, "RER_A", SAMEDI_8H)
+        assert samedi < semaine / 2, f"samedi 8h ({samedi}) devrait être très inférieur à mardi 8h ({semaine})"
 
-    def test_backward_compat_no_hour(self):
-        """Without hour parameter, should use the old flat average."""
-        mv_no_hour = _minutes_voyageurs(60, "RER_A")
-        expected = round(60 * (900000 / 18 / 60))
-        assert mv_no_hour == expected
+    def test_samedi_culmine_en_fin_de_journee(self):
+        assert _minutes_voyageurs(10, "RER_A", SAMEDI_18H) > _minutes_voyageurs(10, "RER_A", SAMEDI_8H)
 
-    def test_all_service_hours_have_weight(self):
-        """All hours from 6 to 23 should have a non-zero weight."""
-        for h in range(6, 24):
-            assert h in HOURLY_WEIGHTS, f"Hour {h} missing from HOURLY_WEIGHTS"
-            assert HOURLY_WEIGHTS[h] > 0, f"Hour {h} has zero weight"
+    def test_nuit_negligeable(self):
+        assert _minutes_voyageurs(10, "RER_A", MARDI_3H) < _minutes_voyageurs(10, "RER_A", MARDI_8H) / 100
 
-    def test_weights_sum_to_expected(self):
-        """Hourly weights should sum to 19.2 (18 hours, adjusted profile)."""
-        total = sum(HOURLY_WEIGHTS.values())
-        assert abs(total - 19.2) < 0.01, f"Weights sum to {total}, expected 19.2"
+    def test_repli_plat_sans_instant(self):
+        """Sans instant connu, on retombe sur la moyenne plate des 18 h de service."""
+        assert _minutes_voyageurs(60, "RER_A") == round(60 * (900000 / 18 / 60))
+
+    def test_ligne_sans_profil_utilise_le_repli(self):
+        """Le métro n'a pas de profil : même résultat avec ou sans instant."""
+        assert part_horaire("METRO_1", MARDI_8H) is None
+        assert _minutes_voyageurs(60, "METRO_1", MARDI_8H) == _minutes_voyageurs(60, "METRO_1")
+
+    def test_toutes_les_lignes_rer_transilien_ont_un_profil(self):
+        for line_id in LIGNE_RESEAU:
+            assert part_horaire(line_id, MARDI_8H) is not None, f"{line_id} sans profil"
+
+    def test_chaque_profil_somme_a_un(self):
+        """Garde-fou : c'est la normalisation ratée de l'ancien profil qui biaisait tous les chiffres."""
+        for reseau, cats in PROFILS["profils"].items():
+            for cat, profil in cats.items():
+                assert len(profil) == 24, f"{reseau}/{cat} : {len(profil)} tranches au lieu de 24"
+                total = sum(profil)
+                assert abs(total - 1.0) < 1e-4, f"{reseau}/{cat} somme à {total}, attendu 1.0"
+
+    def test_tous_les_jours_types_presents(self):
+        for reseau, cats in PROFILS["profils"].items():
+            for cat in CATEGORIES:
+                assert cat in cats, f"{reseau} sans profil {cat}"
+
+
+class TestCategorieJour:
+    def test_semaine(self):
+        assert categorie_jour(date(2026, 9, 15)) == "JOHV"   # mardi
+
+    def test_samedi(self):
+        assert categorie_jour(date(2026, 9, 19)) == "SAHV"
+
+    def test_dimanche(self):
+        assert categorie_jour(date(2026, 9, 20)) == "DIJFP"
+
+    def test_ferie_en_semaine_compte_comme_dimanche(self):
+        assert categorie_jour(date(2026, 7, 14)) == "DIJFP"   # mardi 14 juillet
+
+    def test_ferie_mobile(self):
+        assert categorie_jour(date(2026, 5, 14)) == "DIJFP"   # Ascension 2026
 
 
 class TestEffectiveDuration:

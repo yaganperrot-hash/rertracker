@@ -362,6 +362,15 @@
       <div class="source-item">
         <span class="source-dot"></span>
         <div class="source-body">
+          <div class="source-name">
+            <a href="https://data.iledefrance-mobilites.fr/explore/dataset/validations-reseau-ferre-profils-horaires-par-jour-type-3eme-trimestre/" target="_blank" rel="noopener">Profils horaires de validations</a>
+          </div>
+          <div class="source-desc">Validations sur le réseau ferré par arrêt, jour type et tranche horaire · open data Île-de-France Mobilités · agrégées par réseau dans <code style="background:var(--bg3);padding:1px 5px;font-size:11px">data/profils_horaires.json</code></div>
+        </div>
+      </div>
+      <div class="source-item">
+        <span class="source-dot"></span>
+        <div class="source-body">
           <div class="source-name">Fréquentation IDF Mobilités</div>
           <div class="source-desc">Données annuelles publiées par SNCF Voyageurs et IDF Mobilités · stockées dans <code style="background:var(--bg3);padding:1px 5px;font-size:11px">data/frequentation.json</code> · mise à jour mensuelle</div>
         </div>
@@ -391,14 +400,14 @@
     </p>
     <div class="formula-block">
       minutes-voyageurs = retard du train (min) × voyageurs_par_minute<br>
-      voyageurs_par_minute = voyageurs_par_jour × poids_de_l'heure ÷ 18 ÷ 60<br>
+      voyageurs_par_minute = voyageurs_par_jour × part_de_l'heure ÷ 60<br>
       coût = minutes-voyageurs × <span class="ref-smic">—</span> €/h ÷ 60
       <div class="formula-note">
-        Le poids de l'heure suit la fréquentation : <span class="ref-poids-8">—</span> à 8 h (pointe), <span class="ref-poids-14">—</span> à 14 h (creux), 0 entre minuit et 6 h. L'heure retenue est celle du début du retard. Un train supprimé compte pour <span class="ref-suppression">—</span> min de retard.
+        La <strong>part de l'heure</strong> est la fraction des voyageurs du jour qui embarquent pendant cette heure-là. Les 24 parts d'une journée somment à 1. Elles ne sont pas estimées mais mesurées, à partir des validations open data d'Île-de-France Mobilités, et diffèrent selon le réseau et le jour de la semaine : sur le RER A, 8 h pèse <span class="ref-part-8">—</span> un jour de semaine, contre <span class="ref-part-sam-8">—</span> un samedi. L'heure retenue est celle du début du retard. Un train supprimé compte pour <span class="ref-suppression">—</span> min de retard.
       </div>
     </div>
     <p>
-      <strong>Exemple — RER A, retard de 45 minutes à 8 h :</strong><br>
+      <strong>Exemple — RER A, retard de 45 minutes à 8 h un jour de semaine :</strong><br>
       <span class="ref-exemple">—</span> <strong class="ref-exemple-cout"></strong>
     </p>
   </section>
@@ -494,6 +503,15 @@
         <strong>Fréquentation par ligne.</strong> Chaque retard est multiplié par la fréquentation de toute la ligne à cette heure, sans distinguer les gares ni les branches : un retard sur une branche peu fréquentée est surestimé, un retard sur le tronc commun sous-estimé.
       </div>
       <div class="limit-item">
+        <strong>Une validation n'est pas un voyageur à bord.</strong> Les profils horaires sont construits à partir des validations, c'est-à-dire des entrées dans le réseau. Ils décrivent donc où et quand les voyageurs embarquent, ce qui est un bon indicateur du flux mais pas de la charge réelle d'un train : un retard subi en milieu de parcours touche des voyageurs montés une heure plus tôt.
+      </div>
+      <div class="limit-item">
+        <strong>Profils groupés pour le Transilien.</strong> Les données open data sont publiées par réseau, pas par ligne. Les cinq RER ont chacun leur profil, mais H et K partagent celui de Paris-Nord, J et L celui de Saint-Lazare, N et U celui de Montparnasse. Deux lignes d'un même réseau aux rythmes différents sont donc lissées ensemble.
+      </div>
+      <div class="limit-item">
+        <strong>Vacances scolaires non distinguées.</strong> Trois jours types sont retenus : semaine, samedi, dimanche et jours fériés. Le jeu de données distingue aussi les périodes de vacances scolaires, où la fréquentation est sensiblement plus basse ; nous ne les utilisons pas encore, ce qui surestime le coût des retards pendant les vacances.
+      </div>
+      <div class="limit-item">
         <strong>Un incident = une ligne.</strong> Un incident affectant plusieurs lignes est compté une fois par ligne, ce qui peut sur-estimer le nombre d'incidents distincts.
       </div>
       <div class="limit-item">
@@ -543,20 +561,26 @@
       set('.ref-retard-min', n(ref.retard_min_minutes));
       set('.ref-suppression', n(ref.suppression_minutes));
       set('.ref-fantome', n(ref.fantome_min_minutes));
-      set('.ref-poids-8', n(ref.poids_horaires['8']));
-      set('.ref-poids-14', n(ref.poids_horaires['14']));
+      // Profils horaires réels : part des voyageurs du jour sur chaque heure (somme = 1 sur 24 h)
+      const reseauA = (ref.profils_lignes || {}).RER_A;
+      const profilA = ((ref.profils_horaires || {})[reseauA]) || null;
+      const pct = v => (v * 100).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %';
 
-      // Exemple : RER A, retard de 45 min à 8 h, avec la formule affichée juste au-dessus
-      const voyJour = ref.frequentation.RER_A;
-      const poids = ref.poids_horaires['8'];
-      if (voyJour && poids) {
-        const DUREE = 45;
-        const parMin = voyJour * poids / 18 / 60;
-        const mv = Math.round(DUREE * parMin);
-        const cout = Math.floor(mv * Math.round(ref.smic_horaire * 100) / 6000);  // arrondi du backend
-        set('.ref-exemple', `${n(voyJour)} voy./jour × ${n(poids)} ÷ 18 ÷ 60 = ${n(Math.round(parMin))} voy./min · ` +
-          `${DUREE} × ${n(Math.round(parMin))} = ${n(mv)} min-voy. · coût estimé =`);
-        set('.ref-exemple-cout', `${n(cout)} €`);
+      if (profilA && profilA.JOHV && profilA.SAHV) {
+        set('.ref-part-8', pct(profilA.JOHV[8]));
+        set('.ref-part-sam-8', pct(profilA.SAHV[8]));
+
+        // Exemple : RER A, retard de 45 min à 8 h un jour de semaine, formule affichée au-dessus
+        const voyJour = ref.frequentation.RER_A;
+        if (voyJour) {
+          const DUREE = 45;
+          const parMin = voyJour * profilA.JOHV[8] / 60;
+          const mv = Math.round(DUREE * parMin);
+          const cout = Math.floor(mv * Math.round(ref.smic_horaire * 100) / 6000);  // arrondi du backend
+          set('.ref-exemple', `${n(voyJour)} voy./jour × ${pct(profilA.JOHV[8])} ÷ 60 = ${n(Math.round(parMin))} voy./min · ` +
+            `${DUREE} × ${n(Math.round(parMin))} = ${n(mv)} min-voy. · coût estimé =`);
+          set('.ref-exemple-cout', `${n(cout)} €`);
+        }
       }
     } catch (_) { /* placeholders « — » */ }
   })();
