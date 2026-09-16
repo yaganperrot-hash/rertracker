@@ -22,6 +22,15 @@ pondérée par les départs (une gare du tronc commun pèse plus qu'un terminus 
 Fenêtre : les dates du GTFS où circule au moins la moitié du nombre médian de trains. Les bords
 de fenêtre publiés partiellement (services commencés avant la date de publication) sont écartés.
 
+Coefficient de gare d'une mission (suite ordonnée de gares g₁ … gₙ) : part des voyageurs du train
+qui descendent après la gare g_k, donc touchés par un retard constaté en g_k. Modèle :
+  * poids w_i de chaque gare = validations du trimestre (open data IDFM, par id_zdc) ; gare sans
+    volume connu : médiane des gares de la mission ;
+  * montées m_i = w_i, sauf au terminus (m_n = 0) ;
+  * un voyageur monté en i descend en j > i avec la probabilité w_j ÷ Σ_{l>i} w_l ;
+  * coef(g_k) = [Σ_{i<k} m_i × S(k) ÷ S(i) + Σ_{i≥k} m_i] ÷ Σ_i m_i, avec S(x) = Σ_{j>x} w_j.
+Invariants : coefficient dans [0, 1], 1 au premier arrêt, non croissant, 0 au terminus.
+
 Les correspondances d'identifiants ont été vérifiées sur les données (2026-09-16) :
 route_id GTFS = ligne PRIM sans « line: », trip_id GTFS = vehicle_journey PRIM sans
 « vehicle_journey: », trip_headsign = code mission, stop_name = nom de gare PRIM.
@@ -41,6 +50,7 @@ from pathlib import Path
 import httpx
 
 from backend.collector import LIGNES_CIBLES
+from backend.profils import LIGNE_RESEAU, _volumes_par_gare
 from backend.profils import CAT_SAMEDI, CAT_SAMEDI_VAC, CAT_SEMAINE, CAT_SEMAINE_VAC, CATEGORIES, categorie_jour
 
 GTFS_URL = ("https://data.iledefrance-mobilites.fr/explore/dataset/offre-horaires-tc-gtfs-idfm/"
@@ -90,6 +100,20 @@ def trains_heure(line_id: str, quand: datetime) -> float | None:
 def intervalle_min(line_id: str, quand: datetime) -> float | None:
     """Intervalle médian entre deux trains à l'heure de `quand` (heure de Paris). None si inconnu."""
     return _valeur("intervalle_min", line_id, quand)
+
+
+def coef_gare(line_id: str, mission: str | None, gare: str | None) -> float:
+    """Part des voyageurs du train touchés par un retard constaté à `gare`.
+
+    Mission connue → coefficient de la mission ; sinon moyenne de la ligne ; gare inconnue → 1.0.
+    """
+    if not gare:
+        return 1.0
+    c = charger()
+    par_mission = c.get("coef_gare", {}).get(line_id, {}).get(mission or "", {})
+    if gare in par_mission:
+        return par_mission[gare]
+    return c.get("coef_gare_ligne", {}).get(line_id, {}).get(gare, 1.0)
 
 
 # ─────────────────────────── Construction ───────────────────────────
@@ -175,8 +199,72 @@ def mediane_ponderee(valeurs_poids: list[tuple[float, float]]) -> float:
     raise ValueError("liste vide")
 
 
-def agreger(chemin_zip: Path | str) -> dict:
-    """Trains équivalents, trains du jour et intervalles par ligne × jour type × heure."""
+def coefficients_mission(poids: list[float]) -> list[float]:
+    """Coefficient de chaque gare d'une mission à partir des poids de ses gares (docstring du module)."""
+    n = len(poids)
+    if n == 0:
+        return []
+    if n == 1:
+        return [1.0]
+    montees = poids[:-1] + [0.0]
+    total = sum(montees)
+    if total <= 0:
+        return [1.0] * (n - 1) + [0.0]
+    # S[x] = Σ_{j>x} w_j
+    apres = [0.0] * n
+    for x in range(n - 2, -1, -1):
+        apres[x] = apres[x + 1] + poids[x + 1]
+    coefs = []
+    for k in range(n):
+        encore_a_bord = sum(montees[i] * apres[k] / apres[i] for i in range(k) if apres[i] > 0)
+        coefs.append(min(1.0, (encore_a_bord + sum(montees[k:])) / total))
+    return coefs
+
+
+def coefficients_gare(trains: dict[str, dict], gares: dict[str, tuple[str, str]],
+                      parcours: dict[str, list[tuple[int, str, str]]],
+                      volumes: dict[str, float]) -> tuple[dict, dict]:
+    """(coef par ligne → mission → gare, coef par ligne → gare pondéré par le nombre de trains).
+
+    Une mission est un code (trip_headsign) ; parmi ses suites de gares, la plus fréquente fait foi.
+    `volumes` : id_zdc → validations ; l'arrêt parent GTFS « IDFM:71517 » porte l'id_zdc 71517.
+    """
+    suites: dict[tuple[str, str], dict[tuple, int]] = defaultdict(lambda: defaultdict(int))
+    for trip_id, t in trains.items():
+        desserte = parcours.get(trip_id)
+        if not desserte or not t["mission"]:
+            continue
+        suite: list[str] = []
+        for _, _, stop_id in desserte:
+            gare = gares.get(stop_id, (stop_id, stop_id))[0]
+            if not suite or suite[-1] != gare:
+                suite.append(gare)
+        suites[(t["ligne"], t["mission"])][tuple(suite)] += 1
+
+    nom = {gare: libelle for gare, libelle in gares.values()}
+    par_mission: dict[str, dict[str, dict[str, float]]] = defaultdict(dict)
+    cumul_ligne: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(lambda: [0.0, 0.0]))
+    for (ligne, mission), variantes in sorted(suites.items()):
+        suite, nb_trains = max(variantes.items(), key=lambda kv: (kv[1], kv[0]))
+        connus = [volumes[g.removeprefix("IDFM:")] for g in suite if volumes.get(g.removeprefix("IDFM:"))]
+        repli = statistics.median(connus) if connus else 1.0
+        poids = [volumes.get(g.removeprefix("IDFM:")) or repli for g in suite]
+        coefs = coefficients_mission(poids)
+        par_mission[ligne][mission] = {nom.get(g, g): round(c, 3) for g, c in zip(suite, coefs)}
+        total_trains = sum(variantes.values())
+        for g, c in zip(suite, coefs):
+            acc = cumul_ligne[ligne][nom.get(g, g)]
+            acc[0] += c * total_trains
+            acc[1] += total_trains
+
+    par_ligne = {ligne: {gare: round(s / n, 3) for gare, (s, n) in sorted(acc.items())}
+                 for ligne, acc in cumul_ligne.items()}
+    return dict(par_mission), par_ligne
+
+
+def agreger(chemin_zip: Path | str, volumes: dict[str, float] | None = None) -> dict:
+    """Trains équivalents, trains du jour et intervalles par ligne × jour type × heure.
+    Avec `volumes` (id_zdc → validations), ajoute les coefficients de gare."""
     with zipfile.ZipFile(chemin_zip) as z:
         jours = jours_actifs(z)
         trains = trains_des_lignes(z)
@@ -265,7 +353,7 @@ def agreger(chemin_zip: Path | str) -> dict:
             resultat_intervalle[ligne][cat] = resultat_intervalle[ligne][source]
             replis[cat] = source
 
-    return {
+    contenu = {
         "_source": {
             "portail": "data.iledefrance-mobilites.fr",
             "jeu": DS_GTFS,
@@ -280,6 +368,19 @@ def agreger(chemin_zip: Path | str) -> dict:
         "trains_heure": resultat_trains,
         "intervalle_min": resultat_intervalle,
     }
+    if volumes is not None:
+        contenu["coef_gare"], contenu["coef_gare_ligne"] = coefficients_gare(trains, gares, parcours, volumes)
+    return contenu
+
+
+def volumes_gares() -> dict[str, float]:
+    """Validations du trimestre par id_zdc, sommées sur les réseaux des lignes suivies."""
+    volumes: dict[str, float] = defaultdict(float)
+    with httpx.Client() as client:
+        for res in sorted(set(LIGNE_RESEAU.values())):
+            for zdc, v in _volumes_par_gare(client, res).items():
+                volumes[zdc] += v
+    return dict(volumes)
 
 
 def telecharger(destination: Path) -> None:
@@ -295,8 +396,10 @@ def build() -> None:
         chemin_zip = Path(dossier) / "gtfs.zip"
         print("Téléchargement du GTFS IDFM…", flush=True)
         telecharger(chemin_zip)
+        print("Validations par gare…", flush=True)
+        volumes = volumes_gares()
         print("Agrégation…", flush=True)
-        contenu = agreger(chemin_zip)
+        contenu = agreger(chemin_zip, volumes)
 
     CHEMIN.write_text(json.dumps(contenu, ensure_ascii=False, indent=1), encoding="utf-8")
     global _cache

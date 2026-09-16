@@ -408,18 +408,20 @@
       Le calcul se fait toujours en minutes ; l'affichage convertit ensuite en heures, jours ou années pour rendre les ordres de grandeur lisibles (ex. 2 847 340 min-voy. ≈ 5 ans 152 jours).
     </p>
     <div class="formula-block">
-      minutes-voyageurs = retard du train (min) × voyageurs_par_train<br>
+      minutes-voyageurs = retard du train (min) × voyageurs_par_train × part_touchée_à_la_gare<br>
       voyageurs_par_train = voyageurs_par_jour × part_de_l'heure ÷ trains_de_l'heure<br>
       coût = minutes-voyageurs × <span class="ref-smic">—</span> €/h ÷ 60
       <div class="formula-note">
         La <strong>part de l'heure</strong> est la fraction des voyageurs du jour qui embarquent pendant cette heure-là. Les 24 parts d'une journée somment à 1. Elles ne sont pas estimées mais mesurées, à partir des validations open data d'Île-de-France Mobilités, et diffèrent selon le réseau et le jour type : semaine et samedi, chacun décliné hors vacances et pendant les vacances scolaires, plus les dimanches et jours fériés — cinq profils par réseau. Sur le RER A, 8 h pèse <span class="ref-part-8">—</span> un jour de semaine ordinaire, <span class="ref-part-vac-8">—</span> pendant les vacances, et <span class="ref-part-sam-8">—</span> un samedi. 
         <br><br>
         Les <strong>trains de l'heure</strong> viennent des horaires prévus publiés par Île-de-France Mobilités (GTFS), par ligne et par jour type : les voyageurs qui montent pendant une heure se répartissent entre les trains qui circulent pendant cette heure. Un train à cheval sur deux heures compte dans chacune au prorata de ses arrêts. Sur le RER A, un jour de semaine à 8 h, <span class="ref-trains-8">—</span> trains se partagent les voyageurs. L'heure retenue est l'heure prévue du train.
+        La <strong>part touchée à la gare</strong> est la part des voyageurs du train qui descendent après la gare où le retard est constaté : un retard au départ touche tout le train, un retard à l'avant-dernier arrêt presque personne. Elle est estimée pour chaque mission à partir de la fréquentation des gares desservies (validations open data) : on suppose que chaque voyageur monte en proportion de la fréquentation de sa gare et descend dans l'une des gares suivantes, en proportion de leur fréquentation. L'exemple ci-dessous est un retard au départ (part touchée = 100 %).
+        <br><br>
         Un train supprimé compte pour l'intervalle jusqu'au train suivant à cette heure-là : <span class="ref-intervalle-a-8">—</span> min sur le RER A à 8 h, <span class="ref-intervalle-k-14">—</span> min sur la ligne K à 14 h, un jour de semaine.
       </div>
     </div>
     <p>
-      <strong>Exemple — RER A, retard de 45 minutes à 8 h un jour de semaine :</strong><br>
+      <strong>Exemple — RER A, retard de 45 minutes au départ, à 8 h un jour de semaine :</strong><br>
       <span class="ref-exemple">—</span> <strong class="ref-exemple-cout"></strong>
     </p>
   </section>
@@ -512,7 +514,7 @@
         <strong>Interruptions non chiffrées.</strong> Quand le trafic est interrompu, l'interruption elle-même n'a pas de coût, pour trois raisons. Les messages de l'opérateur ne décrivent le tronçon touché qu'en texte libre (« entre Corbeil-Essonnes et Malesherbes »), sans liste de gares ni de trains. La fréquentation n'est connue que par ligne, pas par tronçon : il faudrait inventer la part des voyageurs concernés. Enfin, les retards des trains qui circulent encore sont déjà comptés — ajouter l'interruption compterait deux fois les mêmes voyageurs. Le coût repose donc sur les retards mesurés et les trains détectés comme supprimés, ce qui sous-estime l'impact d'une interruption. Les messages de l'opérateur servent à la répartition des causes.
       </div>
       <div class="limit-item">
-        <strong>Fréquentation par ligne.</strong> Chaque retard est multiplié par la fréquentation de toute la ligne à cette heure, sans distinguer les gares ni les branches : un retard sur une branche peu fréquentée est surestimé, un retard sur le tronc commun sous-estimé.
+        <strong>Destinations estimées.</strong> Les voyageurs d'un train sont ceux de toute la ligne à cette heure, répartis entre les trains. Seule la part touchée dépend de la gare et de la mission, et elle repose sur une hypothèse : les données ouvertes donnent les entrées par gare, pas les trajets. Les destinations sont donc supposées proportionnelles à la fréquentation des gares suivantes. La gare retenue est celle où le plus grand retard du train a été observé, pas celle où il est apparu.
       </div>
       <div class="limit-item">
         <strong>Une validation n'est pas un voyageur à bord.</strong> Les profils horaires sont construits à partir des validations, c'est-à-dire des entrées dans le réseau. Ils décrivent donc où et quand les voyageurs embarquent, ce qui est un bon indicateur du flux mais pas de la charge réelle d'un train : un retard subi en milieu de parcours touche des voyageurs montés une heure plus tôt.

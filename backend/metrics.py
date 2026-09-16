@@ -114,9 +114,15 @@ def _duree_suppression(line_id: str, quand: datetime | None) -> int:
     return round(intervalle)
 
 
+def _coef_gare(incident) -> float:
+    """Part des voyageurs du train touchés à la gare de l'incident (backend/offre.py) ; 1 sans gare."""
+    return offre.coef_gare(incident.line_id, getattr(incident, "mission", None), getattr(incident, "gare", None))
+
+
 def incident_minutes_voyageurs(incident, now_utc: datetime) -> tuple[int, int]:
     """(durée effective, minutes-voyageurs) d'un retard temps réel ou d'un train supprimé.
 
+    minutes-voyageurs = durée × voyageurs du train × part des voyageurs touchés à la gare.
     Même calcul pour les métriques du jour et pour le coût par incident servi par l'API.
     """
     quand = _incident_dt_paris(incident)
@@ -124,7 +130,9 @@ def incident_minutes_voyageurs(incident, now_utc: datetime) -> tuple[int, int]:
         dur = _duree_suppression(incident.line_id, quand)
     else:
         dur = _effective_duration(incident, now_utc)
-    return dur, _minutes_voyageurs(dur, incident.line_id, quand)
+    if dur <= 0:
+        return dur, 0
+    return dur, round(dur * _voyageurs_par_train(incident.line_id, quand) * _coef_gare(incident))
 
 
 def cout_eur(minutes_voyageurs: int, smic_horaire: float) -> int:
@@ -307,9 +315,10 @@ def _freq_minute(line_id: str, quand: datetime | None) -> float:
 
 
 async def _retard_moyen_pondere(line_id: str, start: date, end: date, db: AsyncSession) -> float:
-    """Retard moyen pondéré par les voyageurs du train (minutes).
+    """Retard moyen pondéré par les voyageurs touchés (minutes).
 
-    = Σ(durée_i × voyageurs_par_train_i) / Σ(voyageurs_par_train_i)
+    = Σ(durée_i × voyageurs_touchés_i) / Σ(voyageurs_touchés_i),
+    voyageurs_touchés = voyageurs du train × coefficient de gare
     Un retard de 48 min en heure de pointe pèse plus qu'un retard de 5 min à 22 h.
     """
     start_utc = datetime.combine(start, time(7, 0), tzinfo=PARIS_TZ).astimezone(timezone.utc)
@@ -334,7 +343,7 @@ async def _retard_moyen_pondere(line_id: str, start: date, end: date, db: AsyncS
         dur, _ = incident_minutes_voyageurs(inc, now_utc)
         if dur <= 0:
             continue
-        poids = _voyageurs_par_train(line_id, _incident_dt_paris(inc))
+        poids = _voyageurs_par_train(line_id, _incident_dt_paris(inc)) * _coef_gare(inc)
         if poids <= 0:
             continue
         sum_dur_x_poids += dur * poids

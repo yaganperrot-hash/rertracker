@@ -180,7 +180,7 @@ class TestProfilsVacances:
 def _inc(**kw):
     from types import SimpleNamespace
     champs = dict(line_id="RER_A", heure_debut=None, heure_theorique=None, heure_fin=None,
-                  duree_minutes=10, is_cancelled=False)
+                  duree_minutes=10, is_cancelled=False, gare=None, mission=None)
     champs.update(kw)
     return SimpleNamespace(**champs)
 
@@ -258,6 +258,29 @@ class TestInstantEtSuppressions:
         dur, mv = incident_minutes_voyageurs(inc, datetime.now(timezone.utc))
         assert dur == _duree_suppression("TRANSILIEN_K", MARDI_14H)
         assert mv == _minutes_voyageurs(dur, "TRANSILIEN_K", MARDI_14H)
+
+
+class TestCoefficientDeGare:
+    """Un retard constaté en fin de parcours touche moins de voyageurs (TASK-23)."""
+
+    def test_premier_arret_plus_cher_que_l_avant_dernier(self):
+        mission, gares = next(iter(offre.charger()["coef_gare"]["RER_A"].items()))
+        noms = list(gares)
+        now = datetime.now(timezone.utc)
+        debut = _inc(mission=mission, gare=noms[0], heure_theorique=MARDI_8H)
+        fin = _inc(mission=mission, gare=noms[-2], heure_theorique=MARDI_8H)
+        assert incident_minutes_voyageurs(fin, now)[1] < incident_minutes_voyageurs(debut, now)[1]
+
+    def test_sans_gare_identique_au_calcul_par_train(self):
+        inc = _inc(heure_theorique=MARDI_8H)
+        _, mv = incident_minutes_voyageurs(inc, datetime.now(timezone.utc))
+        assert mv == _minutes_voyageurs(10, "RER_A", MARDI_8H)
+
+    def test_coefficient_applique(self):
+        inc = _inc(mission="QYRO", gare="Nation", heure_theorique=MARDI_8H)
+        _, mv = incident_minutes_voyageurs(inc, datetime.now(timezone.utc))
+        attendu = round(10 * _voyageurs_par_train("RER_A", MARDI_8H) * offre.coef_gare("RER_A", "QYRO", "Nation"))
+        assert mv == attendu
 
 
 class TestEffectiveDuration:

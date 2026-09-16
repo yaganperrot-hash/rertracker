@@ -110,6 +110,37 @@ class TestAgregation:
         assert c["_source"]["fenetre"] == ["2026-09-21", "2026-09-27"]
 
 
+class TestCoefficientsGare:
+    """Part des voyageurs touchés par un retard constaté à une gare (TASK-22)."""
+
+    def test_trois_gares_de_poids_egaux(self):
+        # m = [1, 1, 0] ; à la 2e gare : le voyageur monté en 1 descend après avec 1 chance sur 2,
+        # celui qui monte en 2 est touché → (0,5 + 1) ÷ 2
+        assert offre.coefficients_mission([1, 1, 1]) == [1.0, 0.75, 0.0]
+
+    def test_invariants(self):
+        for poids in ([5, 1, 1, 8, 2], [1, 100, 1], [3, 3], [1, 1, 1, 1, 1, 1]):
+            coefs = offre.coefficients_mission(poids)
+            assert coefs[0] == 1.0
+            assert coefs[-1] == 0.0
+            assert all(0 <= c <= 1 for c in coefs)
+            assert all(a >= b for a, b in zip(coefs, coefs[1:])), poids
+
+    def test_mission_du_gtfs_et_replis(self, tmp_path):
+        trips = f"{ROUTE_A},S,A1,QYRO,0\n{ROUTE_A},S,A2,QYRO,0\n"
+        stop_times = ("A1,08:00:00,Q1,1\nA1,08:10:00,Q2,2\nA1,08:20:00,Q3,3\n"
+                      "A2,09:00:00,Q1,1\nA2,09:10:00,Q2,2\nA2,09:20:00,Q3,3\n")
+        z = _gtfs(tmp_path, _toutes_lignes(trips), stop_times + _dessertes_autres(), SEMAINE)
+        c = offre.agreger(z, volumes={"P1": 1.0, "P2": 1.0})   # P3 sans volume : médiane des connus
+        assert c["coef_gare"]["RER_A"]["QYRO"] == {"Gare Un": 1.0, "Gare Deux": 0.75, "Gare Trois": 0.0}
+        assert c["coef_gare_ligne"]["RER_A"]["Gare Deux"] == 0.75
+
+    def test_sans_volumes_pas_de_coefficients(self, tmp_path):
+        z = _gtfs(tmp_path, _toutes_lignes(f"{ROUTE_A},S,A1,QYRO,0\n"),
+                  "A1,08:00:00,Q1,1\n" + _dessertes_autres(), SEMAINE)
+        assert "coef_gare" not in offre.agreger(z)
+
+
 class TestMedianePonderee:
     def test_poids_egaux(self):
         assert offre.mediane_ponderee([(1, 1), (2, 1), (3, 1)]) == 2
@@ -152,6 +183,27 @@ class TestFichierReel:
         mardi_8h = datetime(2026, 9, 22, 8, 30, tzinfo=PARIS)
         assert 30 <= offre.trains_heure("RER_A", mardi_8h) <= 80
         assert offre.intervalle_min("RER_A", mardi_8h) <= 6
+
+    def test_coefficients_de_gare_invariants(self):
+        """Invariants de la docstring du module, sur toutes les missions publiées."""
+        c = offre.charger()
+        assert set(c["coef_gare"]) == set(offre.LIGNE_ROUTE)
+        for ligne, missions in c["coef_gare"].items():
+            for mission, gares in missions.items():
+                coefs = list(gares.values())
+                assert all(0 <= v <= 1 for v in coefs), (ligne, mission)
+                if len(coefs) >= 2:
+                    assert coefs[0] == 1.0 and coefs[-1] == 0.0, (ligne, mission)
+                    assert all(a >= b for a, b in zip(coefs, coefs[1:])), (ligne, mission)
+
+    def test_coef_gare_replis(self):
+        c = offre.charger()
+        mission, gares = next(iter(c["coef_gare"]["RER_A"].items()))
+        gare, valeur = next(iter(gares.items()))
+        assert offre.coef_gare("RER_A", mission, gare) == valeur
+        assert offre.coef_gare("RER_A", "MISSION_INCONNUE", gare) == c["coef_gare_ligne"]["RER_A"][gare]
+        assert offre.coef_gare("RER_A", mission, "Gare inconnue") == 1.0
+        assert offre.coef_gare("RER_A", None, None) == 1.0
 
     def test_ligne_inconnue(self):
         assert offre.trains_heure("METRO_1", datetime(2026, 9, 22, 8, tzinfo=PARIS)) is None
