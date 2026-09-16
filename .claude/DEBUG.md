@@ -573,6 +573,21 @@ contient pas les trains supprimés (ils disparaissent du flux) : un train suppri
 **Symptôme** : 50 passages toutes gares confondues par relevé de 20 min : quelques trains vus à chaque fois
 **Status** : 🔄 TASK-13 (journal), TASK-15 (rapport), TASK-26 (flux SIRI Estimated Timetable)
 
+### [2026-09-16] Flux SIRI Estimated Timetable : faisabilité (TASK-26)
+**Requêtes** : 2 (13 h 30) — `estimated-timetable?LineRef=STIF:Line::C01742:` et `LineRef=ALL`
+**Constats** :
+- **Quota distinct** : `x-ratelimit-remaining-day` = 999 puis 998 sur ce flux, alors que le compteur Navitia du
+  serveur était à 700 → deux compteurs de 1 000 req/jour (à reconfirmer dans les logs après bascule : Navitia ne
+  doit plus perdre que 2 req/relevé). `CLAUDE.md` (« compteur unique pour tous les endpoints ») à corriger.
+- Par ligne : 0,9 Mo, 0,5 s ; RER A = 79 trains, horaires prévus de −50 min à +2 h 15, 1 427 arrêts avec heure prévue
+  et estimée, statuts `ON_TIME` / `DELAYED` / `CANCELLED` / `ARRIVED`. Arrêts **non ordonnés** dans la réponse.
+- Global (`ALL`) : 5 Mo gzip, 59 Mo JSON, 3,7 s, 16 028 trains / 1 424 lignes, horizon +4 h — trop lourd à analyser
+  toutes les 20 min ; l'appel par ligne suffit.
+- 13 lignes ce midi : 928 trains, 4 supprimés en entier, 18 limités en cours de route (ex. RER A terminus La Défense,
+  arrêts à l'est `CANCELLED`). 438 arrêts, tous nommés via le GTFS (`STIF:StopArea:SP:<n>:` = `IDFM:monomodalStopPlace:<n>`).
+- `DatedVehicleJourneyRef` contient l'uuid du trip_id GTFS (133/141 sur le RER A) ; `JourneyNote` = code mission.
+**Status** : 🔄 TASK-31 en attente d'accord (zone critique)
+
 ---
 
 ## Notes de surveillance

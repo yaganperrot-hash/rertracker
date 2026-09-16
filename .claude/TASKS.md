@@ -240,6 +240,34 @@ correspondances sans valideur (métro → RER à Châtelet), ce qui sous-compte 
 Comparer les deux sources par ligne, chercher les chiffres officiels publiés (IDFM, RATP, SNCF), présenter
 un tableau et une recommandation à l'utilisateur. **Aucun changement sans son accord.**
 
+> **Résultat (2026-09-16)** — source trouvée : SNCF Open Data `comptage-voyageurs-trains-transilien`
+> (voyageurs **montants** comptés dans les trains, correspondances comprises, par ligne × gare × jour type
+> JOB/SAM/DIM × 5 tranches horaires, hors travaux et vacances ; comptage automatique annuel ou manuel ~tous les 4 ans).
+> Montants par jour ouvré comparés à `frequentation.json` :
+>
+> | Ligne | JOB | SAM | DIM | Année | `frequentation.json` |
+> |---|---:|---:|---:|---|---:|
+> | C | 508 651 | 284 502 | 201 993 | 2025 | 350 000 |
+> | D | 630 841 | 427 752 | 329 673 | 2024 | 530 000 |
+> | E | 306 281 | 174 020 | 125 810 | 2022 | 180 000 |
+> | H | 239 376 | 154 959 | 114 094 | 2025 | 110 000 |
+> | J | 279 878 | 169 308 | 120 633 | 2025-26 | 130 000 |
+> | K | 15 654 | 2 846 | 1 440 | 2025 | 50 000 |
+> | L | 296 827 | 162 753 | 112 391 | 2025 | 170 000 |
+> | N | 131 828 | 88 356 | 59 231 | 2025 | 100 000 |
+> | P | 101 493 | 58 668 | 43 411 | 2023 | 80 000 |
+> | R | 71 422 | 55 729 | 47 067 | 2025 | 70 000 |
+> | U | 47 248 | 16 634 | 12 021 | 2024 | 40 000 |
+> | A | *11 gares SNCF seulement* | | | 2022 | 900 000 |
+> | B | *16 gares SNCF seulement* | | | 2019/2023 | 650 000 |
+>
+> Constats : `frequentation.json` sous-estime C, E, H, J, L d'environ ×1,5 à ×2,2 et surestime K ×3 ;
+> le samedi pèse ~55-65 % d'un jour ouvré, le dimanche ~40 % (aujourd'hui : 100 %). A et B n'y sont que pour la
+> partie SNCF : il faut une autre source (chiffres publiés RATP / IDFM) pour ces deux lignes.
+> Recommandation : voyageurs par jour **par ligne et par jour type** depuis ce jeu (A et B : chiffre officiel publié),
+> dans un `backend/frequentation.py` construit hors ligne comme `profils.py`. Ce jeu donne aussi les montants
+> par gare de chaque ligne, meilleurs que les validations pour les coefficients de gare (lot 3). En attente de décision.
+
 ---
 
 ## TASK-20 [Deepseek] — Page Méthode alignée sur le nouveau calcul
@@ -338,7 +366,19 @@ Comme TASK-21.
 
 ## LOT 4 — Suppressions, interruptions, couverture
 
-## TASK-25 [Claude Code] ⚠️ — Offre du jour pour la détection des suppressions
+> **2026-09-16 — TASK-26 faite, TASK-25 et TASK-27 remplacées.** Le flux SIRI Estimated Timetable (voir
+> `DEBUG.md`) donne tous les trains d'une ligne sur ~2 h, arrêt par arrêt, avec le statut `CANCELLED` explicite
+> (train entier ou fin de parcours). Plus besoin de l'offre GTFS du jour : la collecte passe sur ce flux (TASK-31).
+
+## TASK-31 [Claude Code] ⚠️ — Collecte des retards et suppressions sur le flux Estimated Timetable
+
+13 appels `estimated-timetable?LineRef=STIF:Line::<code>:` à la place des 13 appels `/departures` ; noms de gares
+via `offre.nom_arret` (`arrets` de `offre_theorique.json`, fait) ; suppression = premier arrêt `CANCELLED` ;
+pire retard sur les arrêts non supprimés ; filtre des trains fantômes conservé ; deux compteurs de quota suivis.
+Même `navitia_id` qu'avant (`rt_vehicle_journey:IDFM:TN:SNCF:<uuid>_AAAAMMJJ`). **En attente de l'accord de
+l'utilisateur** (zone critique : endpoint et quota PRIM). Puis TASK-28 (page Méthode) et `CLAUDE.md` (quota).
+
+## TASK-25 [Claude Code] ⚠️ — Offre du jour pour la détection des suppressions (remplacée par TASK-31)
 
 Avant TASK-27, valider avec l'utilisateur : téléchargement quotidien du GTFS (117 Mo) par le scheduler, durée du
 build sur la machine, emplacement `data/offre_jour/` (à ajouter au `.gitignore`).
@@ -400,6 +440,15 @@ sont comptés ; les voyageurs qui renoncent à voyager ne le sont pas).
 Référentiel officiel (France Stratégie / DGITM, fiches outils de l'évaluation des projets de transport) :
 valeur du temps des déplacements en Île-de-France, et coefficient de pénibilité de l'attente ou du retard.
 Valeurs, année de référence et lien consignés ici ; validation par l'utilisateur avant TASK-30.
+
+> **Résultat (2026-09-16)** — Haut-commissariat à la Stratégie et au Plan, *Investissements de transport : une
+> évaluation renouvelée face aux nouveaux défis*, juin 2026, chapitre 2, tableau 2 p. 56 (valeurs du rapport
+> Ayoun-Bréhier IGEDD 2023, validées par le conseil scientifique les 10 mars et 21 mai 2025) :
+> valeur du temps **courte distance / urbain, Île-de-France, tous motifs : 13,8 €₂₀₂₂/h** (domicile-travail/études 15,5 ;
+> professionnel 27,3 ; autres 10,7). Temps d'attente pondéré **× 1,5** (rapport Quinet 2013, repris p. 58).
+> Aucun coefficient propre au retard subi n'est fixé : l'étude IDFM 2005 citée p. 62 conclut que la conséquence
+> principale est le retard à l'arrivée, sans chiffre. Proposition : second chiffre = minutes-voyageurs × 13,8 €/h
+> (valeur 2022, non actualisée), sans coefficient ; × 1,5 réservé aux suppressions (temps d'attente). À valider.
 
 ## TASK-30 [Deepseek] — Second chiffre en valeur tutélaire
 Détaillée par Claude Code après TASK-29 : `config.py` (valeur, source), `/api/reference`, `bilans.py`
