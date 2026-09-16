@@ -1,8 +1,7 @@
-import json
 import logging
+import statistics
 from datetime import date, datetime, time, timezone, timedelta
 from zoneinfo import ZoneInfo
-from pathlib import Path
 
 from sqlalchemy import select, func, or_
 from sqlalchemy.dialects.postgresql import insert
@@ -11,8 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.config import get_settings
 from backend.database import AsyncSessionLocal
 from backend.models import Incident, DailyMetric
-from backend.profils import categorie_jour, charger as _charger_profils
-from backend import offre
+from backend.profils import CAT_SEMAINE, categorie_jour, charger as _charger_profils
+from backend import frequentation, offre
 
 logger = logging.getLogger(__name__)
 
@@ -21,38 +20,36 @@ PARIS_TZ = ZoneInfo("Europe/Paris")
 # Max duration for open incidents (no heure_fin, no duree_minutes)
 MAX_OPEN_DURATION_MIN = 180
 
-_FREQ_PATH = Path(__file__).parent.parent / "data" / "frequentation.json"
+# Voyageurs montant dans un train par ligne, gare, jour type et heure (comptages SNCF, validations IDFM),
+# construits par `python -m backend.frequentation build`. Lecteur unique : backend/frequentation.py.
+FREQ_GARES: dict = frequentation.charger()
 
-def _load_frequentation() -> dict[str, int]:
-    try:
-        return json.loads(_FREQ_PATH.read_text())
-    except Exception as exc:
-        logger.error("Cannot load frequentation.json: %s", exc)
-        return {}
+if not FREQ_GARES:
+    logger.error("frequentation_gares.json illisible — minutes-voyageurs nulles")
 
-
-FREQUENTATION: dict[str, int] = _load_frequentation()
+# Voyageurs montés par jour ouvré ordinaire, par ligne : ordre de grandeur affiché (/api/reference)
+FREQUENTATION: dict[str, int] = {
+    ligne: round(sum(cats.get(CAT_SEMAINE, {}).values()))
+    for ligne, cats in FREQ_GARES.get("montees_jour", {}).items()
+}
 
 # Profils horaires et calendrier scolaire, construits hors ligne par
 # `python -m backend.profils build`. Un seul lecteur, dans backend/profils.py.
 PROFILS: dict = _charger_profils()
 
 if not PROFILS:
-    logger.error("profils_horaires.json illisible — repli sur la moyenne plate 18 h")
+    logger.error("profils_horaires.json illisible — jours types sans vacances scolaires")
 
-# Offre théorique GTFS (trains équivalents, intervalles), construite par `python -m backend.offre build`
+# Offre théorique GTFS (départs, intervalles, missions), construite par `python -m backend.offre build`
 OFFRE: dict = offre.charger()
 
 if not OFFRE:
-    logger.error("offre_theorique.json illisible — repli sur le débit par minute")
+    logger.error("offre_theorique.json illisible — parcours et intervalles inconnus")
 
 
 def part_horaire(line_id: str, quand: datetime) -> float | None:
-    """Part des voyageurs du jour qui embarquent pendant l'heure de `quand` (heure de Paris).
-
-    Les 24 parts d'un profil somment à 1 : il n'y a plus de diviseur à tenir à jour.
-    None quand la ligne n'a pas de profil open data (métro, ligne inconnue).
-    """
+    """Part des validations du jour sur l'heure de `quand` (heure de Paris), profil du réseau de la ligne.
+    None quand la ligne n'a pas de profil open data."""
     reseau = PROFILS.get("lignes", {}).get(line_id)
     if reseau is None:
         return None
@@ -60,16 +57,6 @@ def part_horaire(line_id: str, quand: datetime) -> float | None:
     if not profil or len(profil) != 24:
         return None
     return profil[quand.hour]
-
-
-def _minutes_voyageurs(duree_min: int, line_id: str, quand: datetime | None = None) -> int:
-    """Minutes-voyageurs d'un retard : durée × voyageurs du train à cette heure-là.
-
-    `quand` est l'heure prévue du train, en heure de Paris.
-    """
-    if duree_min <= 0:
-        return 0
-    return round(duree_min * _voyageurs_par_train(line_id, quand))
 
 
 def _effective_duration(incident, now_utc: datetime) -> int:
@@ -93,46 +80,114 @@ def _effective_duration(incident, now_utc: datetime) -> int:
 
 
 def _incident_dt_paris(incident) -> datetime | None:
-    """Instant qui pondère l'incident, en heure de Paris : l'heure prévue du train quand elle est
-    connue, sinon le début de l'incident (heure du relevé). Le jour type (semaine/samedi/dimanche)
-    dépend de la date, pas seulement de l'heure — d'où le datetime complet."""
+    """Heure prévue du train en heure de Paris, sinon le début de l'incident (heure du relevé).
+    Le jour type dépend de la date, pas seulement de l'heure — d'où le datetime complet."""
     instant = getattr(incident, "heure_theorique", None) or incident.heure_debut
     if instant is None:
         return None
     return instant.astimezone(PARIS_TZ)
 
 
-def _duree_suppression(line_id: str, quand: datetime | None) -> int:
-    """Minutes perdues par les voyageurs d'un train supprimé : l'attente du train suivant.
+def arrets_du_train(incident, now_utc: datetime) -> list[dict] | None:
+    """Arrêts du train, dans l'ordre : {"g", "quand" (Paris), "r", "s", "w"}.
 
-    Calculée ici et jamais lue dans `duree_minutes`, où le collecteur écrit la valeur de repli :
-    l'historique se recalcule ainsi avec l'offre du moment.
+    Relevés arrêt par arrêt dans le flux SIRI (colonne `arrets`) depuis la bascule. Le flux ne remonte
+    qu'une cinquantaine de minutes dans le passé : les gares déjà desservies quand le train a été relevé
+    pour la première fois sont reprises de la mission GTFS, sans retard connu (leurs voyageurs comptent,
+    avec le retard mesuré là où ils descendent).
+    Pour un incident d'avant la bascule, parcours reconstitué depuis la mission GTFS : pas de retard
+    avant la gare où le pire retard a été relevé, ce retard à partir d'elle (ou suppression à partir
+    d'elle), heure prévue partout.
     """
-    intervalle = offre.intervalle_min(line_id, quand) if quand is not None else None
-    if intervalle is None:
-        return get_settings().cancel_default_impact_minutes
-    return round(intervalle)
+    if getattr(incident, "arrets", None):
+        releves = [{"g": a.get("g"), "quand": datetime.fromisoformat(a["p"]).astimezone(PARIS_TZ),
+                    "r": a.get("r"), "s": bool(a.get("s")), "w": a.get("w")} for a in incident.arrets if a.get("p")]
+        if not releves:
+            return None
+        parcours = offre.parcours_mission(incident.line_id, getattr(incident, "mission", None), releves[0]["g"])
+        if parcours and releves[0]["g"] in parcours:
+            avant = parcours[:parcours.index(releves[0]["g"])]
+            releves = [{"g": g, "quand": releves[0]["quand"], "r": None, "s": False, "w": None} for g in avant] + releves
+        return releves
+    quand = _incident_dt_paris(incident)
+    gares = offre.parcours_mission(incident.line_id, getattr(incident, "mission", None), getattr(incident, "gare", None))
+    if quand is None or not gares:
+        return None
+    gare = getattr(incident, "gare", None)
+    debut = gares.index(gare) if gare in gares else 0
+    supprime = bool(getattr(incident, "is_cancelled", False))
+    retard = 0 if supprime else _effective_duration(incident, now_utc)
+    return [{"g": g, "quand": quand, "r": retard if i >= debut else 0, "s": supprime and i >= debut, "w": None}
+            for i, g in enumerate(gares)]
 
 
-def _coef_gare(incident) -> float:
-    """Part des voyageurs du train touchés à la gare de l'incident (backend/offre.py) ; 1 sans gare."""
-    return offre.coef_gare(incident.line_id, getattr(incident, "mission", None), getattr(incident, "gare", None))
+def _attente(line_id: str, arret: dict) -> int:
+    """Attente d'un voyageur à un arrêt supprimé : mesurée (train suivant réellement passé) ; à défaut,
+    intervalle prévu à cette heure ; à défaut, valeur de repli de la configuration."""
+    if arret.get("w") is not None:
+        return arret["w"]
+    intervalle = offre.intervalle_min(line_id, arret["quand"])
+    return round(intervalle) if intervalle is not None else get_settings().cancel_default_impact_minutes
+
+
+def minutes_voyageurs_train(line_id: str, arrets: list[dict]) -> int:
+    """Minutes perdues par les voyageurs d'un train.
+
+    Voyageurs montés à l'arrêt i : montées dans un train à cette gare et à cette heure (mesurées).
+    Destination : arrêt j > i avec la probabilité w_j ÷ Σ_{l>i} w_l, w = voyageurs montés sur la journée
+    à la gare j (hypothèse : une gare voit descendre autant de voyageurs qu'elle en voit monter).
+    Perte du voyageur i → j :
+      * un arrêt supprimé entre i et j (inclus) : attente au premier arrêt supprimé ;
+      * sinon retard à l'arrivée mesuré en j, compté dès MIN_DELAY_MINUTES.
+    Invariant : chaque voyageur monté (hors terminus) est affecté à exactement une destination.
+    """
+    from backend.collector import MIN_DELAY_MINUTES
+
+    n = len(arrets)
+    if n < 2:
+        return 0
+    montees = [frequentation.montees_train(line_id, a["g"], a["quand"]) or 0.0 if a["g"] else 0.0 for a in arrets]
+    montees[-1] = 0.0
+    poids = [frequentation.montees_jour(line_id, a["g"], a["quand"]) or 0.0 if a["g"] else 0.0 for a in arrets]
+    connus = [p for p in poids if p > 0]
+    repli = statistics.median(connus) if connus else 1.0
+    poids = [p if p > 0 else repli for p in poids]
+
+    retards = [a["r"] if a.get("r") is not None and a["r"] >= MIN_DELAY_MINUTES else 0 for a in arrets]
+    attentes = [_attente(line_id, a) if a.get("s") else None for a in arrets]
+
+    total = 0.0
+    for i in range(n - 1):
+        if montees[i] <= 0:
+            continue
+        somme_poids = sum(poids[i + 1:])
+        premier_supprime = None
+        if attentes[i] is not None:
+            premier_supprime = i
+        for j in range(i + 1, n):
+            if premier_supprime is None and attentes[j] is not None:
+                premier_supprime = j
+            perte = attentes[premier_supprime] if premier_supprime is not None else retards[j]
+            if perte:
+                total += montees[i] * poids[j] / somme_poids * perte
+    return round(total)
 
 
 def incident_minutes_voyageurs(incident, now_utc: datetime) -> tuple[int, int]:
-    """(durée effective, minutes-voyageurs) d'un retard temps réel ou d'un train supprimé.
+    """(durée affichée, minutes-voyageurs) d'un retard temps réel ou d'un train supprimé.
 
-    minutes-voyageurs = durée × voyageurs du train × part des voyageurs touchés à la gare.
+    Durée affichée : pire retard relevé, ou plus longue attente pour un train supprimé.
     Même calcul pour les métriques du jour et pour le coût par incident servi par l'API.
     """
-    quand = _incident_dt_paris(incident)
+    arrets = arrets_du_train(incident, now_utc)
     if getattr(incident, "is_cancelled", False):
-        dur = _duree_suppression(incident.line_id, quand)
+        attentes = [_attente(incident.line_id, a) for a in (arrets or []) if a["s"]]
+        dur = max(attentes) if attentes else get_settings().cancel_default_impact_minutes
     else:
         dur = _effective_duration(incident, now_utc)
-    if dur <= 0:
+    if not arrets or dur <= 0:
         return dur, 0
-    return dur, round(dur * _voyageurs_par_train(incident.line_id, quand) * _coef_gare(incident))
+    return dur, minutes_voyageurs_train(incident.line_id, arrets)
 
 
 def cout_eur(minutes_voyageurs: int, smic_horaire: float) -> int:
@@ -269,56 +324,10 @@ async def get_today_stats(db: AsyncSession) -> dict:
     }
 
 
-_lignes_en_repli: set[str] = set()   # un seul warning par ligne sans offre ni profil
-
-
-def _voyageurs_par_train(line_id: str, quand: datetime | None) -> float:
-    """Voyageurs d'un train de la ligne à un instant donné (heure de Paris).
-
-    = voyageurs du jour × part de l'heure ÷ trains équivalents de l'heure (backend/offre.py).
-    Plancher à 1 train : une heure creuse à 0,3 train équivalent ne multiplie pas les voyageurs.
-    Invariant (hors heures à moins d'un train) : Σ_h voyageurs_par_train × trains_heure
-    = voyageurs du jour × Σ_h part de l'heure.
-
-    Unique endroit où la fréquentation devient une charge : _minutes_voyageurs et le retard
-    moyen pondéré s'appuient tous deux dessus. Repli sur l'ancien débit par minute pour une
-    ligne sans profil ou sans offre, ou un instant inconnu.
-    """
-    voyageurs_jour = FREQUENTATION.get(line_id, 0)
-    if voyageurs_jour == 0:
-        return 0.0
-    if quand is not None:
-        part = part_horaire(line_id, quand)
-        trains = offre.trains_heure(line_id, quand)
-        if part is not None and trains is not None:
-            return voyageurs_jour * part / max(trains, 1.0)
-    if line_id not in _lignes_en_repli:
-        _lignes_en_repli.add(line_id)
-        logger.warning("Voyageurs par train inconnus pour %s — repli sur le débit par minute", line_id)
-    return _freq_minute(line_id, quand)
-
-
-def _freq_minute(line_id: str, quand: datetime | None) -> float:
-    """Voyageurs par minute sur une ligne à un instant donné (heure de Paris).
-
-    Ancien calcul, conservé comme repli de _voyageurs_par_train.
-    """
-    voyageurs_jour = FREQUENTATION.get(line_id, 0)
-    if voyageurs_jour == 0:
-        return 0.0
-    if quand is not None:
-        part = part_horaire(line_id, quand)
-        if part is not None:
-            return voyageurs_jour * part / 60
-    # Repli plat sur les 18 h de service : lignes sans profil open data (métro), ou instant inconnu
-    return voyageurs_jour / 18 / 60
-
-
 async def _retard_moyen_pondere(line_id: str, start: date, end: date, db: AsyncSession) -> float:
     """Retard moyen pondéré par les voyageurs touchés (minutes).
 
-    = Σ(durée_i × voyageurs_touchés_i) / Σ(voyageurs_touchés_i),
-    voyageurs_touchés = voyageurs du train × coefficient de gare
+    = Σ(durée_i × voyageurs_touchés_i) / Σ(voyageurs_touchés_i), voyageurs_touchés = minutes-voyageurs ÷ durée
     Un retard de 48 min en heure de pointe pèse plus qu'un retard de 5 min à 22 h.
     """
     start_utc = datetime.combine(start, time(7, 0), tzinfo=PARIS_TZ).astimezone(timezone.utc)
@@ -340,10 +349,10 @@ async def _retard_moyen_pondere(line_id: str, start: date, end: date, db: AsyncS
     sum_dur_x_poids = 0.0
     sum_poids = 0.0
     for inc in incidents:
-        dur, _ = incident_minutes_voyageurs(inc, now_utc)
+        dur, mv = incident_minutes_voyageurs(inc, now_utc)
         if dur <= 0:
             continue
-        poids = _voyageurs_par_train(line_id, _incident_dt_paris(inc)) * _coef_gare(inc)
+        poids = mv / dur   # voyageurs touchés
         if poids <= 0:
             continue
         sum_dur_x_poids += dur * poids

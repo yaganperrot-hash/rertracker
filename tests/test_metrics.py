@@ -6,15 +6,14 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from backend import offre
+from backend import frequentation
 from backend.metrics import (
     FREQUENTATION,
-    _duree_suppression,
-    _freq_minute,
-    _incident_dt_paris,
-    _voyageurs_par_train,
+    arrets_du_train,
     incident_minutes_voyageurs,
-    _minutes_voyageurs,
+    minutes_voyageurs_train,
     _effective_duration,
+    _incident_dt_paris,
     PROFILS,
     part_horaire,
     MAX_OPEN_DURATION_MIN,
@@ -31,84 +30,8 @@ SAMEDI_8H = datetime(2026, 9, 19, 8, 30, tzinfo=PARIS)
 SAMEDI_18H = datetime(2026, 9, 19, 18, 30, tzinfo=PARIS)
 
 
-FREQ = {
-    "RER_A": 900000,
-    "RER_B": 650000,
-    "RER_C": 350000,
-    "RER_D": 530000,
-    "RER_E": 180000,
-    "TRANSILIEN_H": 110000,
-    "TRANSILIEN_J": 130000,
-    "TRANSILIEN_K": 50000,
-    "TRANSILIEN_L": 170000,
-    "TRANSILIEN_N": 100000,
-    "TRANSILIEN_P": 80000,
-    "TRANSILIEN_R": 70000,
-    "TRANSILIEN_U": 40000,
-}
-
-
-class TestMinutesVoyageurs:
-    def test_rer_a_known_value(self):
-        # 900000 / 18 / 60 = 833.33… voyageurs/min
-        result = _minutes_voyageurs(60, "RER_A")
-        expected = round(60 * (900000 / 18 / 60))
-        assert result == expected
-
-    def test_rer_b_known_value(self):
-        result = _minutes_voyageurs(30, "RER_B")
-        expected = round(30 * (650000 / 18 / 60))
-        assert result == expected
-
-    def test_unknown_line_returns_zero(self):
-        assert _minutes_voyageurs(60, "LIGNE_INCONNUE") == 0
-
-    def test_zero_duration_returns_zero(self):
-        assert _minutes_voyageurs(0, "RER_A") == 0
-
-    def test_result_is_proportional_to_duration(self):
-        mv_30 = _minutes_voyageurs(30, "RER_D")
-        mv_60 = _minutes_voyageurs(60, "RER_D")
-        assert mv_60 == mv_30 * 2
-
-    def test_all_known_lines_non_zero(self):
-        for line_id in FREQ:
-            result = _minutes_voyageurs(10, line_id)
-            assert result > 0, f"{line_id} should give non-zero result"
-
-    def test_higher_frequency_line_gives_more_mv(self):
-        mv_a = _minutes_voyageurs(60, "RER_A")   # 900k/jour
-        mv_u = _minutes_voyageurs(60, "TRANSILIEN_U")  # 40k/jour
-        assert mv_a > mv_u
-
-
 class TestProfilsHoraires:
-    """Pondération par les profils horaires réels (validations open data IDFM)."""
-
-    def test_pointe_du_matin_superieure_au_creux(self):
-        assert _minutes_voyageurs(10, "RER_A", MARDI_8H) > _minutes_voyageurs(10, "RER_A", MARDI_14H)
-
-    def test_samedi_matin_moins_cher_que_semaine(self):
-        """Un samedi n'a pas de pointe pendulaire à 8 h. L'écart par train est moindre que l'écart
-        de fréquentation : le samedi, moins de trains se partagent les voyageurs."""
-        semaine = _minutes_voyageurs(45, "RER_A", MARDI_8H)
-        samedi = _minutes_voyageurs(45, "RER_A", SAMEDI_8H)
-        assert samedi < semaine, f"samedi 8h ({samedi}) devrait être inférieur à mardi 8h ({semaine})"
-
-    def test_samedi_culmine_en_fin_de_journee(self):
-        assert _minutes_voyageurs(10, "RER_A", SAMEDI_18H) > _minutes_voyageurs(10, "RER_A", SAMEDI_8H)
-
-    def test_nuit_negligeable(self):
-        assert _minutes_voyageurs(10, "RER_A", MARDI_3H) < _minutes_voyageurs(10, "RER_A", MARDI_8H) / 100
-
-    def test_repli_plat_sans_instant(self):
-        """Sans instant connu, on retombe sur la moyenne plate des 18 h de service."""
-        assert _minutes_voyageurs(60, "RER_A") == round(60 * (900000 / 18 / 60))
-
-    def test_ligne_sans_profil_utilise_le_repli(self):
-        """Le métro n'a pas de profil : même résultat avec ou sans instant."""
-        assert part_horaire("METRO_1", MARDI_8H) is None
-        assert _minutes_voyageurs(60, "METRO_1", MARDI_8H) == _minutes_voyageurs(60, "METRO_1")
+    """Profils horaires de validations (open data IDFM), utilisés pour répartir les comptages dans l'heure."""
 
     def test_toutes_les_lignes_rer_transilien_ont_un_profil(self):
         for line_id in LIGNE_RESEAU:
@@ -165,12 +88,6 @@ class TestCategorieJour:
 
 
 class TestProfilsVacances:
-    def test_pointe_du_matin_ecrasee_en_vacances(self):
-        """Le pic pendulaire de 8 h s'effondre quand les écoles sont fermées."""
-        hors_vac = _minutes_voyageurs(45, "RER_A", MARDI_8H)
-        vac = _minutes_voyageurs(45, "RER_A", datetime(2026, 10, 20, 8, 30, tzinfo=PARIS))
-        assert vac < hors_vac, f"vacances ({vac}) devrait être < hors vacances ({hors_vac})"
-
     def test_cinq_jours_types(self):
         assert len(CATEGORIES) == 5
         for reseau, cats in PROFILS["profils"].items():
@@ -179,108 +96,125 @@ class TestProfilsVacances:
 
 def _inc(**kw):
     from types import SimpleNamespace
-    champs = dict(line_id="RER_A", heure_debut=None, heure_theorique=None, heure_fin=None,
-                  duree_minutes=10, is_cancelled=False, gare=None, mission=None)
+    champs = dict(line_id="RER_A", heure_debut=None, heure_theorique=MARDI_8H, heure_fin=None,
+                  duree_minutes=10, is_cancelled=False, gare=None, mission=None, arrets=None)
     champs.update(kw)
     return SimpleNamespace(**champs)
 
 
-class TestVoyageursParTrain:
-    """Voyageurs par train = voyageurs du jour × part de l'heure ÷ trains équivalents (TASK-18)."""
-
-    def test_invariant_somme_sur_la_journee(self):
-        """Σ_h voyageurs_par_train × trains_heure = voyageurs du jour × Σ part, sur les heures à ≥ 1 train."""
-        offre_c = offre.charger()
-        for line_id in LIGNE_RESEAU:
-            reseau = PROFILS["lignes"][line_id]
-            for cat in CATEGORIES:
-                parts = PROFILS["profils"][reseau][cat]
-                trains = offre_c["trains_heure"][line_id][cat]
-                heures = [h for h in range(24) if trains[h] >= 1]
-                attendu = FREQUENTATION[line_id] * sum(parts[h] for h in heures)
-                obtenu = sum(FREQUENTATION[line_id] * parts[h] / max(trains[h], 1.0) * trains[h] for h in heures)
-                assert obtenu == pytest.approx(attendu, rel=0.001), f"{line_id} {cat}"
-
-    def test_formule_a_partir_des_fichiers(self):
-        attendu = FREQUENTATION["RER_A"] * part_horaire("RER_A", MARDI_8H) / offre.trains_heure("RER_A", MARDI_8H)
-        assert _voyageurs_par_train("RER_A", MARDI_8H) == pytest.approx(attendu)
-        assert _minutes_voyageurs(45, "RER_A", MARDI_8H) == round(45 * attendu)
-
-    def test_rer_a_pointe_ordre_de_grandeur(self):
-        assert 1000 <= _voyageurs_par_train("RER_A", MARDI_8H) <= 3000
-
-    def test_transilien_k_bien_plus_cher_qu_avant(self):
-        """Le défaut corrigé : 2 à 4 trains à 8 h sur la K, pas 60."""
-        nouveau = _minutes_voyageurs(10, "TRANSILIEN_K", MARDI_8H)
-        ancien = round(10 * _freq_minute("TRANSILIEN_K", MARDI_8H))
-        assert nouveau >= 10 * ancien
-
-    def test_plancher_a_un_train(self):
-        # Transilien K un dimanche à 3 h : moins d'un train équivalent
-        dimanche_3h = datetime(2026, 9, 20, 3, 30, tzinfo=PARIS)
-        assert offre.trains_heure("TRANSILIEN_K", dimanche_3h) < 1
-        attendu = FREQUENTATION["TRANSILIEN_K"] * part_horaire("TRANSILIEN_K", dimanche_3h)
-        assert _voyageurs_par_train("TRANSILIEN_K", dimanche_3h) == pytest.approx(attendu)
-
-    def test_repli_ligne_sans_offre_un_seul_warning(self, caplog):
-        import backend.metrics as metrics
-        metrics._lignes_en_repli.discard("METRO_1")
-        with caplog.at_level("WARNING", logger="backend.metrics"):
-            a = _voyageurs_par_train("METRO_1", MARDI_8H)
-            b = _voyageurs_par_train("METRO_1", MARDI_8H)
-        assert a == b == _freq_minute("METRO_1", MARDI_8H)
-        assert sum("METRO_1" in r.message for r in caplog.records) == 1
+NOW = datetime(2026, 9, 15, 12, 0, tzinfo=timezone.utc)
 
 
-class TestInstantEtSuppressions:
+def _arrets(gares, retards=None, supprimes=(), attentes=None, quand=MARDI_8H):
+    retards = retards or [0] * len(gares)
+    attentes = attentes or {}
+    return [{"g": g, "quand": quand, "r": r, "s": i in supprimes, "w": attentes.get(i)}
+            for i, (g, r) in enumerate(zip(gares, retards))]
+
+
+@pytest.fixture
+def ligne_fictive(monkeypatch):
+    """Trois gares, 100 voyageurs montent dans chaque train à A et à B ; B et C attirent autant."""
+    monkeypatch.setattr(frequentation, "_cache", {
+        "montees_train": {"RER_A": {"JOHV": {g: [100.0] * 24 for g in "ABC"}}},
+        "montees_jour": {"RER_A": {"JOHV": {"A": 1000.0, "B": 1000.0, "C": 1000.0}}},
+    })
+
+
+class TestMinutesVoyageursTrain:
+    """Perte de chaque voyageur entre sa gare de montée et sa gare de descente (lot 6)."""
+
+    def test_train_a_l_heure(self, ligne_fictive):
+        assert minutes_voyageurs_train("RER_A", _arrets("ABC")) == 0
+
+    def test_retard_au_terminus(self, ligne_fictive):
+        # A → B (moitié des montés en A) : 0 ; A → C : 50 × 10 ; B → C : 100 × 10
+        assert minutes_voyageurs_train("RER_A", _arrets("ABC", [0, 0, 10])) == 50 * 10 + 100 * 10
+
+    def test_retard_sous_le_seuil_non_compte(self, ligne_fictive):
+        assert minutes_voyageurs_train("RER_A", _arrets("ABC", [1, 1, 1])) == 0
+
+    def test_retard_partout(self, ligne_fictive):
+        # Tous les voyageurs (200) arrivent avec 5 min de retard
+        assert minutes_voyageurs_train("RER_A", _arrets("ABC", [5, 5, 5])) == 200 * 5
+
+    def test_suppression_totale_attente_mesuree(self, ligne_fictive):
+        arrets = _arrets("ABC", supprimes=(0, 1, 2), attentes={0: 12, 1: 20})
+        # Montés en A attendent 12 min, montés en B 20 min
+        assert minutes_voyageurs_train("RER_A", arrets) == 100 * 12 + 100 * 20
+
+    def test_train_limite_en_cours_de_route(self, ligne_fictive):
+        # Terminus avancé en B : seuls les voyageurs vers C attendent (attente mesurée en C : 15)
+        arrets = _arrets("ABC", supprimes=(2,), attentes={2: 15})
+        assert minutes_voyageurs_train("RER_A", arrets) == 50 * 15 + 100 * 15
+
+    def test_attente_inconnue_intervalle_prevu(self, ligne_fictive):
+        from backend import offre
+        arrets = _arrets("ABC", supprimes=(0, 1, 2))
+        intervalle = round(offre.intervalle_min("RER_A", MARDI_8H))
+        assert minutes_voyageurs_train("RER_A", arrets) == 200 * intervalle
+
+    def test_invariant_chaque_voyageur_une_destination(self, ligne_fictive):
+        """Même retard partout = voyageurs montés hors terminus × retard, quels que soient les poids."""
+        frequentation._cache["montees_jour"]["RER_A"]["JOHV"] = {"A": 7.0, "B": 3000.0, "C": 11.0}
+        assert minutes_voyageurs_train("RER_A", _arrets("ABC", [4, 4, 4])) == 200 * 4
+
+
+class TestArretsDuTrain:
+    def test_arrets_releves(self):
+        arrets = [{"g": "Nation", "p": "2026-09-15T06:30:00+00:00", "r": 5, "s": False, "w": None}]
+        a = arrets_du_train(_inc(arrets=arrets, mission=None), NOW)
+        assert a[-1]["g"] == "Nation" and a[-1]["r"] == 5
+        assert a[-1]["quand"].hour == 8
+
+    def test_debut_de_parcours_complete_par_la_mission(self):
+        from backend import offre
+        parcours = offre.charger()["missions"]["RER_A"]["QYRO"]
+        releve = [{"g": parcours[5], "p": "2026-09-15T06:30:00+00:00", "r": 5, "s": False, "w": None}]
+        a = arrets_du_train(_inc(arrets=releve, mission="QYRO"), NOW)
+        assert [x["g"] for x in a] == parcours[:6]
+        assert all(x["r"] is None for x in a[:5])
+
+    def test_incident_d_avant_la_bascule_reconstitue(self):
+        from backend import offre
+        parcours = offre.charger()["missions"]["RER_A"]["QYRO"]
+        a = arrets_du_train(_inc(mission="QYRO", gare=parcours[3], duree_minutes=7), NOW)
+        assert [x["g"] for x in a] == parcours
+        assert [x["r"] for x in a[:3]] == [0, 0, 0]
+        assert all(x["r"] == 7 for x in a[3:])
+
     def test_heure_prevue_prioritaire(self):
         inc = _inc(heure_theorique=datetime(2026, 9, 15, 8, 55, tzinfo=PARIS),
                    heure_debut=datetime(2026, 9, 15, 9, 5, tzinfo=PARIS))
         assert _incident_dt_paris(inc).hour == 8
 
-    def test_sans_heure_prevue_debut_de_l_incident(self):
-        inc = _inc(heure_debut=datetime(2026, 9, 15, 9, 5, tzinfo=PARIS))
-        assert _incident_dt_paris(inc).hour == 9
 
-    def test_suppression_rer_a_pointe(self):
-        assert 2 <= _duree_suppression("RER_A", MARDI_8H) <= 6
+class TestIncidentMinutesVoyageurs:
+    def test_retard_d_avant_la_bascule(self):
+        dur, mv = incident_minutes_voyageurs(_inc(mission="QYRO", duree_minutes=10), NOW)
+        assert dur == 10 and mv > 0
 
-    def test_suppression_transilien_k_creuse(self):
-        assert _duree_suppression("TRANSILIEN_K", MARDI_14H) >= 20
+    def test_plus_tard_dans_le_parcours_moins_cher(self):
+        from backend import offre
+        parcours = offre.charger()["missions"]["RER_A"]["QYRO"]
+        tot = incident_minutes_voyageurs(_inc(mission="QYRO", gare=parcours[0]), NOW)[1]
+        tard = incident_minutes_voyageurs(_inc(mission="QYRO", gare=parcours[-2]), NOW)[1]
+        assert tard < tot
 
-    def test_suppression_ligne_sans_offre_valeur_de_repli(self):
-        from backend.config import get_settings
-        assert _duree_suppression("METRO_1", MARDI_8H) == get_settings().cancel_default_impact_minutes
+    def test_pointe_plus_chere_que_le_creux(self):
+        pointe = incident_minutes_voyageurs(_inc(mission="QYRO"), NOW)[1]
+        creux = incident_minutes_voyageurs(_inc(mission="QYRO", heure_theorique=MARDI_14H), NOW)[1]
+        assert pointe > creux
 
-    def test_suppression_ignore_duree_stockee(self):
-        """Le collecteur écrit 5 dans duree_minutes ; le calcul lit l'intervalle de l'offre."""
-        inc = _inc(line_id="TRANSILIEN_K", is_cancelled=True, duree_minutes=5, heure_theorique=MARDI_14H)
-        dur, mv = incident_minutes_voyageurs(inc, datetime.now(timezone.utc))
-        assert dur == _duree_suppression("TRANSILIEN_K", MARDI_14H)
-        assert mv == _minutes_voyageurs(dur, "TRANSILIEN_K", MARDI_14H)
+    def test_suppression_duree_affichee_plus_longue_attente(self):
+        arrets = [{"g": "Nation", "p": "2026-09-15T06:30:00+00:00", "r": None, "s": True, "w": 9},
+                  {"g": "Vincennes", "p": "2026-09-15T06:34:00+00:00", "r": None, "s": True, "w": 14}]
+        dur, _ = incident_minutes_voyageurs(_inc(arrets=arrets, is_cancelled=True, duree_minutes=5), NOW)
+        assert dur == 14
 
-
-class TestCoefficientDeGare:
-    """Un retard constaté en fin de parcours touche moins de voyageurs (TASK-23)."""
-
-    def test_premier_arret_plus_cher_que_l_avant_dernier(self):
-        mission, gares = next(iter(offre.charger()["coef_gare"]["RER_A"].items()))
-        noms = list(gares)
-        now = datetime.now(timezone.utc)
-        debut = _inc(mission=mission, gare=noms[0], heure_theorique=MARDI_8H)
-        fin = _inc(mission=mission, gare=noms[-2], heure_theorique=MARDI_8H)
-        assert incident_minutes_voyageurs(fin, now)[1] < incident_minutes_voyageurs(debut, now)[1]
-
-    def test_sans_gare_identique_au_calcul_par_train(self):
-        inc = _inc(heure_theorique=MARDI_8H)
-        _, mv = incident_minutes_voyageurs(inc, datetime.now(timezone.utc))
-        assert mv == _minutes_voyageurs(10, "RER_A", MARDI_8H)
-
-    def test_coefficient_applique(self):
-        inc = _inc(mission="QYRO", gare="Nation", heure_theorique=MARDI_8H)
-        _, mv = incident_minutes_voyageurs(inc, datetime.now(timezone.utc))
-        attendu = round(10 * _voyageurs_par_train("RER_A", MARDI_8H) * offre.coef_gare("RER_A", "QYRO", "Nation"))
-        assert mv == attendu
+    def test_frequentation_affichee_par_ligne(self):
+        assert set(FREQUENTATION) >= set(LIGNE_RESEAU)
+        assert all(v > 0 for v in FREQUENTATION.values())
 
 
 class TestEffectiveDuration:
