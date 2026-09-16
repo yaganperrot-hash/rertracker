@@ -551,6 +551,30 @@ sous la nouvelle étiquette. Le recalcul qui suit reconstruit les bonnes valeurs
 
 ---
 
+## Session 2026-09-16 — Mac (affinage du calcul)
+
+### [2026-09-16] Bug 32 — Trains supprimés jamais détectés
+**Fichier(s)** : `backend/collector.py` (détection des suppressions, fin de `collect_rt_delays`)
+**Symptôme** : 0 train supprimé en base sur 7 jours, toutes lignes confondues
+**Cause** : seuls les trains **déjà enregistrés en retard** sont surveillés. Or `/departures` en `realtime` ne
+contient pas les trains supprimés (ils disparaissent du flux) : un train supprimé qui roulait à l'heure n'est jamais vu
+**Fix** : prévu — comparer le flux à l'offre GTFS du jour (`trip_id` GTFS = `vehicle_journey` PRIM, vérifié)
+**Status** : 🔄 TASK-14 (test) et TASK-27 (`.claude/TASKS.md`)
+
+### [2026-09-16] Coût calculé par minute de voyageurs, pas par train (limite de méthode)
+**Fichier(s)** : `backend/metrics.py` (`_freq_minute`, `_minutes_voyageurs`)
+**Symptôme** : chaque train en retard est multiplié par les voyageurs d'**une minute** de la ligne, ce qui suppose
+60 trains/heure. GTFS du 17/09 à 8 h : RER A 50 trains (sous-estimé × 1,2), U 8 (× 7,5), K 2 (× 30)
+**Cause** : formule d'origine ; le classement entre lignes pénalise les lignes peu fréquentes
+**Status** : 🔄 Lot « Affinage du calcul », TASK-16 → TASK-21
+
+### [2026-09-16] Couverture de la collecte inconnue (limite de méthode)
+**Fichier(s)** : `backend/collector.py` (`/departures?count=50`)
+**Symptôme** : 50 passages toutes gares confondues par relevé de 20 min : quelques trains vus à chaque fois
+**Status** : 🔄 TASK-13 (journal), TASK-15 (rapport), TASK-26 (flux SIRI Estimated Timetable)
+
+---
+
 ## Notes de surveillance
 - Quota PRIM : 1 000 req/jour confirmé (en-têtes `x-ratelimit-*`, compteur unique, remise à zéro minuit UTC) —
   relevé 20 min de 6 h à minuit × 15 req = 810 req/jour ; reste loggué à chaque relevé, warning sous 150

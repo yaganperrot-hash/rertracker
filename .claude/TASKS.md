@@ -4,6 +4,409 @@
 
 ---
 
+# Lot « Affinage du calcul » — rédigé le 2026-09-16
+
+Chaque tâche indique son exécutant : **[Deepseek]** (écriture de code uniquement, aucune commande) ou
+**[Claude Code]** (vérifications, commandes, requêtes, études). Une tâche marquée ⚠️ touche une zone critique
+de `CLAUDE.md` : Claude Code demande l'accord de l'utilisateur **avant** de la confier à Deepseek.
+
+## Contexte commun (à lire avant toute tâche du lot)
+
+### Décisions de l'utilisateur (2026-09-16)
+- **Historique recalculé** avec la nouvelle méthode (`python -m backend.recalcul`) pour les lots 2 et 3. Le lot 4
+  n'est pas rétroactif : sa date de mise en service est écrite sur la page Méthode.
+- Lot 5 (valeur du temps) conservé, appliqué aux minutes-voyageurs de la nouvelle méthode.
+- Chaque lot qui change les chiffres ajoute à `TODO.md` : « PC Windows : `git pull` puis `python -m backend.recalcul` ».
+
+### Le défaut principal corrigé
+Aujourd'hui `minutes-voyageurs = retard × voyageurs_jour × part_heure ÷ 60`, **par train en retard**. Cela revient
+à supposer qu'un train transporte une minute de voyageurs de la ligne, soit 60 trains par heure. Offre réelle
+(GTFS IDFM, trains au départ de leur terminus, jeudi 17/09/2026, deux sens confondus) :
+
+| Ligne | Trains/jour | 7 h | 8 h | 12 h | 18 h | Sous-estimation actuelle à 8 h (60 ÷ trains) |
+|-------|------------:|----:|----:|-----:|-----:|------------------:|
+| RER A | 635 | 51 | 50 | 30 | 50 | × 1,2 |
+| RER B | 547 | 41 | 37 | 24 | 40 | × 1,6 |
+| L     | 558 | 41 | 42 | 28 | 42 | × 1,4 |
+| U     | 93  | 8  | 8  | 4  | 8  | × 7,5 |
+| K     | 36  | 4  | 2  | 1  | 4  | × 30  |
+
+Formule cible : `minutes-voyageurs = retard × voyageurs_par_train`, avec
+`voyageurs_par_train = voyageurs_jour × part_heure ÷ trains_équivalents_heure` (définition en TASK-16).
+
+### Faits vérifiés par Claude Code (ne pas re-vérifier, ne pas recopier ailleurs sans nécessité)
+- **GTFS** : `https://data.iledefrance-mobilites.fr/explore/dataset/offre-horaires-tc-gtfs-idfm/files/a925e164271e4bca93433756d6a340d1/download/`
+  — zip de 117 Mo, **30 jours** d'offre à partir du jour de publication, mis à jour chaque jour.
+  `stop_times.txt` fait 760 Mo décompressé : **lecture en flux ligne à ligne depuis le zip**, jamais chargé en mémoire.
+- `route_id` GTFS = identifiant de ligne PRIM sans le préfixe `line:` (`IDFM:C01742` ↔ `line:IDFM:C01742`, les
+  13 lignes de `LIGNES_CIBLES`). Toujours dériver la correspondance de `LIGNES_CIBLES`, jamais la recopier.
+- `trip_id` GTFS = identifiant `vehicle_journey` PRIM sans le préfixe `vehicle_journey:`
+  (`IDFM:TN:SNCF:<uuid>`). 100 % des trains en base depuis le 13/09 se retrouvent dans le GTFS.
+- `trip_headsign` GTFS = code mission PRIM (`QYRO`, `MONA`…) : 2 802 missions en base sur 2 806 retrouvées.
+- `stop_name` GTFS = nom de gare PRIM (`Incident.gare`) : 354 gares en base sur 354, correspondance exacte.
+- `stops.txt` : l'arrêt parent `parent_station = IDFM:71517` porte l'identifiant `id_zdc = 71517` des jeux
+  de validations (`La Défense`).
+- Heures GTFS au-delà de 24 h (`25:10:00`) : appartiennent au jour de service de la veille ; heure = `hh % 24`.
+- La fenêtre GTFS ne contient pas toujours les cinq jours types : du 16/09 au 15/10/2026, **aucun jour de vacances**.
+- `/departures` en `data_freshness=realtime` **ne contient pas** les trains supprimés : ils disparaissent du flux
+  (test du 15/09, `TODO.md` piste c). La détection actuelle ne surveille que les trains déjà en retard : un train
+  supprimé qui roulait à l'heure n'est jamais vu → **0 suppression en base en 7 jours** (Bug 32, `DEBUG.md`).
+
+### Règles
+- `encoding="utf-8"` explicite sur toute lecture/écriture de fichier texte.
+- Tout invariant écrit dans un commentaire ou une docstring a son test.
+- Deepseek n'envoie aucune requête PRIM et ne lance rien ; les builds open data sont lancés par Claude Code.
+- Nouveaux lecteurs de fichiers de données : sur le modèle de `profils.charger()` (lu une fois, `{}` si illisible).
+
+---
+
+## LOT 0 — Diagnostics (aucun chiffre ne change)
+
+## TASK-13 [Deepseek] — Journal de couverture de chaque relevé
+
+### Fichier cible
+`backend/collector.py`, `tests/test_collector.py`
+
+### Contexte
+`/departures?count=50` renvoie les 50 prochains passages, toutes gares confondues : chaque relevé ne voit
+que quelques trains. On ne sait pas quelle part des trains est observée.
+
+### Travail
+1. Extraire en fonction pure le calcul de l'identifiant de train déjà fait dans `collect_rt_delays`
+   (`vj_id.split(":RealTime:")[0]`) : `_train_id(dep: dict) -> str | None`. `collect_rt_delays` l'utilise.
+2. Fonction pure `couverture_releve(departures: list[dict]) -> dict` :
+   `{"trains": int, "passages": int, "debut": datetime | None, "fin": datetime | None}` — trains distincts
+   (tous, en retard ou non, `data_freshness == "realtime"`), nombre de passages, plus petite et plus grande
+   heure **prévue** (`base_departure_date_time`, en UTC).
+3. Dans `collect_rt_delays`, pour chaque ligne, un log INFO :
+   `Couverture RER_A : 7 trains, 50 passages, départs prévus 08:02 → 08:11 (9 min)` (heures de Paris).
+
+### Critères d'acceptation
+- Aucune requête supplémentaire, aucun changement de ce qui est enregistré en base.
+- Tests : réponse vide ; deux passages du même train (suffixes `:RealTime:` différents) = 1 train ; passage
+  `base_schedule` ignoré ; bornes début/fin correctes.
+
+---
+
+## TASK-14 [Deepseek] — Test qui reproduit le Bug 32
+
+### Fichier cible
+`tests/test_collector.py`
+
+### Travail
+Sur le modèle des tests existants de détection des suppressions (`mock_settings.cancel_default_impact_minutes`),
+un test : un train **à l'heure** présent dans un relevé, absent du suivant alors que son départ prévu est
+dans le futur → aucune ligne `is_cancelled` n'est créée. Marqué
+`@pytest.mark.xfail(strict=True, reason="Bug 32 : suppression d'un train à l'heure non détectée — TASK-27")`.
+
+### Critères d'acceptation
+- Le test est « xfailed » aujourd'hui ; il passera (et le marqueur sera retiré) avec TASK-27.
+
+---
+
+## TASK-15 [Claude Code] — Rapport de couverture
+
+Après au moins une journée complète de logs de TASK-13 et le fichier de TASK-16 : taux de couverture par ligne
+(trains distincts vus / trains prévus au GTFS sur la journée, et fenêtre moyenne en minutes). Consigné dans
+`DEBUG.md`. Sert à décider de TASK-26.
+
+---
+
+## LOT 1 — Offre théorique (données, hors zone critique)
+
+## TASK-16 [Deepseek] — `backend/offre.py` : trains équivalents et intervalles par heure
+
+### Fichiers cibles
+`backend/offre.py` (nouveau), `tests/test_offre.py` (nouveau)
+
+### Contexte
+Même architecture que `backend/profils.py` : `python -m backend.offre build` télécharge et agrège hors ligne,
+écrit `data/offre_theorique.json` (versionné) ; à l'exécution le backend ne lit que ce fichier.
+
+### Définitions (à reprendre dans la docstring du module)
+- **Trains équivalents de l'heure h** d'une ligne, pour une date : Σ sur les trains du jour de
+  `(arrêts du train dont l'heure de départ prévue est dans h) ÷ (arrêts du train)`.
+  Un train de 7 h 50 à 8 h 30 avec la moitié de ses arrêts avant 8 h compte 0,5 à 7 h et 0,5 à 8 h.
+  **Invariant : Σ des 24 heures = nombre de trains du jour.**
+  Justification : les voyageurs qui montent pendant h se répartissent sur les trains qui desservent des gares
+  pendant h ; ainsi Σ_trains voyageurs_par_train = voyageurs du jour.
+- **Intervalle de l'heure h** : pour chaque couple (arrêt parent, `direction_id`) desservi pendant h, nombre de
+  départs dans h ; intervalle = `60 ÷ médiane de ces nombres`, borné à 60 min. `null` si aucun départ.
+  C'est l'attente du train suivant pour un voyageur dont le train est supprimé.
+
+### Travail
+1. Constantes : URL du GTFS (Contexte commun), chemin `data/offre_theorique.json`. Lignes :
+   `{LIGNES_CIBLES[k]: k.removeprefix("line:") for k in LIGNES_CIBLES}` (import depuis `backend.collector`).
+2. Téléchargement du zip dans un fichier temporaire (`tempfile`), supprimé à la fin, même en cas d'erreur.
+3. Jours actifs de chaque `service_id` : `calendar.txt` (jours de la semaine entre `start_date` et `end_date`)
+   puis `calendar_dates.txt` (`exception_type` 1 = ajout, 2 = retrait).
+4. `trips.txt` : garder les trains des 13 `route_id`.
+5. `stop_times.txt` en flux : pour chaque train retenu, liste de (heure de départ prévue `hh % 24`, `stop_id`).
+   `stops.txt` : `stop_id` → arrêt parent.
+6. Pour chaque date de la fenêtre : jour type `profils.categorie_jour(date)` ; trains équivalents et intervalles
+   par ligne et par heure.
+7. Moyenne par ligne × jour type × heure, sur les dates de ce jour type. **Repli** si un jour type est absent de la
+   fenêtre : `JOVS` ← `JOHV`, `SAVS` ← `SAHV` ; `DIJFP` absent → erreur explicite. Replis listés dans
+   `_source.replis`.
+8. Écriture :
+   ```json
+   {
+     "_source": {"portail": "...", "jeu": "offre-horaires-tc-gtfs-idfm", "genere_le": "AAAA-MM-JJ",
+                 "fenetre": ["AAAA-MM-JJ", "AAAA-MM-JJ"], "replis": {"JOVS": "JOHV"},
+                 "methode": "trains équivalents : part des arrêts du train dans l'heure"},
+     "lignes": {"RER_A": "IDFM:C01742", "...": "..."},
+     "trains_heure": {"RER_A": {"JOHV": [24 nombres, 2 décimales], "...": []}},
+     "intervalle_min": {"RER_A": {"JOHV": [24 nombres ou null, 1 décimale], "...": []}}
+   }
+   ```
+   Affichage console par ligne comme `profils.build` (trains/jour, trains à 8 h en JOHV).
+9. Lecteur : `charger() -> dict` et `trains_heure(line_id, quand: datetime) -> float | None`,
+   `intervalle_min(line_id, quand: datetime) -> float | None` (heure de Paris, jour type via `categorie_jour`).
+
+### Tests (`tests/test_offre.py`)
+Un mini GTFS construit **dans le test** avec `zipfile` dans `tmp_path` (pas de binaire versionné), fonctions
+d'agrégation appelées sur ce zip sans réseau :
+- un train dont les arrêts chevauchent deux heures est réparti au prorata ;
+- `calendar_dates` retire et ajoute bien un jour ;
+- heure `25:10:00` → heure 1 ;
+- intervalle : 4 départs dans l'heure sur un arrêt/sens → 15 min ; borne 60 ;
+- repli `JOVS` ← `JOHV` noté dans `_source.replis`.
+Sur le fichier réel `data/offre_theorique.json` (tests sautés s'il est absent) :
+- **invariant** : pour chaque ligne et jour type, Σ `trains_heure` = trains du jour à 1 % près (écrire aussi
+  `trains_jour` dans le JSON pour ce test) ;
+- les 13 lignes et les 5 jours types présents, 24 valeurs chacun ;
+- RER A `JOHV` 8 h entre 30 et 80 trains équivalents.
+
+### Critères d'acceptation
+- Aucun appel PRIM. Aucun fichier du zip écrit dans le projet.
+- `backend/profils.py` inchangé.
+
+---
+
+## TASK-17 [Claude Code] — Construire et contrôler l'offre
+
+`python -m backend.offre build`, contrôle des ordres de grandeur contre le tableau du Contexte commun, taille
+du JSON (< 1 Mo), tests verts, commit du fichier. Ajout à `TODO.md` : régénérer `offre_theorique.json` en même
+temps que les profils.
+
+---
+
+## LOT 2 — Nouveau calcul
+
+## TASK-18 [Deepseek] ⚠️ — Voyageurs par train, heure prévue, suppression = intervalle
+
+### Fichiers cibles
+`backend/metrics.py`, `backend/api.py` (référence), `tests/test_metrics.py`, `tests/test_api.py`
+
+### Travail
+1. `_voyageurs_par_train(line_id, quand) -> float` remplace `_freq_minute` :
+   `voyageurs_jour × part_horaire ÷ max(trains_heure, 1.0)`. Plancher à 1 train : une heure creuse à 0,3 train
+   équivalent ne doit pas multiplier les voyageurs.
+   **Repli** (ligne sans profil ou sans offre, ou `quand` inconnu) : l'ancien calcul `_freq_minute`, conservé
+   sous ce nom, avec un `logger.warning` **une seule fois par ligne** (ensemble module).
+2. `_minutes_voyageurs(duree, line_id, quand)` = `round(duree × _voyageurs_par_train(...))`.
+3. `_incident_dt_paris` : `heure_theorique` si renseignée, sinon `heure_debut`. La **sélection des incidents
+   du jour** dans `compute_daily_metrics` reste sur `heure_debut` (ne pas changer la fenêtre 7 h → 7 h).
+4. Train supprimé (`is_cancelled`) : durée = `round(intervalle_min(line_id, quand))` si disponible, sinon
+   `settings.cancel_default_impact_minutes`. Calculé dans `incident_minutes_voyageurs`, **pas** lu dans
+   `duree_minutes` (le collecteur y écrit 5, et l'historique doit se recalculer).
+5. Retard moyen pondéré (`metrics.py`, boucle `poids = _freq_minute(...)`) : poids = `_voyageurs_par_train`.
+6. `/api/reference` : ajouter `offre_trains_heure` (le `trains_heure` du JSON), `offre_intervalle_min`,
+   `offre_source` ; garder `suppression_minutes` (valeur de repli).
+
+### Tests
+- Mettre à jour les valeurs attendues des tests existants qui supposent l'ancienne formule
+  (`test_rer_a_known_value`, `test_rer_b_known_value`, `test_repli_plat_sans_instant`, `tests/test_api.py`),
+  en calculant l'attendu à partir des fichiers de données, jamais en dur.
+- **Invariant** : pour chaque ligne et jour type, Σ sur les heures où `trains_heure ≥ 1` de
+  `voyageurs_par_train × trains_heure` = `voyageurs_jour × Σ part` de ces heures (à 0,1 % près).
+- Transilien K, mardi hors vacances 8 h : minutes-voyageurs d'un retard de 10 min ≥ 10 × l'ancienne formule.
+- RER A, mardi 8 h : voyageurs par train entre 1 000 et 3 000.
+- Un incident avec `heure_theorique` à 8 h 55 et `heure_debut` à 9 h 05 est pondéré à 8 h.
+- Suppression RER A mardi 8 h : durée entre 2 et 6 min ; Transilien K mardi 14 h : ≥ 20 min ; ligne sans offre :
+  `cancel_default_impact_minutes`.
+- Repli : une ligne absente de l'offre donne le même résultat que `_freq_minute`, et un seul warning pour deux appels.
+
+### Critères d'acceptation
+- `cout_eur`, `bilans.py` et la réconciliation des totaux inchangés (tests de `test_bilans.py` verts sans modification).
+
+---
+
+## TASK-19 [Claude Code] — Étude : source de `voyageurs_jour`
+
+`data/frequentation.json` contient des chiffres ronds d'origine inconnue. Les validations open data ne peuvent
+pas les remplacer telles quelles : elles sont par réseau (H+K, J+L, N+U regroupés) et ne comptent pas les
+correspondances sans valideur (métro → RER à Châtelet), ce qui sous-compte fortement les RER dans Paris.
+Comparer les deux sources par ligne, chercher les chiffres officiels publiés (IDFM, RATP, SNCF), présenter
+un tableau et une recommandation à l'utilisateur. **Aucun changement sans son accord.**
+
+---
+
+## TASK-20 [Deepseek] — Page Méthode alignée sur le nouveau calcul
+
+### Fichier cible
+`frontend/methode.html`
+
+### Travail
+1. Formule : 
+   ```
+   minutes-voyageurs = retard du train (min) × voyageurs_par_train
+   voyageurs_par_train = voyageurs_par_jour × part_de_l'heure ÷ trains_de_l'heure
+   coût = minutes-voyageurs × … €/h ÷ 60
+   ```
+2. Note sous la formule : paragraphe sur les **trains de l'heure** (offre théorique GTFS d'IDFM, par ligne et jour
+   type ; un train à cheval sur deux heures compte pour partie dans chacune). « L'heure retenue est l'heure prévue
+   du train. » « Un train supprimé compte pour l'intervalle jusqu'au train suivant à cette heure-là » suivi de deux
+   exemples (RER A à 8 h, Transilien K à 14 h, jour de semaine) — valeurs lues dans `/api/reference`, jamais en dur.
+3. Exemple recalculé en JS à partir de `ref.offre_trains_heure.RER_A.JOHV[8]` :
+   `… voy./jour × … % ÷ … trains = … voy./train · 45 × … = … min-voy. · coût estimé = … €`
+   (même arrondi que le backend).
+4. Périmètre : « Trains supprimés … comptés … min chacun » → « comptés pour l'intervalle jusqu'au train suivant ».
+5. Limites : nouveau paragraphe **« Offre prévue, pas offre réalisée »** : le nombre de trains vient des horaires
+   prévus ; un jour de service réduit, les trains restants sont plus chargés que ne le suppose le calcul.
+
+### Critères d'acceptation
+- Ton froid et factuel, aucune valeur numérique écrite en dur hors exemple de libellé.
+- Placeholders « — » conservés si `/api/reference` échoue.
+
+---
+
+## TASK-21 [Claude Code] — Recalcul et vérification du lot 2
+
+Tests verts ; serveur arrêté ; `python -m backend.recalcul` ; comparer avant/après par ligne sur 7 jours
+(attendu : Transilien nettement en hausse, RER A proche) ; relecture de `/methode` ; `TODO.md` (recalcul PC
+Windows) ; commit.
+
+---
+
+## LOT 3 — Pondération par gare
+
+## TASK-22 [Deepseek] ⚠️ — Coefficient de gare par mission
+
+### Fichiers cibles
+`backend/offre.py`, `tests/test_offre.py`
+
+### Principe
+Un retard constaté à la gare G ne touche que les voyageurs qui descendent **après** G (ceux déjà à bord et ceux
+qui montent plus loin). Coefficient `coef(mission, G)` = part des voyageurs du train qui descendent après G.
+Modèle, pour une mission (suite ordonnée de gares g₁ … gₙ) :
+- poids de chaque gare `w_i` = validations moyennes par jour de la gare (jeu
+  `validations-reseau-ferre-nombre-validations-par-jour-3eme-trimestre`, champ `nb_vald`, par `id_zdc`) ;
+  gare sans volume connu : médiane des gares de la mission ;
+- montées `m_i = w_i` pour i < n, `m_n = 0` ;
+- destination d'un voyageur monté en i : gare j > i avec probabilité `w_j ÷ Σ_{k>i} w_k` ;
+- `coef(G = g_k) = [ Σ_{i<k} m_i × P(dest > k | i) + Σ_{i≥k} m_i ] ÷ Σ_i m_i`.
+
+### Travail
+1. Réutiliser `profils._volumes_par_gare` (réseaux de `LIGNE_RESEAU`) : volume par `id_zdc`, sommé sur les
+   réseaux quand une gare en a plusieurs.
+2. Missions : trains GTFS regroupés par (`route_id`, `trip_headsign`, suite d'arrêts parents). Une même mission
+   avec plusieurs suites d'arrêts : garder la plus fréquente.
+3. JSON : `"coef_gare": {"RER_A": {"QYRO": {"La Défense": 0.62, "...": 0.0}}}` (clé = `stop_name`, 3 décimales)
+   et `"coef_gare_ligne": {"RER_A": {"La Défense": 0.55}}` (moyenne sur les missions pondérée par leur nombre de trains).
+4. Lecteur `coef_gare(line_id, mission, gare) -> float` : mission connue → ligne → **1.0**.
+
+### Tests
+- **Invariants** : coefficient dans [0, 1] ; égal à 1 au premier arrêt ; non croissant le long de la mission ;
+  0 au terminus.
+- Mission à 3 gares de poids égaux : valeurs calculées à la main.
+- Replis : mission inconnue → coefficient de ligne ; gare inconnue → 1.0.
+
+---
+
+## TASK-23 [Deepseek] ⚠️ — Appliquer le coefficient de gare
+
+### Fichiers cibles
+`backend/metrics.py`, `tests/test_metrics.py`, `frontend/methode.html`
+
+### Travail
+- `incident_minutes_voyageurs` : `minutes-voyageurs × coef_gare(line_id, mission, gare)` pour les retards et les
+  suppressions (`gare` / `mission` nulles → 1.0).
+- Méthode : formule complétée (`× part_des_voyageurs_après_la_gare`), paragraphe explicatif ; Limites :
+  « Fréquentation par ligne » réécrit (la gare est prise en compte, la destination est estimée au prorata de la
+  fréquentation des gares suivantes) ; nouvelle limite : la gare retenue est celle du pire retard observé, pas
+  celle où le retard est né.
+
+### Tests
+- Même incident au premier arrêt et à l'avant-dernier : le second coûte moins.
+- Incident sans gare : identique au lot 2.
+
+## TASK-24 [Claude Code] — Recalcul et vérification du lot 3
+Comme TASK-21.
+
+---
+
+## LOT 4 — Suppressions, interruptions, couverture
+
+## TASK-25 [Claude Code] ⚠️ — Offre du jour pour la détection des suppressions
+
+Avant TASK-27, valider avec l'utilisateur : téléchargement quotidien du GTFS (117 Mo) par le scheduler, durée du
+build sur la machine, emplacement `data/offre_jour/` (à ajouter au `.gitignore`).
+
+## TASK-26 [Claude Code] ⚠️ — Faisabilité du flux SIRI Estimated Timetable
+
+Avec l'accord de l'utilisateur, un seul serveur en marche, **3 requêtes au plus** : taille de la réponse, lignes
+présentes, statut des trains supprimés, en-têtes `x-ratelimit-*-day`. Conclusion dans `DEBUG.md` avec le rapport
+TASK-15. Si le flux est viable, Claude Code rédige ici la tâche de remplacement des 13 appels `/departures`.
+Sinon, tâche d'extrapolation par le taux de couverture, présentée comme estimation.
+
+## TASK-27 [Deepseek] ⚠️ — Détecter les trains prévus absents du flux (Bug 32 + interruptions)
+
+### Fichiers cibles
+`backend/offre.py`, `backend/collector.py`, `backend/main.py`, `.gitignore`, `tests/test_offre.py`,
+`tests/test_collector.py`
+
+### Travail
+1. `python -m backend.offre jour AAAA-MM-JJ` et fonction `construire_jour(date)` : écrit
+   `data/offre_jour/AAAA-MM-JJ.json` = `{line_id: {trip_id_sans_prefixe: [[stop_name, "HH:MM:SS"], ...]}}`
+   (heures GTFS brutes, départs prévus). Garde les 3 derniers fichiers. `data/offre_jour/` dans `.gitignore`.
+2. Scheduler (`main.py`) : chaque jour à 4 h 30 (heure de Paris), construire le jour et le lendemain ; en cas
+   d'échec, warning et détection désactivée pour la journée (jamais d'exception qui tue le scheduler).
+3. `collect_rt_delays`, par ligne, après la collecte : fenêtre = `[relevé + CANCEL_MARGIN_MIN, fin − CANCEL_MARGIN_MIN]`
+   où `fin` = plus grande heure prévue des passages reçus (TASK-13). Trains attendus = trains de l'offre du jour
+   ayant au moins un départ prévu dans la fenêtre. Un train attendu dont l'identifiant n'apparaît dans **aucun**
+   passage reçu (toutes gares) est supprimé.
+4. Garde-fou : si plus de la moitié des trains attendus d'une ligne manquent **et** qu'aucune perturbation active
+   `NO_SERVICE` / `REDUCED_SERVICE` n'existe en base sur la ligne, warning « écart massif offre / temps réel »
+   et rien n'est enregistré (probable décalage de données, pas une interruption).
+5. Enregistrement : même `navitia_id` que les retards (`rt_vehicle_journey:<trip>_<AAAAMMJJ>`), `is_cancelled=True`,
+   `type_incident="CANCELLED"`, `heure_theorique` et `gare` = premier départ prévu dans la fenêtre, `mission` =
+   `trip_headsign`. Insertion sans écraser un incident existant (`on_conflict_do_nothing`). Un train qui réapparaît
+   est déjà remis en retard par l'upsert existant.
+6. La détection existante (trains en retard disparus) est conservée.
+
+### Tests
+- TASK-14 passe : retirer `xfail`.
+- Train attendu présent dans les passages → rien ; absent → une suppression, avec gare et heure prévue.
+- Départ prévu hors fenêtre → rien.
+- Garde-fou : 6 trains attendus sur 10 absents sans perturbation → rien et warning ; avec perturbation
+  `NO_SERVICE` → 6 suppressions.
+- Offre du jour absente → aucune détection, un warning.
+
+### Critères d'acceptation
+- Aucune requête PRIM supplémentaire.
+
+## TASK-28 [Deepseek] — Page Méthode : suppressions et interruptions
+Périmètre : les trains prévus absents du flux sont comptés, y compris pendant une interruption, **depuis le
+<date de mise en service>** ; Limites : « Interruptions non chiffrées » réécrit (les trains supprimés du tronçon
+sont comptés ; les voyageurs qui renoncent à voyager ne le sont pas).
+
+---
+
+## LOT 5 — Valeur du temps
+
+## TASK-29 [Claude Code] — Sourcer la valeur tutélaire du temps
+
+Référentiel officiel (France Stratégie / DGITM, fiches outils de l'évaluation des projets de transport) :
+valeur du temps des déplacements en Île-de-France, et coefficient de pénibilité de l'attente ou du retard.
+Valeurs, année de référence et lien consignés ici ; validation par l'utilisateur avant TASK-30.
+
+## TASK-30 [Deepseek] — Second chiffre en valeur tutélaire
+Détaillée par Claude Code après TASK-29 : `config.py` (valeur, source), `/api/reference`, `bilans.py`
+(`cout_tutelaire`, même règle d'arrondi par ligne × jour), Statistiques et Méthode. Le SMIC reste le chiffre principal.
+
+---
+
 # Lot « Bilans » — pages `/statistiques` et `/annee`
 
 > ✅ Lot implémenté directement par Claude Code le 2026-09-11 (à la demande de l'utilisateur), tests verts.

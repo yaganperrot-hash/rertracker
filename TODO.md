@@ -1,7 +1,10 @@
 # TODO — Compteur de Retards IDF
 
 ## En cours
-_(aucun)_
+- [ ] **Lot « Affinage du calcul »** — tâches TASK-13 → TASK-30 dans `.claude/TASKS.md` (rédigées le 2026-09-16).
+  Ordre : lot 0 (diagnostics) → lot 1 (offre GTFS) → lot 2 (voyageurs par train) → lot 3 (gares) ; lot 4 après
+  TASK-15 ; lot 5 indépendant. Tâches ⚠️ = zone critique, accord de l'utilisateur avant de les lancer.
+  **À chaque lot qui change les chiffres (2, 3)** : PC Windows → `git pull` puis `python -m backend.recalcul`.
 
 ## À faire
 - [ ] **PC Windows — recalculer l'historique** après `git pull` : `python -m backend.recalcul`.
