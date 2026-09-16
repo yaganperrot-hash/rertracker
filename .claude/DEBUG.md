@@ -558,20 +558,20 @@ sous la nouvelle étiquette. Le recalcul qui suit reconstruit les bonnes valeurs
 **Symptôme** : 0 train supprimé en base sur 7 jours, toutes lignes confondues
 **Cause** : seuls les trains **déjà enregistrés en retard** sont surveillés. Or `/departures` en `realtime` ne
 contient pas les trains supprimés (ils disparaissent du flux) : un train supprimé qui roulait à l'heure n'est jamais vu
-**Fix** : prévu — comparer le flux à l'offre GTFS du jour (`trip_id` GTFS = `vehicle_journey` PRIM, vérifié)
-**Status** : 🔄 TASK-14 (test) et TASK-27 (`.claude/TASKS.md`)
+**Fix** : collecte sur le flux SIRI Estimated Timetable, qui marque chaque arrêt supprimé `CANCELLED` (commit 7a48b8e)
+**Status** : ✅ Résolu (effectif au redémarrage du serveur)
 
 ### [2026-09-16] Coût calculé par minute de voyageurs, pas par train (limite de méthode)
 **Fichier(s)** : `backend/metrics.py` (`_freq_minute`, `_minutes_voyageurs`)
 **Symptôme** : chaque train en retard est multiplié par les voyageurs d'**une minute** de la ligne, ce qui suppose
 60 trains/heure. GTFS du 17/09 à 8 h : RER A 50 trains (sous-estimé × 1,2), U 8 (× 7,5), K 2 (× 30)
 **Cause** : formule d'origine ; le classement entre lignes pénalise les lignes peu fréquentes
-**Status** : 🔄 Lot « Affinage du calcul », TASK-16 → TASK-21
+**Status** : ✅ Résolu — lot 2 puis lot 6 (pertes calculées voyageur par voyageur)
 
 ### [2026-09-16] Couverture de la collecte inconnue (limite de méthode)
 **Fichier(s)** : `backend/collector.py` (`/departures?count=50`)
 **Symptôme** : 50 passages toutes gares confondues par relevé de 20 min : quelques trains vus à chaque fois
-**Status** : 🔄 TASK-13 (journal), TASK-15 (rapport), TASK-26 (flux SIRI Estimated Timetable)
+**Status** : ✅ Résolu — flux Estimated Timetable : tous les trains de chaque ligne sur ~2 h, à chaque relevé
 
 ### [2026-09-16] Flux SIRI Estimated Timetable : faisabilité (TASK-26)
 **Requêtes** : 2 (13 h 30) — `estimated-timetable?LineRef=STIF:Line::C01742:` et `LineRef=ALL`
@@ -586,7 +586,7 @@ contient pas les trains supprimés (ils disparaissent du flux) : un train suppri
 - 13 lignes ce midi : 928 trains, 4 supprimés en entier, 18 limités en cours de route (ex. RER A terminus La Défense,
   arrêts à l'est `CANCELLED`). 438 arrêts, tous nommés via le GTFS (`STIF:StopArea:SP:<n>:` = `IDFM:monomodalStopPlace:<n>`).
 - `DatedVehicleJourneyRef` contient l'uuid du trip_id GTFS (133/141 sur le RER A) ; `JourneyNote` = code mission.
-**Status** : 🔄 TASK-31 en attente d'accord (zone critique)
+**Status** : ✅ Bascule faite (accord du 2026-09-16), commit 7a48b8e
 
 ---
 

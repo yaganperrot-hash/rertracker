@@ -4,7 +4,23 @@
 
 ---
 
-# Lot « Affinage du calcul » — rédigé le 2026-09-16
+# Lot 6 « mesure plutôt qu'estimation » — ✅ livré le 2026-09-16 par Claude Code
+
+Décisions de l'utilisateur : calcul au plus près du réel, estimations maison réduites au minimum ; seuil de retard
+gardé à 2 min ; SMIC gardé (lot 5 abandonné). Livré :
+- collecte sur le flux SIRI Estimated Timetable, colonne `incidents.arrets` (retard à l'arrivée et attente mesurée
+  du train suivant, arrêt par arrêt) — `backend/collector.py`, `models.py`, `database.py`, `transfert.py` ;
+- `backend/offre.py` : départs par gare et heure, missions, noms d'arrêts SIRI, id_zdc ; coefficients de gare retirés ;
+- `backend/frequentation.py` (nouveau) : montées dans un train par ligne × gare × jour type × heure, comptages SNCF
+  (validations IDFM pour les gares non comptées), rapport vacances mesuré ;
+- `backend/metrics.py` : perte de chaque voyageur i → j (retard à l'arrivée en j, ou attente au premier arrêt supprimé),
+  destinations au prorata des montées du jour des gares suivantes ; historique reconstitué depuis la mission GTFS ;
+- page Méthode réécrite (sources, formule, exemple calculé par le backend, périmètre, limites).
+Reste : recalcul de l'historique (serveur arrêté), puis vérification du premier relevé.
+
+---
+
+# Lot « Affinage du calcul » — rédigé le 2026-09-16 (lots 0 à 3 livrés ; 4 remplacé par le lot 6 ; 5 abandonné)
 
 Chaque tâche indique son exécutant : **[Deepseek]** (écriture de code uniquement, aucune commande) ou
 **[Claude Code]** (vérifications, commandes, requêtes, études). Une tâche marquée ⚠️ touche une zone critique

@@ -190,6 +190,36 @@ def incident_minutes_voyageurs(incident, now_utc: datetime) -> tuple[int, int]:
     return dur, minutes_voyageurs_train(incident.line_id, arrets)
 
 
+# Exemple de la page Méthode : un train RER A un mardi ordinaire à 8 h 30
+EXEMPLE_LIGNE, EXEMPLE_MISSION, EXEMPLE_RETARD = "RER_A", "QYRO", 10
+EXEMPLE_INSTANT = datetime(2026, 9, 22, 8, 30, tzinfo=PARIS_TZ)
+
+
+def exemple_calcul() -> dict | None:
+    """Calcul complet d'un train, servi à la page Méthode : aucun chiffre recopié dans le HTML."""
+    gares = offre.parcours_mission(EXEMPLE_LIGNE, EXEMPLE_MISSION)
+    if not gares:
+        return None
+    arrets = [{"g": g, "quand": EXEMPLE_INSTANT, "r": EXEMPLE_RETARD, "s": False, "w": None} for g in gares]
+    montes = [frequentation.montees_train(EXEMPLE_LIGNE, g, EXEMPLE_INSTANT) or 0.0 for g in gares[:-1]]
+    supprime = [{**a, "r": None, "s": True} for a in arrets]
+    intervalle = offre.intervalle_min(EXEMPLE_LIGNE, EXEMPLE_INSTANT)
+    return {
+        "ligne": EXEMPLE_LIGNE,
+        "mission": EXEMPLE_MISSION,
+        "origine": gares[0],
+        "terminus": gares[-1],
+        "nb_gares": len(gares),
+        "heure": EXEMPLE_INSTANT.strftime("%H h %M"),
+        "voyageurs": round(sum(montes)),
+        "montees_premiere_gare": round(montes[0]) if montes else 0,
+        "retard": EXEMPLE_RETARD,
+        "minutes_voyageurs_retard": minutes_voyageurs_train(EXEMPLE_LIGNE, arrets),
+        "intervalle": round(intervalle) if intervalle is not None else None,
+        "minutes_voyageurs_suppression": minutes_voyageurs_train(EXEMPLE_LIGNE, supprime),
+    }
+
+
 def cout_eur(minutes_voyageurs: int, smic_horaire: float) -> int:
     """floor(minutes × smic / 60). Appliqué à UNE ligne de daily_metrics (ou à un incident),
     jamais à une somme : un total est la somme de ces coûts arrondis.

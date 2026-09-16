@@ -1,10 +1,13 @@
 # TODO — Compteur de Retards IDF
 
 ## En cours
-- [ ] **Lot « Affinage du calcul »** — tâches TASK-13 → TASK-30 dans `.claude/TASKS.md` (rédigées le 2026-09-16).
-  Ordre : lot 0 (diagnostics) → lot 1 (offre GTFS) → lot 2 (voyageurs par train) → lot 3 (gares) ; lot 4 après
-  TASK-15 ; lot 5 indépendant. Tâches ⚠️ = zone critique, accord de l'utilisateur avant de les lancer.
-  **À chaque lot qui change les chiffres (2, 3)** : PC Windows → `git pull` puis `python -m backend.recalcul`.
+- [ ] **Lot 6 « mesure plutôt qu'estimation » — recalcul à faire** (code livré le 2026-09-16) : serveur arrêté,
+  `python -m backend.recalcul`, puis relancer le serveur (nouvelle collecte Estimated Timetable, colonne `arrets`).
+  Vérifier dans les logs du premier relevé : « Couverture … », les deux lignes « Quota PRIM restant » (Navitia ne doit
+  perdre que 2 req/relevé).
+- [ ] **PC Windows** : `git pull`, serveur arrêté, `python -m backend.recalcul` (la colonne `arrets` est ajoutée au
+  premier démarrage du serveur ; lancer le serveur une fois avant le recalcul, ou l'inverse — le recalcul n'en a pas besoin).
+- [ ] Lot 5 (valeur du temps) : décidé le 2026-09-16 de garder le SMIC seul — TASK-29/30 abandonnées.
 
 ## À faire
 - [ ] **PC Windows — recalculer l'historique** après `git pull` : `python -m backend.recalcul`.
@@ -13,9 +16,12 @@
 - [ ] **Régénérer `data/profils_horaires.json` à chaque trimestre** publié par IDFM :
   `python -m backend.profils build`, puis `python -m backend.recalcul` sur chaque PC.
   Le nom du jeu de données porte le trimestre (`…-3eme-trimestre`) — à mettre à jour dans `backend/profils.py`.
-- [ ] **Régénérer `data/offre_theorique.json` au moins chaque mois** (le GTFS ne couvre que 30 jours, et les
-  jours de vacances y reprennent l'offre hors vacances tant qu'aucun n'est dans la fenêtre) :
-  `python -m backend.offre build`, puis `python -m backend.recalcul` sur chaque PC.
+- [ ] **Régénérer `data/offre_theorique.json` puis `data/frequentation_gares.json` au moins chaque mois** (le GTFS ne
+  couvre que 30 jours ; les jours de vacances y reprennent l'offre hors vacances tant qu'aucun n'est dans la fenêtre ;
+  les comptages SNCF sont mis à jour par campagne) : `python -m backend.offre build`,
+  `python -m backend.frequentation build`, puis `python -m backend.recalcul` sur chaque PC.
+- [ ] Surveiller `data/frequentation_gares.json` → `perdus` et `origine` « inconnue » après chaque build (gare renommée
+  dans le GTFS ou les comptages).
 - [ ] Valider la maquette `frontend/carte.html`, puis reprendre le plan X/Instagram :
   script `backend/carte.py`, envoi X avec repli texte seul, module Instagram inerte sans `PUBLIC_BASE_URL`.
 - [ ] **Régénérer la clé PRIM** (en clair dans l'historique git, commit `c591442`) — urgent

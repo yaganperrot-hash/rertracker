@@ -10,7 +10,7 @@ from backend.config import get_settings
 from backend.database import get_db
 from backend.models import Incident, DailyMetric
 from backend.metrics import (
-    FREQUENTATION, OFFRE, PROFILS, compute_daily_metrics, cout_eur, get_line_stats, get_today_stats,
+    FREQ_GARES, FREQUENTATION, OFFRE, PROFILS, compute_daily_metrics, exemple_calcul, cout_eur, get_line_stats, get_today_stats,
     incident_minutes_voyageurs,
 )
 from backend.collector import (
@@ -83,11 +83,22 @@ async def reference():
         "smic_source": s.smic_source,
         "polling_interval_minutes": s.polling_interval_minutes,
         "bilans_interval_minutes": s.bilans_interval_minutes,
-        # À chaque relevé : un appel perturbations par mode (RER, Transilien) + un appel départs par ligne
+        # À chaque relevé : un appel perturbations par mode (RER, Transilien, compteur Navitia)
+        # + un appel Estimated Timetable par ligne (compteur distinct)
         "requetes_prim_jour": releves_jour * (len(MODES_PHYSIQUES) + len(LIGNES_CIBLES)),
+        "requetes_navitia_jour": releves_jour * len(MODES_PHYSIQUES),
+        "requetes_et_jour": releves_jour * len(LIGNES_CIBLES),
         "quota_prim_jour": s.prim_quota_jour,
         "collecte_heure_debut": s.collecte_heure_debut,
+        # Voyageurs montés par jour ouvré ordinaire, par ligne (comptages SNCF, validations IDFM)
         "frequentation": FREQUENTATION,
+        "frequentation_origines": {
+            ligne: {"comptage": sum(o.startswith("comptage") for o in gares.values()),
+                    "validations": sum(o.startswith("validations") for o in gares.values())}
+            for ligne, gares in FREQ_GARES.get("origine", {}).items()
+        },
+        "frequentation_rapports_vacances": FREQ_GARES.get("_source", {}).get("rapports_vacances", {}),
+        "exemple_calcul": exemple_calcul(),
         # Profils horaires réels (validations open data IDFM) : parts sommant à 1 sur 24 h,
         # par réseau et par jour type. `profils_lignes` dit quelle ligne lit quel réseau.
         "profils_horaires": PROFILS.get("profils", {}),

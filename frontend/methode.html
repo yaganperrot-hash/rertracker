@@ -356,16 +356,34 @@
           <div class="source-name">
             <a href="https://prim.iledefrance-mobilites.fr" target="_blank" rel="noopener">API PRIM — IDF Mobilités</a>
           </div>
-          <div class="source-desc">Départs temps réel et perturbations déclarées (Navitia) · relevé toutes les <span class="ref-polling">—</span> min, de <span class="ref-collecte-debut">—</span> h à minuit · <span class="ref-req">—</span> req/jour sur <span class="ref-quota">—</span> autorisées</div>
+          <div class="source-desc">Horaires temps réel de chaque train, arrêt par arrêt, suppressions comprises (flux SIRI Estimated Timetable) et perturbations déclarées (Navitia) · relevé toutes les <span class="ref-polling">—</span> min, de <span class="ref-collecte-debut">—</span> h à minuit · <span class="ref-req-et">—</span> et <span class="ref-req-navitia">—</span> req/jour, sur <span class="ref-quota">—</span> autorisées pour chacun des deux flux</div>
         </div>
       </div>
       <div class="source-item">
         <span class="source-dot"></span>
         <div class="source-body">
           <div class="source-name">
-            <a href="https://data.iledefrance-mobilites.fr/explore/dataset/validations-reseau-ferre-profils-horaires-par-jour-type-3eme-trimestre/" target="_blank" rel="noopener">Profils horaires de validations</a>
+            <a href="https://ressources.data.sncf.com/explore/dataset/comptage-voyageurs-trains-transilien/" target="_blank" rel="noopener">Comptages des voyageurs montants — SNCF</a>
           </div>
-          <div class="source-desc">Validations sur le réseau ferré par arrêt, jour type et tranche horaire · open data Île-de-France Mobilités · agrégées par réseau dans <code style="background:var(--bg3);padding:1px 5px;font-size:11px">data/profils_horaires.json</code> · jeu de données trimestriel</div>
+          <div class="source-desc">Voyageurs montés dans les trains, correspondances comprises, par ligne, gare, jour type et tranche horaire · open data SNCF · campagne la plus récente de chaque gare (2019 à 2026)</div>
+        </div>
+      </div>
+      <div class="source-item">
+        <span class="source-dot"></span>
+        <div class="source-body">
+          <div class="source-name">
+            <a href="https://data.iledefrance-mobilites.fr/explore/dataset/validations-reseau-ferre-nombre-validations-par-jour-3eme-trimestre/" target="_blank" rel="noopener">Validations sur le réseau ferré — IDF Mobilités</a>
+          </div>
+          <div class="source-desc">Validations par gare et par jour, et profils horaires par gare · open data Île-de-France Mobilités · gares sans comptage SNCF (partie RATP des RER A et B, gares partagées) et répartition heure par heure</div>
+        </div>
+      </div>
+      <div class="source-item">
+        <span class="source-dot"></span>
+        <div class="source-body">
+          <div class="source-name">
+            <a href="https://data.iledefrance-mobilites.fr/explore/dataset/offre-horaires-tc-gtfs-idfm/" target="_blank" rel="noopener">Horaires prévus (GTFS) — IDF Mobilités</a>
+          </div>
+          <div class="source-desc">Départs de chaque ligne par gare et par heure, parcours des missions · stockés dans <code style="background:var(--bg3);padding:1px 5px;font-size:11px">data/offre_theorique.json</code>, fréquentation par gare dans <code style="background:var(--bg3);padding:1px 5px;font-size:11px">data/frequentation_gares.json</code></div>
         </div>
       </div>
       <div class="source-item">
@@ -375,13 +393,6 @@
             <a href="https://data.education.gouv.fr/explore/dataset/fr-en-calendrier-scolaire/" target="_blank" rel="noopener">Calendrier scolaire — Éducation nationale</a>
           </div>
           <div class="source-desc">Vacances de la zone C (académies de Paris, Créteil et Versailles) · sert à choisir le jour type applicable à chaque date</div>
-        </div>
-      </div>
-      <div class="source-item">
-        <span class="source-dot"></span>
-        <div class="source-body">
-          <div class="source-name">Fréquentation IDF Mobilités</div>
-          <div class="source-desc">Données annuelles publiées par SNCF Voyageurs et IDF Mobilités · stockées dans <code style="background:var(--bg3);padding:1px 5px;font-size:11px">data/frequentation.json</code> · mise à jour mensuelle</div>
         </div>
       </div>
       <div class="source-item">
@@ -404,25 +415,25 @@
       <span class="section-title">Calcul du coût</span>
     </div>
     <p>
-      Les <strong>minutes-voyageurs perdues</strong> estiment l'impact humain réel : combien de minutes de trajet ont été perdues par l'ensemble des usagers touchés pendant un incident.
-      Le calcul se fait toujours en minutes ; l'affichage convertit ensuite en heures, jours ou années pour rendre les ordres de grandeur lisibles (ex. 2 847 340 min-voy. ≈ 5 ans 152 jours).
+      Les <strong>minutes-voyageurs perdues</strong> mesurent le temps perdu par l'ensemble des voyageurs d'un train retardé ou supprimé. Le calcul suit chaque voyageur de sa gare de montée à sa gare de descente et retient ce qui a été mesuré sur son trajet. Il se fait toujours en minutes ; l'affichage convertit ensuite en heures, jours ou années pour rendre les ordres de grandeur lisibles (ex. 2 847 340 min-voy. ≈ 5 ans 152 jours).
     </p>
     <div class="formula-block">
-      minutes-voyageurs = retard du train (min) × voyageurs_par_train × part_touchée_à_la_gare<br>
-      voyageurs_par_train = voyageurs_par_jour × part_de_l'heure ÷ trains_de_l'heure<br>
+      minutes-voyageurs d'un train = Σ<sub>montée i, descente j</sub> voyageurs(i → j) × perte(i → j)<br>
+      voyageurs montés en i = voyageurs montés à la gare i pendant l'heure ÷ départs de la ligne à cette gare pendant l'heure<br>
+      perte(i → j) = retard mesuré à l'arrivée en j, ou attente mesurée du train suivant si un arrêt du trajet est supprimé<br>
       coût = minutes-voyageurs × <span class="ref-smic">—</span> €/h ÷ 60
       <div class="formula-note">
-        La <strong>part de l'heure</strong> est la fraction des voyageurs du jour qui embarquent pendant cette heure-là. Les 24 parts d'une journée somment à 1. Elles ne sont pas estimées mais mesurées, à partir des validations open data d'Île-de-France Mobilités, et diffèrent selon le réseau et le jour type : semaine et samedi, chacun décliné hors vacances et pendant les vacances scolaires, plus les dimanches et jours fériés — cinq profils par réseau. Sur le RER A, 8 h pèse <span class="ref-part-8">—</span> un jour de semaine ordinaire, <span class="ref-part-vac-8">—</span> pendant les vacances, et <span class="ref-part-sam-8">—</span> un samedi. 
+        <strong>Voyageurs montés.</strong> Pour chaque gare, le nombre de voyageurs qui montent dans les trains de la ligne vient des comptages SNCF (correspondances comprises), par jour type et par tranche horaire, réparti heure par heure selon le profil de validations de la gare. Pour les gares sans comptage, surtout la partie RATP des RER A et B, ce sont les validations de la gare, partagées entre les lignes qui la desservent au prorata de leurs départs. On divise ensuite par le nombre de trains de la ligne au départ de la gare pendant cette heure (horaires prévus IDF Mobilités). Les jours de vacances scolaires appliquent le rapport mesuré sur les validations du réseau entre jours de vacances et jours ordinaires.
         <br><br>
-        Les <strong>trains de l'heure</strong> viennent des horaires prévus publiés par Île-de-France Mobilités (GTFS), par ligne et par jour type : les voyageurs qui montent pendant une heure se répartissent entre les trains qui circulent pendant cette heure. Un train à cheval sur deux heures compte dans chacune au prorata de ses arrêts. Sur le RER A, un jour de semaine à 8 h, <span class="ref-trains-8">—</span> trains se partagent les voyageurs. L'heure retenue est l'heure prévue du train.
-        La <strong>part touchée à la gare</strong> est la part des voyageurs du train qui descendent après la gare où le retard est constaté : un retard au départ touche tout le train, un retard à l'avant-dernier arrêt presque personne. Elle est estimée pour chaque mission à partir de la fréquentation des gares desservies (validations open data) : on suppose que chaque voyageur monte en proportion de la fréquentation de sa gare et descend dans l'une des gares suivantes, en proportion de leur fréquentation. L'exemple ci-dessous est un retard au départ (part touchée = 100 %).
+        <strong>Retard.</strong> Le flux temps réel donne, pour chaque arrêt, l'heure d'arrivée prévue et l'heure estimée ; leur écart est le retard subi par les voyageurs qui descendent là. Il est compté dès <span class="ref-retard-min">—</span> min. L'heure de chaque arrêt est son heure prévue.
         <br><br>
-        Un train supprimé compte pour l'intervalle jusqu'au train suivant à cette heure-là : <span class="ref-intervalle-a-8">—</span> min sur le RER A à 8 h, <span class="ref-intervalle-k-14">—</span> min sur la ligne K à 14 h, un jour de semaine.
+        <strong>Suppression.</strong> Quand un arrêt est supprimé (train supprimé en entier, ou terminus avancé), un voyageur dont le trajet passe par cet arrêt attend le train suivant du même sens. L'attente est mesurée : heure estimée du premier train qui dessert réellement l'arrêt, moins l'heure prévue du train supprimé. Si aucun train suivant n'est encore visible dans le flux, on retient l'intervalle prévu à cette heure.
       </div>
     </div>
     <p>
-      <strong>Exemple — RER A, retard de 45 minutes au départ, à 8 h un jour de semaine :</strong><br>
-      <span class="ref-exemple">—</span> <strong class="ref-exemple-cout"></strong>
+      <strong>Exemple — <span class="ref-ex-train">—</span> :</strong><br>
+      <span class="ref-exemple">—</span> <strong class="ref-exemple-cout"></strong><br>
+      <span class="ref-exemple-supp">—</span> <strong class="ref-exemple-supp-cout"></strong>
     </p>
   </section>
 
@@ -438,15 +449,15 @@
         <div class="scope-list">
           <div class="scope-item">
             <span class="scope-icon yes">✓</span>
-            <span>Retards mesurés train par train dans le flux temps réel PRIM, dès <span class="ref-retard-min">—</span> min</span>
+            <span>Retards mesurés arrêt par arrêt dans le flux temps réel PRIM, dès <span class="ref-retard-min">—</span> min</span>
           </div>
           <div class="scope-item">
             <span class="scope-icon yes">✓</span>
-            <span>Trains supprimés (disparus du flux avant leur départ), comptés pour l'intervalle jusqu'au train suivant</span>
+            <span>Trains supprimés en entier ou en partie, y compris pendant une interruption, comptés pour l'attente mesurée du train suivant</span>
           </div>
           <div class="scope-item">
             <span class="scope-icon yes">✓</span>
-            <span>Heures de pointe et heures creuses, semaine, samedi, dimanche et vacances scolaires — pondérés selon la fréquentation mesurée du réseau concerné</span>
+            <span>Voyageurs comptés par gare, par heure et par jour type : semaine, samedi, dimanche, vacances scolaires</span>
           </div>
           <div class="scope-item">
             <span class="scope-icon yes">✓</span>
@@ -463,11 +474,15 @@
           </div>
           <div class="scope-item">
             <span class="scope-icon no">✗</span>
-            <span>Interruptions et perturbations déclarées par l'opérateur : affichées et classées par cause, mais sans coût (voir Limites)</span>
+            <span>Messages de perturbation de l'opérateur : affichés et classés par cause ; leur coût passe par les trains supprimés et retardés qu'ils décrivent</span>
           </div>
           <div class="scope-item">
             <span class="scope-icon no">✗</span>
             <span>Trains « fantômes » : retard d'au moins <span class="ref-fantome">—</span> min dont le départ estimé glisse d'un relevé à l'autre</span>
+          </div>
+          <div class="scope-item">
+            <span class="scope-icon no">✗</span>
+            <span>Voyageurs qui renoncent à leur trajet ou changent d'itinéraire, trains bondés</span>
           </div>
           <div class="scope-item">
             <span class="scope-icon no">✗</span>
@@ -511,25 +526,25 @@
     </div>
     <div class="limits-list">
       <div class="limit-item">
-        <strong>Interruptions non chiffrées.</strong> Quand le trafic est interrompu, l'interruption elle-même n'a pas de coût, pour trois raisons. Les messages de l'opérateur ne décrivent le tronçon touché qu'en texte libre (« entre Corbeil-Essonnes et Malesherbes »), sans liste de gares ni de trains. La fréquentation n'est connue que par ligne, pas par tronçon : il faudrait inventer la part des voyageurs concernés. Enfin, les retards des trains qui circulent encore sont déjà comptés — ajouter l'interruption compterait deux fois les mêmes voyageurs. Le coût repose donc sur les retards mesurés et les trains détectés comme supprimés, ce qui sous-estime l'impact d'une interruption. Les messages de l'opérateur servent à la répartition des causes.
+        <strong>Destinations estimées.</strong> Les données ouvertes disent où les voyageurs montent, pas où ils descendent. On suppose qu'une gare voit descendre, sur la journée, autant de voyageurs qu'elle en voit monter, et qu'un voyageur descend dans l'une des gares suivantes du train au prorata de cette fréquentation. C'est la seule hypothèse du calcul qu'aucune donnée publique ne permet de remplacer.
       </div>
       <div class="limit-item">
-        <strong>Destinations estimées.</strong> Les voyageurs d'un train sont ceux de toute la ligne à cette heure, répartis entre les trains. Seule la part touchée dépend de la gare et de la mission, et elle repose sur une hypothèse : les données ouvertes donnent les entrées par gare, pas les trajets. Les destinations sont donc supposées proportionnelles à la fréquentation des gares suivantes. La gare retenue est celle où le plus grand retard du train a été observé, pas celle où il est apparu.
+        <strong>Sens de circulation confondus.</strong> Les comptages et les validations d'une gare ne distinguent pas le sens : les voyageurs sont répartis sur les trains des deux sens au prorata des départs, alors que le matin la plupart vont vers Paris.
       </div>
       <div class="limit-item">
-        <strong>Une validation n'est pas un voyageur à bord.</strong> Les profils horaires sont construits à partir des validations, c'est-à-dire des entrées dans le réseau. Ils décrivent donc où et quand les voyageurs embarquent, ce qui est un bon indicateur du flux mais pas de la charge réelle d'un train : un retard subi en milieu de parcours touche des voyageurs montés une heure plus tôt.
+        <strong>Correspondances de la partie RATP des RER A et B.</strong> Dans ces gares, sans comptage SNCF, les validations ne voient pas les voyageurs qui arrivent d'une autre ligne sans repasser un valideur (Châtelet - Les Halles, Nation, Charles de Gaulle - Étoile…). Les voyageurs montés y sont sous-estimés.
       </div>
       <div class="limit-item">
-        <strong>Profils groupés pour le Transilien.</strong> Les données open data sont publiées par réseau, pas par ligne. Les cinq RER ont chacun leur profil, mais H et K partagent celui de Paris-Nord, J et L celui de Saint-Lazare, N et U celui de Montparnasse. Deux lignes d'un même réseau aux rythmes différents sont donc lissées ensemble.
+        <strong>Comptages datés.</strong> Les comptages automatiques sont annuels, les comptages manuels ont lieu tous les quatre ans environ : selon la gare, la campagne retenue date de 2019 à 2026. Ils décrivent un jour ordinaire, hors travaux.
       </div>
       <div class="limit-item">
-        <strong>Dimanches et jours fériés non déclinés.</strong> Les jours ouvrés et les samedis ont chacun un profil hors vacances et un profil vacances scolaires, mais les dimanches et jours fériés n'en ont qu'un : le jeu de données source ne les distingue pas selon la période. Un dimanche d'août est donc pondéré comme un dimanche de mars.
+        <strong>Vacances scolaires.</strong> Le rapport entre jours de vacances et jours ordinaires est mesuré sur les validations de l'été (3<sup>e</sup> trimestre), seul trimestre publié. Il s'applique à toutes les vacances, et reflète aussi les travaux d'été : sur le RER C, fermé en partie l'été, un jour de semaine de vacances pèse <span class="ref-vac-c">—</span> d'un jour ordinaire.
       </div>
       <div class="limit-item">
-        <strong>Offre prévue, pas offre réalisée.</strong> Le nombre de trains de chaque heure vient des horaires prévus. Un jour de service réduit, les trains qui circulent encore sont plus chargés que ne le suppose le calcul. Les horaires publiés couvrent les 30 jours à venir ; tant qu'aucun jour de vacances scolaires n'y figure, les jours de vacances reprennent l'offre des jours ordinaires.
+        <strong>Départs prévus.</strong> Le nombre de trains qui se partagent les voyageurs d'une heure est celui des horaires prévus, cohérent avec les comptages, qui décrivent un jour ordinaire. Les voyageurs d'un train supprimé sont comptés pour leur attente ; leur report sur le train suivant, plus chargé, ne l'est pas.
       </div>
       <div class="limit-item">
-        <strong>Même fréquentation tous les jours.</strong> Le nombre de voyageurs par jour est le même en semaine, le samedi et le dimanche ; seule sa répartition entre les heures change. Les week-ends sont donc surestimés.
+        <strong>Incidents antérieurs au <span class="ref-bascule">16 septembre 2026</span>.</strong> Avant cette date, la collecte ne gardait que le plus grand retard de chaque train et la gare où il avait été vu. Ces incidents sont recalculés avec la même méthode, sur le parcours de leur mission : aucun retard avant cette gare, ce retard à partir d'elle, et pour un train supprimé l'intervalle prévu au lieu de l'attente mesurée.
       </div>
       <div class="limit-item">
         <strong>Un incident = une ligne.</strong> Un incident affectant plusieurs lignes est compté une fois par ligne, ce qui peut sur-estimer le nombre d'incidents distincts.
@@ -575,38 +590,29 @@
       set('.ref-smic', ref.smic_horaire.toLocaleString('fr-FR', { minimumFractionDigits: 2 }));
       set('.ref-smic-source', ref.smic_source);
       set('.ref-polling', n(ref.polling_interval_minutes));
-      set('.ref-req', n(ref.requetes_prim_jour));
+      set('.ref-req-et', n(ref.requetes_et_jour));
+      set('.ref-req-navitia', n(ref.requetes_navitia_jour));
       set('.ref-quota', n(ref.quota_prim_jour));
       set('.ref-collecte-debut', n(ref.collecte_heure_debut));
       set('.ref-retard-min', n(ref.retard_min_minutes));
-      // Offre théorique GTFS : trains équivalents et intervalle, jour de semaine hors vacances
-      const offreT = (ref.offre_trains_heure || {}), offreI = (ref.offre_intervalle_min || {});
-      const dec = v => v.toLocaleString('fr-FR', { maximumFractionDigits: 0 });
-      if (offreT.RER_A) set('.ref-trains-8', dec(offreT.RER_A.JOHV[8]));
-      if (offreI.RER_A && offreI.RER_A.JOHV[8] != null) set('.ref-intervalle-a-8', n(Math.round(offreI.RER_A.JOHV[8])));
-      if (offreI.TRANSILIEN_K && offreI.TRANSILIEN_K.JOHV[14] != null) set('.ref-intervalle-k-14', n(Math.round(offreI.TRANSILIEN_K.JOHV[14])));
       set('.ref-fantome', n(ref.fantome_min_minutes));
-      // Profils horaires réels : part des voyageurs du jour sur chaque heure (somme = 1 sur 24 h)
-      const reseauA = (ref.profils_lignes || {}).RER_A;
-      const profilA = ((ref.profils_horaires || {})[reseauA]) || null;
-      const pct = v => (v * 100).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %';
 
-      if (profilA && profilA.JOHV && profilA.JOVS && profilA.SAHV) {
-        set('.ref-part-8', pct(profilA.JOHV[8]));
-        set('.ref-part-vac-8', pct(profilA.JOVS[8]));
-        set('.ref-part-sam-8', pct(profilA.SAHV[8]));
+      const vacC = ((ref.frequentation_rapports_vacances || {})['803'] || {}).JOVS;
+      if (vacC != null) set('.ref-vac-c', `${Math.round(vacC * 100)} %`);
 
-        // Exemple : RER A, retard de 45 min à 8 h un jour de semaine, formule affichée au-dessus
-        const voyJour = ref.frequentation.RER_A;
-        const trains8 = offreT.RER_A ? offreT.RER_A.JOHV[8] : null;
-        if (voyJour && trains8) {
-          const DUREE = 45;
-          const parTrain = voyJour * profilA.JOHV[8] / Math.max(trains8, 1);  // plancher du backend
-          const mv = Math.round(DUREE * parTrain);
-          const cout = Math.floor(mv * Math.round(ref.smic_horaire * 100) / 6000);  // arrondi du backend
-          set('.ref-exemple', `${n(voyJour)} voy./jour × ${pct(profilA.JOHV[8])} ÷ ${trains8.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} trains = ` +
-            `${n(Math.round(parTrain))} voy./train · ${DUREE} × ${n(Math.round(parTrain))} = ${n(mv)} min-voy. · coût estimé =`);
-          set('.ref-exemple-cout', `${n(cout)} €`);
+      // Exemple calculé par le backend (metrics.exemple_calcul) : un train, retard puis suppression
+      const ex = ref.exemple_calcul;
+      if (ex) {
+        const euros = mv => `${n(Math.floor(mv * Math.round(ref.smic_horaire * 100) / 6000))} €`;  // arrondi du backend
+        const lettre = ex.ligne.replace('RER_', 'RER ').replace('TRANSILIEN_', 'ligne ');
+        set('.ref-ex-train', `${lettre}, mission ${ex.mission}, ${ex.origine} → ${ex.terminus} (${n(ex.nb_gares)} gares), un mardi ordinaire à ${ex.heure}`);
+        set('.ref-exemple', `${n(ex.voyageurs)} voyageurs montent le long du parcours (dont ${n(ex.montees_premiere_gare)} à ${ex.origine}). ` +
+          `Avec ${n(ex.retard)} min de retard à chaque arrivée : ${n(ex.voyageurs)} × ${n(ex.retard)} = ${n(ex.minutes_voyageurs_retard)} min-voy. · coût estimé =`);
+        set('.ref-exemple-cout', euros(ex.minutes_voyageurs_retard));
+        if (ex.intervalle != null) {
+          set('.ref-exemple-supp', `Supprimé en entier, chaque voyageur attend le train suivant, prévu ${n(ex.intervalle)} min plus tard : ` +
+            `${n(ex.minutes_voyageurs_suppression)} min-voy. · coût estimé =`);
+          set('.ref-exemple-supp-cout', euros(ex.minutes_voyageurs_suppression));
         }
       }
     } catch (_) { /* placeholders « — » */ }

@@ -23,13 +23,19 @@ sur les lignes RER et Transilien d'Île-de-France.
 
 ## Source de données
 - **API PRIM IDF Mobilités** : relevé toutes les 20 min, de 6 h à minuit (heure de Paris)
-- Endpoint : `https://prim.iledefrance-mobilites.fr/marketplace/v2/navitia/line_reports`
+- Endpoints : retards et suppressions via le flux SIRI **Estimated Timetable**
+  (`/marketplace/estimated-timetable?LineRef=STIF:Line::<code>:`, un appel par ligne, ~2 h de trains arrêt par arrêt) ;
+  perturbations déclarées via Navitia (`/marketplace/v2/navitia/physical_modes/{mode}/line_reports`).
 - Auth : header `apikey: {PRIM_API_KEY}`
-- Quota : **1 000 req/jour par clé**, confirmé par les en-têtes de chaque réponse (`x-ratelimit-limit-day`,
-  `x-ratelimit-remaining-day`) — compteur unique pour tous les endpoints, remis à zéro à minuit UTC (2 h l'été).
-  Budget : 15 req/relevé × 54 relevés = 810 req/jour. Reste loggué à chaque relevé (warning sous 150).
-  Chaque requête manuelle (tests, diagnostics) est prise sur ce budget.
-- **Fréquentation** : `data/frequentation.json` (statique, màj mensuelle)
+- Quota : **1 000 req/jour par clé et par flux** — deux compteurs distincts constatés le 2026-09-16 dans les en-têtes
+  (`x-ratelimit-remaining-day`) : Navitia et Estimated Timetable. Remise à zéro à minuit UTC (2 h l'été).
+  Budget : Estimated Timetable 13 req/relevé × 54 = 702/jour ; Navitia 2 req/relevé × 54 = 108/jour.
+  Les deux restes sont loggués à chaque relevé (warning sous 150). Chaque requête manuelle est prise sur ces budgets.
+- **Données statiques** (open data, construites hors ligne, versionnées) — ordre de construction :
+  `python -m backend.profils build` (profils horaires, vacances) → `python -m backend.offre build` (GTFS : départs
+  par gare, missions, noms d'arrêts) → `python -m backend.frequentation build` (comptages SNCF + validations IDFM :
+  voyageurs montant dans un train par gare et heure), puis `python -m backend.recalcul`.
+  `data/frequentation.json` n'est plus utilisé par le calcul.
 
 ---
 
@@ -123,8 +129,8 @@ Chaque PC a sa propre base PostgreSQL. Pour ne pas perdre les données collecté
 - **Import** : `python -m backend.transfert import transferts/<fichier>.json` (fusionne, recalcule métriques + bilans)
 - `/start` importe automatiquement les fichiers `transferts/*.json` présents.
 - `/wrap` exporte automatiquement la journée en cours avant le commit.
-- **Un seul serveur à la fois** : les deux PC partagent la clé PRIM et son quota de 1 000 req/jour (810 pour un
-  serveur au réglage par défaut). Toute affirmation sur la limite PRIM se vérifie dans les en-têtes
+- **Un seul serveur à la fois** : les deux PC partagent la clé PRIM et ses quotas de 1 000 req/jour par flux
+  (702 Estimated Timetable et 108 Navitia pour un serveur au réglage par défaut). Toute affirmation sur la limite PRIM se vérifie dans les en-têtes
   `x-ratelimit-*-day` d'une réponse, jamais de mémoire.
 
 ---

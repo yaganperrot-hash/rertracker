@@ -62,6 +62,16 @@ class TestReference:
         assert ref["collecte_heure_debut"] == s.collecte_heure_debut
         assert ref["frequentation"] == FREQUENTATION
 
+    async def test_exemple_de_la_page_methode_calcule(self):
+        ex = (await reference())["exemple_calcul"]
+        assert ex["voyageurs"] > 0
+        assert abs(ex["minutes_voyageurs_retard"] - ex["voyageurs"] * ex["retard"]) <= ex["retard"]   # arrondis
+
+    async def test_requetes_par_flux(self):
+        ref = await reference()
+        assert ref["requetes_navitia_jour"] + ref["requetes_et_jour"] == ref["requetes_prim_jour"]
+        assert ref["requetes_et_jour"] <= ref["quota_prim_jour"]
+
     async def test_requetes_prim_par_jour(self):
         # Relevés de collecte_heure_debut à minuit ; à chacun 2 appels perturbations + 1 appel départs par ligne
         s = get_settings()
