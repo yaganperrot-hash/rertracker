@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Carte récap — Compteur de retards IDF</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F7F4EF; --bg2:#EDEAE4; --border:#D4CFC7;
+    --ink:#000; --sub:#333; --muted:#555; --red:#C0392B;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1080px;height:1080px;overflow:hidden}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:'Roboto',sans-serif; -webkit-font-smoothing:antialiased;
+  }
+  .carte{width:1080px;height:1080px;padding:64px 72px;display:flex;flex-direction:column}
+
+  /* — En-tête — */
+  header{display:flex;align-items:center;justify-content:space-between;
+         padding-bottom:22px;border-bottom:2px solid var(--ink)}
+  .marque{display:flex;align-items:center;gap:14px}
+  .badge{border:3px solid var(--red);color:var(--red);font-weight:900;
+         font-size:15px;letter-spacing:.14em;padding:5px 10px}
+  .titre{font-size:22px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}
+  .date{font-size:21px;font-weight:500;color:var(--sub)}
+  .date::first-letter{text-transform:uppercase}
+
+  /* — Hero — */
+  .hero{padding:52px 0 40px}
+  .kicker{font-size:23px;font-weight:500;letter-spacing:.1em;
+          text-transform:uppercase;color:var(--muted)}
+  .montant{font-size:172px;font-weight:900;line-height:.92;color:var(--red);
+           letter-spacing:-.035em;margin:14px 0 16px}
+  .legende{font-size:30px;font-weight:300;color:var(--sub)}
+
+  /* — Bandeau minutes — */
+  .bandeau{background:var(--ink);color:var(--bg);padding:24px 30px;
+           display:flex;align-items:baseline;gap:16px}
+  .bandeau .gros{font-size:44px;font-weight:900;letter-spacing:-.02em}
+  .bandeau .txt{font-size:23px;font-weight:300}
+
+  /* — Classement — */
+  .classement{flex:1;padding-top:38px}
+  .classement h2{font-size:19px;font-weight:900;letter-spacing:.16em;
+                 text-transform:uppercase;color:var(--muted);margin-bottom:20px}
+  .ligne{display:flex;align-items:center;gap:20px;margin-bottom:16px}
+  .pastille{width:92px;height:44px;border-radius:6px;flex:none;display:flex;
+            align-items:center;justify-content:center;
+            font-size:21px;font-weight:900;color:#fff}
+  .jauge{flex:1;height:22px;background:var(--bg2);border-radius:3px;overflow:hidden}
+  .jauge span{display:block;height:100%;border-radius:3px}
+  .val{width:172px;text-align:right;font-size:27px;font-weight:700;
+       font-variant-numeric:tabular-nums}
+
+  /* — Pied — */
+  footer{display:flex;justify-content:space-between;align-items:center;
+         border-top:2px solid var(--ink);padding-top:22px;
+         font-size:21px;color:var(--sub)}
+  footer b{font-weight:900;color:var(--ink)}
+  .src{font-size:17px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="carte">
+  <header>
+    <div class="marque">
+      <span class="badge">IDF</span>
+      <span class="titre">Compteur de retards</span>
+    </div>
+    <div class="date" id="date"></div>
+  </header>
+
+  <div class="hero">
+    <div class="kicker">Aujourd'hui, les retards ont coûté</div>
+    <div class="montant" id="montant">—</div>
+    <div class="legende">aux voyageurs d'Île-de-France</div>
+  </div>
+
+  <div class="bandeau">
+    <span class="gros" id="mv">—</span>
+    <span class="txt" id="mvtxt">minutes-voyageurs perdues</span>
+  </div>
+
+  <div class="classement">
+    <h2>Les lignes les plus touchées</h2>
+    <div id="lignes"></div>
+  </div>
+
+  <footer>
+    <div><b id="inc">—</b> incidents &nbsp;·&nbsp; <b id="nbl">—</b> lignes perturbées</div>
+    <div class="src">Données PRIM · Île-de-France Mobilités</div>
+  </footer>
+</div>
+
+<script src="/duree.js"></script>
+<script>
+const META = {
+  RER_A:['RER A','#E2231A','#fff'], RER_B:['RER B','#5191CF','#fff'],
+  RER_C:['RER C','#C8A800','#1a1a17'], RER_D:['RER D','#00814F','#fff'],
+  RER_E:['RER E','#B04191','#fff'],
+  TRANSILIEN_H:['H','#7B7B7B','#fff'], TRANSILIEN_J:['J','#D2B464','#1a1a17'],
+  TRANSILIEN_K:['K','#8C4B31','#fff'], TRANSILIEN_L:['L','#9F3E96','#fff'],
+  TRANSILIEN_N:['N','#333333','#fff'], TRANSILIEN_P:['P','#E87722','#fff'],
+  TRANSILIEN_R:['R','#228B22','#fff'], TRANSILIEN_U:['U','#7B0F1F','#fff'],
+};
+const nb = v => v.toLocaleString('fr-FR').replace(/ | /g, ' ');
+
+(async () => {
+  const today = await (await fetch('/api/stats/today')).json();
+
+  document.getElementById('date').textContent =
+    new Date(today.date + 'T12:00:00').toLocaleDateString('fr-FR',
+      {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  document.getElementById('montant').textContent = nb(today.cout_eur) + ' €';
+  document.getElementById('mv').textContent = nb(today.total_minutes_voyageurs);
+  document.getElementById('mvtxt').textContent =
+    'minutes-voyageurs ' + accordPerdu(today.total_minutes_voyageurs) +
+    ' — soit ' + formatDuree(today.total_minutes_voyageurs);
+  document.getElementById('inc').textContent = nb(today.total_incidents);
+  document.getElementById('nbl').textContent = today.nb_lignes_perturbees;
+
+  // Minutes-voyageurs du jour, ligne par ligne
+  const stats = await Promise.all(today.lignes_perturbees.map(async id => {
+    const d = await (await fetch('/api/stats/line/' + id)).json();
+    const jour = (d.daily || []).find(x => x.date === today.date);
+    return {id, mv: jour ? jour.minutes_voyageurs : 0};
+  }));
+
+  const top = stats.sort((a,b) => b.mv - a.mv).slice(0, 5);
+  const max = top.length ? top[0].mv : 1;
+
+  document.getElementById('lignes').innerHTML = top.map(l => {
+    const [nom, bg, fg] = META[l.id] || [l.id, '#555', '#fff'];
+    const pct = max ? Math.max(2, Math.round(l.mv / max * 100)) : 0;
+    return `<div class="ligne">
+      <div class="pastille" style="background:${bg};color:${fg}">${nom}</div>
+      <div class="jauge"><span style="width:${pct}%;background:${bg}"></span></div>
+      <div class="val">${nb(l.mv)}</div>
+    </div>`;
+  }).join('');
+
+  await document.fonts.ready;
+  document.body.dataset.pret = '1';
+})();
+</script>
+</body>
+</html>
