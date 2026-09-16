@@ -3,6 +3,7 @@ from sqlalchemy import (
     Integer, String, Text, DateTime, Date, Boolean, BigInteger,
     UniqueConstraint, func
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from backend.database import Base
 
@@ -27,6 +28,10 @@ class Incident(Base):
     gare: Mapped[str | None] = mapped_column(String(120), nullable=True)
     direction: Mapped[str | None] = mapped_column(String(120), nullable=True)
     mission: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # Arrêts du train relevés dans le flux SIRI Estimated Timetable, dans l'ordre du parcours :
+    # [{"g": gare, "p": heure prévue ISO UTC, "r": retard à l'arrivée (min) ou null,
+    #   "s": arrêt supprimé, "w": attente mesurée du train suivant (min) ou null}]. Null avant la bascule.
+    arrets: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )

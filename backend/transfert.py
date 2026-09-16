@@ -30,6 +30,7 @@ DOSSIER = Path(__file__).parent.parent / "transferts"
 COLONNES = [
     "navitia_id", "line_id", "type_incident", "cause", "heure_debut", "heure_fin", "duree_minutes",
     "created_at", "source", "heure_theorique", "is_cancelled", "gare", "direction", "mission", "updated_at",
+    "arrets",
 ]
 DATES = {"heure_debut", "heure_fin", "created_at", "heure_theorique", "updated_at"}
 
@@ -102,6 +103,9 @@ async def importer(chemin: Path) -> None:
                        for c in ("duree_minutes", "cause", "heure_theorique", "gare", "direction", "mission")},
                     **{c: case((plus_recent, getattr(ex, c)), else_=getattr(Incident, c))
                        for c in ("type_incident", "is_cancelled", "heure_fin", "source")},
+                    # Un export d'avant la bascule n'a pas d'arrêts : ne pas effacer ceux déjà en base
+                    "arrets": case((plus_recent, func.coalesce(ex.arrets, Incident.arrets)),
+                                   else_=func.coalesce(Incident.arrets, ex.arrets)),
                 },
             )
             await session.execute(stmt)

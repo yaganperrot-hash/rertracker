@@ -29,7 +29,8 @@ async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         # create_all n'ajoute pas les colonnes aux tables existantes
-        for col, typ in (("gare", "VARCHAR(120)"), ("direction", "VARCHAR(120)"), ("mission", "VARCHAR(20)")):
+        for col, typ in (("gare", "VARCHAR(120)"), ("direction", "VARCHAR(120)"), ("mission", "VARCHAR(20)"),
+                         ("arrets", "JSONB")):
             await conn.execute(text(f"ALTER TABLE incidents ADD COLUMN IF NOT EXISTS {col} {typ}"))
     # Backfill source and is_cancelled for existing data
     from backend.migrate_source import backfill_source
