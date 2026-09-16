@@ -1,23 +1,24 @@
-# SESSION — État courant
+# SESSION -- Etat courant
 
-## 2026-09-15 — PC Windows (bis), fin de session (historique : `.claude/archive/`)
+## 2026-09-16 -- PC Windows, fin de session (historique : `.claude/archive/`)
 
 ### Objectif
-Import des données Mac, diagnostic écart compteur, identification travaux planifiés.
+Aligner le PC Windows : imports Mac + relabel Transilien + polling 20 min.
 
 ### Avancement
-- Données Mac importées (715 incidents du 15/09 récupérés via git pull + réimport).
-- Compteur du jour rétabli : 745 incidents, ~610 k€.
-- Travaux planifiés identifiés : 22 disruptions de type « travaux » en BDD, toutes avec
-  plages horaires annoncées (soirée/nuit). Question ouverte : les exclure du calcul ou
-  les afficher séparément.
-- Export final : 836 incidents du 15/09.
+- `.env` Windows : `POLLING_INTERVAL_MINUTES` 5 -> 20.
+- Transferts importes dans l'ordre : 13/09 (246), 14/09 (470), relabel, 15/09 (836).
+- Fix `relabel_transilien.py` : conflit d'unicite `daily_metrics` + print cp1252.
+- Travaux planifies (22) : deja exclus du cout, rien a changer.
+- Bug 23 (picker) : try/catch ajoute, en attente de test navigateur.
+- Export du 16/09 : 117 incidents.
+- 153 tests au vert.
 
 ### Blocages
-- `.env` Windows à `POLLING_INTERVAL_MINUTES=5` (CLAUDE.md/config disent 20 min) — à aligner.
-- Clé PRIM à régénérer (non traité).
+- Cle PRIM a regenerer (en clair dans l'historique git, commit c591442).
+- Bug 23 : en attente de diagnostic console navigateur.
 
-### Prochaine étape
-1. Aligner `.env` Windows sur polling 20 min.
-2. Décider du traitement des travaux planifiés (exclure / séparer).
-3. Bug 23 (picker), vérification visuelle durées, causes.
+### Prochaine etape
+1. Tester le picker dans un navigateur (F12).
+2. Regenerer la cle PRIM sur le portail IDF Mobilites.
+3. Verifier visuellement durees + causes.

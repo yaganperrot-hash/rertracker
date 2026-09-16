@@ -460,7 +460,7 @@ Label changé : "Un usager retardé a perdu en moyenne"
 codes 6434/6438/6435), R sur un ID sans départ. Vérifié via `pt_objects?q=Transilien&type[]=line`
 **Fix** : IDs corrigés + test sur les 13 IDs ; historique réétiqueté J→P, K→R, U→N (202 incidents, 5 jours de
 métriques recalculés, sauvegardes `*_backup_20260915`, table témoin `migrations_appliquees`)
-**Status** : ✅ Résolu sur le Mac — ⚠️ migration à lancer sur le PC Windows (ordre : voir SESSION.md)
+**Status** : ✅ Résolu sur le Mac — ✅ Appliqué sur le PC Windows le 2026-09-16 (fix conflit d'unicité daily_metrics)
 
 ### [2026-09-15] Bug 26 — Aucune perturbation collectée depuis le 2026-09-12
 **Fichier(s)** : `backend/collector.py` (`collect_disruptions`)
@@ -522,12 +522,32 @@ de tests manuels. La doc venait de déclarer le quota « inconnu » alors que PR
 **Fix** : `.env` du Mac à 30 min pour finir la journée ; défaut 20 min + pause de minuit à 6 h (`collecte_heure_debut`)
 → 810 req/jour ; quota restant loggué à chaque relevé (warning sous 150) ; quota rétabli dans `/api/reference`, la page
 Méthode et la doc ; 7 tests
-**Status** : ✅ Résolu — ⚠️ `.env` du Mac à remettre à 20 min demain ; `.env` du PC Windows à passer à 20
+**Status** : ✅ Résolu — `.env` du PC Windows passé à 20 le 2026-09-16 ; `.env` du Mac à remettre à 20
 
 ### [2026-09-15] Interruptions sous-estimées dans le coût (limite de méthode)
 **Symptôme** : interruption RER D du 15/09 : 0 train supprimé détecté, seuls les retards autour sont chiffrés
 **Cause** : perturbations exclues du coût (double comptage) ; trains d'un tronçon coupé absents du flux temps réel
 **Status** : 🔄 Piste c dans `TODO.md` — tester PRIM à la prochaine interruption en cours
+
+---
+
+## Session 2026-09-16 — PC Windows
+
+### [2026-09-16] Bug 31 — relabel_transilien échoue si le serveur a déjà collecté sous les bons IDs
+**Fichier(s)** : `backend/relabel_transilien.py`
+**Symptôme** : `IntegrityError: uq_daily_metrics_date_line` sur `(2026-09-15, TRANSILIEN_P)`
+**Cause** : le serveur Windows avait tourné avec les IDs corrigés → `daily_metrics` contenait déjà
+`TRANSILIEN_P` pour le 15/09. Le script tentait de renommer `J→P` pour la même date → conflit d'unicité
+**Fix** : avant le UPDATE, supprimer les métriques à l'ancienne étiquette dont la date existe déjà
+sous la nouvelle étiquette. Le recalcul qui suit reconstruit les bonnes valeurs
+**Status** : ✅ Résolu
+
+### [2026-09-16] relabel_transilien : print crash sur Windows (cp1252)
+**Fichier(s)** : `backend/relabel_transilien.py`
+**Symptôme** : `UnicodeEncodeError: 'charmap' codec can't encode character '\u2192'` (flèche →)
+**Cause** : la console Windows utilise cp1252, le caractère `→` n'y existe pas
+**Fix** : remplacé par `->` dans le print
+**Status** : ✅ Résolu
 
 ---
 
