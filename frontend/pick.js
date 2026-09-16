@@ -266,7 +266,9 @@
 
     // ── Clic sur les pastilles ──
     container.querySelectorAll('.pick-dot').forEach(dot => {
-      dot.addEventListener('click', () => select(dot.dataset.id, true));
+      dot.addEventListener('click', () => {
+        select(dot.dataset.id, true).catch(err => console.error('[Pick] select error:', err));
+      });
     });
 
     // ── Toggle période ──

@@ -58,12 +58,19 @@ async def reetiqueter() -> None:
         nb_incidents = (await session.execute(text(
             f"UPDATE incidents SET line_id = {_CASE} WHERE line_id IN ({_ANCIENS})"
         ))).rowcount
+        # Supprimer les métriques à l'ancienne étiquette qui entreraient en conflit
+        # avec une ligne déjà présente sous la bonne étiquette (ex. serveur lancé après le fix)
+        for ancien, nouveau in CORRECTION.items():
+            await session.execute(text(
+                "DELETE FROM daily_metrics WHERE line_id = :ancien "
+                "AND date IN (SELECT date FROM daily_metrics WHERE line_id = :nouveau)"
+            ), {"ancien": ancien, "nouveau": nouveau})
         jours = sorted(set((await session.execute(text(
             f"UPDATE daily_metrics SET line_id = {_CASE} WHERE line_id IN ({_ANCIENS}) RETURNING date"
         ))).scalars()))
         await session.execute(text("INSERT INTO migrations_appliquees (nom) VALUES (:nom)"), {"nom": NOM})
         await session.commit()
-    print(f"{nb_incidents} incidents réétiquetés (J→P, K→R, U→N), {len(jours)} journées de métriques")
+    print(f"{nb_incidents} incidents reetiquetes (J->P, K->R, U->N), {len(jours)} journees de metriques")
 
     # Fréquentation différente d'une ligne à l'autre : minutes-voyageurs et coûts à recalculer
     for jour in jours:
