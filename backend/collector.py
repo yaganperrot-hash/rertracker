@@ -235,6 +235,51 @@ CANCEL_DEFAULT_IMPACT_MIN = 5  # default impact for cancelled trains
 CANCEL_MARGIN_MIN = 2  # marge avant le départ attendu pour considérer une disparition comme suppression
 
 
+def _train_id(dep: dict) -> str | None:
+    """Identifiant stable du train d'un passage PRIM.
+
+    Le suffixe ":RealTime:<uuid>" change à chaque mise à jour temps réel : on garde
+    l'identifiant de base du train (celui du GTFS, préfixé de « vehicle_journey: »).
+    """
+    vj_id = next(
+        (l["id"] for l in dep.get("links", []) if l.get("type") == "vehicle_journey"),
+        None,
+    )
+    return vj_id.split(":RealTime:")[0] if vj_id else None
+
+
+def couverture_releve(departures: list[dict]) -> dict:
+    """Ce qu'un relevé /departures a réellement vu : trains distincts, passages temps réel et
+    plage des départs prévus (UTC). Les 50 passages sont toutes gares confondues, la plage est
+    donc courte — c'est ce que ce diagnostic mesure."""
+    trains: set[str] = set()
+    passages = 0
+    debut = fin = None
+    for dep in departures:
+        sdt = dep.get("stop_date_time", {})
+        if sdt.get("data_freshness") != "realtime":
+            continue
+        tid = _train_id(dep)
+        base = _parse_dt(sdt.get("base_departure_date_time"))
+        if tid is None or base is None:
+            continue
+        trains.add(tid)
+        passages += 1
+        debut = base if debut is None or base < debut else debut
+        fin = base if fin is None or base > fin else fin
+    return {"trains": len(trains), "passages": passages, "debut": debut, "fin": fin}
+
+
+def _journaliser_couverture(line_id: str, couv: dict) -> None:
+    if couv["debut"] is None:
+        logger.info("Couverture %s : aucun passage temps réel", line_id)
+        return
+    d, f = couv["debut"].astimezone(PARIS_TZ), couv["fin"].astimezone(PARIS_TZ)
+    logger.info("Couverture %s : %d trains, %d passages, départs prévus %s → %s (%d min)",
+                line_id, couv["trains"], couv["passages"], d.strftime("%H:%M"), f.strftime("%H:%M"),
+                int((f - d).total_seconds() // 60))
+
+
 async def collect_rt_delays() -> None:
     """Collecte les retards temps réel via l'endpoint /departures."""
     settings = get_settings()
@@ -263,6 +308,7 @@ async def collect_rt_delays() -> None:
                 resp.raise_for_status()
                 data = resp.json()
                 obs_dt = datetime.now(timezone.utc)
+                _journaliser_couverture(line_id, couverture_releve(data.get("departures", [])))
                 for dep in data.get("departures", []):
                     sdt = dep.get("stop_date_time", {})
                     if sdt.get("data_freshness") != "realtime":
@@ -275,16 +321,10 @@ async def collect_rt_delays() -> None:
                     base_dt = datetime.strptime(base_s, "%Y%m%dT%H%M%S").replace(tzinfo=PARIS_TZ).astimezone(timezone.utc)
                     rt_dt   = datetime.strptime(rt_s,   "%Y%m%dT%H%M%S").replace(tzinfo=PARIS_TZ).astimezone(timezone.utc)
                     delay_min = int((rt_dt - base_dt).total_seconds() / 60)
-                    vj_id = next(
-                        (l["id"] for l in dep.get("links", []) if l.get("type") == "vehicle_journey"),
-                        None,
-                    )
-                    if not vj_id:
-                        continue
                     # Un incident par train et par jour, pas un par gare desservie.
-                    # Le suffixe ":RealTime:<uuid>" change à chaque mise à jour temps réel :
-                    # on garde l'identifiant de base du train.
-                    train_id = vj_id.split(":RealTime:")[0]
+                    train_id = _train_id(dep)
+                    if not train_id:
+                        continue
                     uid = f"rt_{train_id}_{base_s[:8]}"
                     fetched_ids_by_line[line_id].add(uid)
                     if delay_min < MIN_DELAY_MINUTES:

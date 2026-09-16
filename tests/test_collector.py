@@ -19,7 +19,50 @@ from backend.collector import (
     LIGNES_CIBLES,
     collect_disruptions,
     collect_rt_delays,
+    couverture_releve,
+    _train_id,
 )
+
+
+def _passage(vj, base, freshness="realtime"):
+    return {
+        "stop_date_time": {"data_freshness": freshness, "base_departure_date_time": base,
+                           "departure_date_time": base},
+        "links": [{"type": "vehicle_journey", "id": vj}],
+    }
+
+
+class TestCouvertureReleve:
+    """Diagnostic de couverture d'un relevé /departures (TASK-13)."""
+
+    def test_reponse_vide(self):
+        assert couverture_releve([]) == {"trains": 0, "passages": 0, "debut": None, "fin": None}
+
+    def test_meme_train_suffixes_realtime_differents(self):
+        couv = couverture_releve([
+            _passage("vehicle_journey:IDFM:TN:SNCF:abc:RealTime:111", "20260917T080000"),
+            _passage("vehicle_journey:IDFM:TN:SNCF:abc:RealTime:222", "20260917T081000"),
+        ])
+        assert couv["trains"] == 1
+        assert couv["passages"] == 2
+
+    def test_passage_base_schedule_ignore(self):
+        couv = couverture_releve([_passage("vj:1", "20260917T080000", freshness="base_schedule")])
+        assert couv["trains"] == 0
+
+    def test_bornes_des_departs_prevus(self):
+        couv = couverture_releve([
+            _passage("vj:1", "20260917T081100"),
+            _passage("vj:2", "20260917T080200"),
+            _passage("vj:3", "20260917T080500"),
+        ])
+        # 08:02 et 08:11 heure de Paris (UTC+2 en septembre)
+        assert couv["debut"] == datetime(2026, 9, 17, 6, 2, tzinfo=timezone.utc)
+        assert couv["fin"] == datetime(2026, 9, 17, 6, 11, tzinfo=timezone.utc)
+        assert couv["trains"] == 3
+
+    def test_train_id_sans_lien(self):
+        assert _train_id({"links": []}) is None
 
 
 class TestParseDt:
