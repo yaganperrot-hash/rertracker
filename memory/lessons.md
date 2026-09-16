@@ -114,6 +114,13 @@
 - Une vérification de quota se fait **par flux** : chaque produit PRIM a son propre `x-ratelimit-remaining-day`.
 - Un serveur relancé par Claude Code survit à la session avec `nohup … & disown` (logs en `>>` dans `logs/uvicorn.log`).
 
+## Plafond de retard
+- Le plafond global (intervalle médian de la ligne) sous-estime les pertes en bout de branche et les
+  surestime au tronc commun. Le bon plafond est `60 / trains_gare` à la gare de destination du voyageur.
+- Impact mesuré sur une journée complète : +1,9 % au total, +6,5 % RER A, +13,5 % Transilien N.
+- `recalcul.py` boucle sur toute la plage premier → dernier incident : sur 148 jours, seuls 19 avaient
+  des incidents. Pas de dégât, mais inutilement lent.
+
 ## Exploitation
 - **Ne jamais tuber un script long dans `head`** : la fermeture du tube envoie un SIGPIPE et tue le
   script avant qu'il écrive son fichier de sortie. Rediriger vers un log puis `tail`, et vérifier le
