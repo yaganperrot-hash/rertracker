@@ -10,7 +10,7 @@ from backend.config import get_settings
 from backend.database import get_db
 from backend.models import Incident, DailyMetric
 from backend.metrics import (
-    FREQUENTATION, PROFILS, compute_daily_metrics, cout_eur, get_line_stats, get_today_stats,
+    FREQUENTATION, OFFRE, PROFILS, compute_daily_metrics, cout_eur, get_line_stats, get_today_stats,
     incident_minutes_voyageurs,
 )
 from backend.collector import (
@@ -24,21 +24,22 @@ router = APIRouter(prefix="/api")
 DbDep = Annotated[AsyncSession, Depends(get_db)]
 
 
-def _impact(r: Incident, now_utc: datetime, smic: float) -> tuple[int | None, int | None]:
-    """(minutes-voyageurs, coût €) d'un incident, calculés comme les métriques du jour.
+def _impact(r: Incident, now_utc: datetime, smic: float) -> tuple[int | None, int | None, int | None]:
+    """(durée comptée, minutes-voyageurs, coût €) d'un incident, calculés comme les métriques du jour.
 
     Seuls les retards temps réel et les trains supprimés comptent ; une perturbation
-    déclarée n'a pas de coût propre (None, None).
+    déclarée n'a pas de coût propre (durée stockée, None, None). Un train supprimé compte pour
+    l'intervalle jusqu'au train suivant, pas pour la valeur de repli stockée en base.
     """
     source = r.source or ("realtime" if r.type_incident == "DELAY_REALTIME" else "disruption")
     if source != "realtime" and not r.is_cancelled:
-        return None, None
-    _, mv = incident_minutes_voyageurs(r, now_utc)
-    return mv, cout_eur(mv, smic)
+        return r.duree_minutes, None, None
+    dur, mv = incident_minutes_voyageurs(r, now_utc)
+    return dur, mv, cout_eur(mv, smic)
 
 
 def _serialize_incident(r: Incident, now_utc: datetime, smic: float) -> dict:
-    minutes_voyageurs, cout = _impact(r, now_utc, smic)
+    duree, minutes_voyageurs, cout = _impact(r, now_utc, smic)
     return {
         "id": r.id,
         "navitia_id": r.navitia_id,
@@ -50,7 +51,7 @@ def _serialize_incident(r: Incident, now_utc: datetime, smic: float) -> dict:
         "categorie": categoriser_cause(r.cause) if r.source == "disruption" else None,
         "heure_debut": r.heure_debut.isoformat(),
         "heure_fin": r.heure_fin.isoformat() if r.heure_fin else None,
-        "duree_minutes": r.duree_minutes,
+        "duree_minutes": duree,
         "minutes_voyageurs": minutes_voyageurs,
         "cout_eur": cout,
         "source": r.source,
@@ -94,7 +95,12 @@ async def reference():
         "profils_reseaux": PROFILS.get("reseaux_libelles", {}),
         "profils_source": PROFILS.get("_source", {}),
         "retard_min_minutes": MIN_DELAY_MINUTES,
+        # Valeur de repli : un train supprimé compte pour l'intervalle de l'offre théorique
         "suppression_minutes": s.cancel_default_impact_minutes,
+        # Offre théorique GTFS : trains équivalents et intervalle par ligne, jour type et heure
+        "offre_trains_heure": OFFRE.get("trains_heure", {}),
+        "offre_intervalle_min": OFFRE.get("intervalle_min", {}),
+        "offre_source": OFFRE.get("_source", {}),
         "fantome_min_minutes": GHOST_MIN_DELAY_MINUTES,
     }
 

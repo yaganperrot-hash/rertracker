@@ -35,6 +35,17 @@ class TestCoutIncident:
         inc = _incident(is_cancelled=True, type_incident="CANCELLED", duree_minutes=5)
         assert _serialize_incident(inc, NOW, SMIC)["cout_eur"] > 0
 
+    def test_train_supprime_duree_affichee_egale_duree_comptee(self):
+        inc = _incident(is_cancelled=True, type_incident="CANCELLED", duree_minutes=5)
+        dur, _ = incident_minutes_voyageurs(inc, NOW)
+        assert _serialize_incident(inc, NOW, SMIC)["duree_minutes"] == dur
+
+    async def test_reference_expose_l_offre(self):
+        ref = await reference()
+        assert set(ref["offre_trains_heure"]) == set(LIGNES_CIBLES.values())
+        assert set(ref["offre_intervalle_min"]) == set(LIGNES_CIBLES.values())
+        assert "fenetre" in ref["offre_source"]
+
     def test_perturbation_declaree_sans_cout(self):
         inc = _incident(source="disruption", type_incident="SIGNIFICANT_DELAYS", cause="Trafic perturbé")
         d = _serialize_incident(inc, NOW, SMIC)

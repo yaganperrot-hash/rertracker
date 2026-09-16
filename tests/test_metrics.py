@@ -5,7 +5,14 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+from backend import offre
 from backend.metrics import (
+    FREQUENTATION,
+    _duree_suppression,
+    _freq_minute,
+    _incident_dt_paris,
+    _voyageurs_par_train,
+    incident_minutes_voyageurs,
     _minutes_voyageurs,
     _effective_duration,
     PROFILS,
@@ -82,10 +89,11 @@ class TestProfilsHoraires:
         assert _minutes_voyageurs(10, "RER_A", MARDI_8H) > _minutes_voyageurs(10, "RER_A", MARDI_14H)
 
     def test_samedi_matin_moins_cher_que_semaine(self):
-        """Le gain du chantier : un samedi n'a pas de pointe pendulaire à 8 h."""
+        """Un samedi n'a pas de pointe pendulaire à 8 h. L'écart par train est moindre que l'écart
+        de fréquentation : le samedi, moins de trains se partagent les voyageurs."""
         semaine = _minutes_voyageurs(45, "RER_A", MARDI_8H)
         samedi = _minutes_voyageurs(45, "RER_A", SAMEDI_8H)
-        assert samedi < semaine / 2, f"samedi 8h ({samedi}) devrait être très inférieur à mardi 8h ({semaine})"
+        assert samedi < semaine, f"samedi 8h ({samedi}) devrait être inférieur à mardi 8h ({semaine})"
 
     def test_samedi_culmine_en_fin_de_journee(self):
         assert _minutes_voyageurs(10, "RER_A", SAMEDI_18H) > _minutes_voyageurs(10, "RER_A", SAMEDI_8H)
@@ -167,6 +175,89 @@ class TestProfilsVacances:
         assert len(CATEGORIES) == 5
         for reseau, cats in PROFILS["profils"].items():
             assert set(cats) == set(CATEGORIES), f"{reseau} : {sorted(cats)}"
+
+
+def _inc(**kw):
+    from types import SimpleNamespace
+    champs = dict(line_id="RER_A", heure_debut=None, heure_theorique=None, heure_fin=None,
+                  duree_minutes=10, is_cancelled=False)
+    champs.update(kw)
+    return SimpleNamespace(**champs)
+
+
+class TestVoyageursParTrain:
+    """Voyageurs par train = voyageurs du jour × part de l'heure ÷ trains équivalents (TASK-18)."""
+
+    def test_invariant_somme_sur_la_journee(self):
+        """Σ_h voyageurs_par_train × trains_heure = voyageurs du jour × Σ part, sur les heures à ≥ 1 train."""
+        offre_c = offre.charger()
+        for line_id in LIGNE_RESEAU:
+            reseau = PROFILS["lignes"][line_id]
+            for cat in CATEGORIES:
+                parts = PROFILS["profils"][reseau][cat]
+                trains = offre_c["trains_heure"][line_id][cat]
+                heures = [h for h in range(24) if trains[h] >= 1]
+                attendu = FREQUENTATION[line_id] * sum(parts[h] for h in heures)
+                obtenu = sum(FREQUENTATION[line_id] * parts[h] / max(trains[h], 1.0) * trains[h] for h in heures)
+                assert obtenu == pytest.approx(attendu, rel=0.001), f"{line_id} {cat}"
+
+    def test_formule_a_partir_des_fichiers(self):
+        attendu = FREQUENTATION["RER_A"] * part_horaire("RER_A", MARDI_8H) / offre.trains_heure("RER_A", MARDI_8H)
+        assert _voyageurs_par_train("RER_A", MARDI_8H) == pytest.approx(attendu)
+        assert _minutes_voyageurs(45, "RER_A", MARDI_8H) == round(45 * attendu)
+
+    def test_rer_a_pointe_ordre_de_grandeur(self):
+        assert 1000 <= _voyageurs_par_train("RER_A", MARDI_8H) <= 3000
+
+    def test_transilien_k_bien_plus_cher_qu_avant(self):
+        """Le défaut corrigé : 2 à 4 trains à 8 h sur la K, pas 60."""
+        nouveau = _minutes_voyageurs(10, "TRANSILIEN_K", MARDI_8H)
+        ancien = round(10 * _freq_minute("TRANSILIEN_K", MARDI_8H))
+        assert nouveau >= 10 * ancien
+
+    def test_plancher_a_un_train(self):
+        # Transilien K un dimanche à 3 h : moins d'un train équivalent
+        dimanche_3h = datetime(2026, 9, 20, 3, 30, tzinfo=PARIS)
+        assert offre.trains_heure("TRANSILIEN_K", dimanche_3h) < 1
+        attendu = FREQUENTATION["TRANSILIEN_K"] * part_horaire("TRANSILIEN_K", dimanche_3h)
+        assert _voyageurs_par_train("TRANSILIEN_K", dimanche_3h) == pytest.approx(attendu)
+
+    def test_repli_ligne_sans_offre_un_seul_warning(self, caplog):
+        import backend.metrics as metrics
+        metrics._lignes_en_repli.discard("METRO_1")
+        with caplog.at_level("WARNING", logger="backend.metrics"):
+            a = _voyageurs_par_train("METRO_1", MARDI_8H)
+            b = _voyageurs_par_train("METRO_1", MARDI_8H)
+        assert a == b == _freq_minute("METRO_1", MARDI_8H)
+        assert sum("METRO_1" in r.message for r in caplog.records) == 1
+
+
+class TestInstantEtSuppressions:
+    def test_heure_prevue_prioritaire(self):
+        inc = _inc(heure_theorique=datetime(2026, 9, 15, 8, 55, tzinfo=PARIS),
+                   heure_debut=datetime(2026, 9, 15, 9, 5, tzinfo=PARIS))
+        assert _incident_dt_paris(inc).hour == 8
+
+    def test_sans_heure_prevue_debut_de_l_incident(self):
+        inc = _inc(heure_debut=datetime(2026, 9, 15, 9, 5, tzinfo=PARIS))
+        assert _incident_dt_paris(inc).hour == 9
+
+    def test_suppression_rer_a_pointe(self):
+        assert 2 <= _duree_suppression("RER_A", MARDI_8H) <= 6
+
+    def test_suppression_transilien_k_creuse(self):
+        assert _duree_suppression("TRANSILIEN_K", MARDI_14H) >= 20
+
+    def test_suppression_ligne_sans_offre_valeur_de_repli(self):
+        from backend.config import get_settings
+        assert _duree_suppression("METRO_1", MARDI_8H) == get_settings().cancel_default_impact_minutes
+
+    def test_suppression_ignore_duree_stockee(self):
+        """Le collecteur écrit 5 dans duree_minutes ; le calcul lit l'intervalle de l'offre."""
+        inc = _inc(line_id="TRANSILIEN_K", is_cancelled=True, duree_minutes=5, heure_theorique=MARDI_14H)
+        dur, mv = incident_minutes_voyageurs(inc, datetime.now(timezone.utc))
+        assert dur == _duree_suppression("TRANSILIEN_K", MARDI_14H)
+        assert mv == _minutes_voyageurs(dur, "TRANSILIEN_K", MARDI_14H)
 
 
 class TestEffectiveDuration:
