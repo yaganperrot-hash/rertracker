@@ -199,6 +199,29 @@ def mediane_ponderee(valeurs_poids: list[tuple[float, float]]) -> float:
     raise ValueError("liste vide")
 
 
+PREFIXE_ARRET = "IDFM:monomodalStopPlace:"
+
+
+def noms_arrets(trains: dict[str, dict], gares: dict[str, tuple[str, str]],
+                parcours: dict[str, list[tuple[int, str, str]]]) -> dict[str, str]:
+    """Numéro d'arrêt → nom de la gare, pour les arrêts desservis par les lignes suivies.
+
+    Le flux SIRI de PRIM désigne un arrêt par « STIF:StopArea:SP:43169: » ; le GTFS par
+    « IDFM:monomodalStopPlace:43169 ». Le nom est celui de la gare parente, clé des coefficients.
+    """
+    noms: dict[str, str] = {}
+    for trip_id in trains:
+        for _, _, stop_id in parcours.get(trip_id, ()):
+            if stop_id.startswith(PREFIXE_ARRET):
+                noms[stop_id.removeprefix(PREFIXE_ARRET)] = gares.get(stop_id, ("", stop_id))[1]
+    return dict(sorted(noms.items()))
+
+
+def nom_arret(numero: str) -> str | None:
+    """Nom de la gare d'un numéro d'arrêt SIRI (voir noms_arrets). None si inconnu."""
+    return charger().get("arrets", {}).get(numero)
+
+
 def coefficients_mission(poids: list[float]) -> list[float]:
     """Coefficient de chaque gare d'une mission à partir des poids de ses gares (docstring du module)."""
     n = len(poids)
@@ -368,6 +391,7 @@ def agreger(chemin_zip: Path | str, volumes: dict[str, float] | None = None) -> 
         "trains_heure": resultat_trains,
         "intervalle_min": resultat_intervalle,
     }
+    contenu["arrets"] = noms_arrets(trains, gares, parcours)
     if volumes is not None:
         contenu["coef_gare"], contenu["coef_gare_ligne"] = coefficients_gare(trains, gares, parcours, volumes)
     return contenu

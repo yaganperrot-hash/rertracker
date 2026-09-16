@@ -21,11 +21,11 @@ Q3,Gare Trois,P3
 """
 
 
-def _gtfs(tmp_path, trips: str, stop_times: str, calendar: str, calendar_dates: str = "") -> str:
+def _gtfs(tmp_path, trips: str, stop_times: str, calendar: str, calendar_dates: str = "", stops: str = STOPS) -> str:
     """Mini GTFS écrit dans tmp_path : aucun binaire versionné, aucun réseau."""
     chemin = tmp_path / "gtfs.zip"
     with zipfile.ZipFile(chemin, "w") as z:
-        z.writestr("stops.txt", STOPS)
+        z.writestr("stops.txt", stops)
         z.writestr("trips.txt", "route_id,service_id,trip_id,trip_headsign,direction_id\n" + trips)
         z.writestr("stop_times.txt", "trip_id,departure_time,stop_id,stop_sequence\n" + stop_times)
         z.writestr("calendar.txt", "service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,"
@@ -134,6 +134,14 @@ class TestCoefficientsGare:
         c = offre.agreger(z, volumes={"P1": 1.0, "P2": 1.0})   # P3 sans volume : médiane des connus
         assert c["coef_gare"]["RER_A"]["QYRO"] == {"Gare Un": 1.0, "Gare Deux": 0.75, "Gare Trois": 0.0}
         assert c["coef_gare_ligne"]["RER_A"]["Gare Deux"] == 0.75
+
+    def test_noms_des_arrets_siri(self, tmp_path):
+        # Le flux SIRI dit « STIF:StopArea:SP:43169: » ; le nom retenu est celui de la gare parente
+        stops = STOPS + "IDFM:monomodalStopPlace:43169,Quai Un,P1\n"
+        chemin = _gtfs(tmp_path, _toutes_lignes(f"{ROUTE_A},S,A1,QYRO,0\n"),
+                       "A1,08:00:00,IDFM:monomodalStopPlace:43169,1\nA1,08:10:00,Q2,2\n" + _dessertes_autres(),
+                       SEMAINE, stops=stops)
+        assert offre.agreger(chemin)["arrets"] == {"43169": "Gare Un"}
 
     def test_sans_volumes_pas_de_coefficients(self, tmp_path):
         z = _gtfs(tmp_path, _toutes_lignes(f"{ROUTE_A},S,A1,QYRO,0\n"),
