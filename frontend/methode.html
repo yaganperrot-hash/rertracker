@@ -408,11 +408,14 @@
       Le calcul se fait toujours en minutes ; l'affichage convertit ensuite en heures, jours ou années pour rendre les ordres de grandeur lisibles (ex. 2 847 340 min-voy. ≈ 5 ans 152 jours).
     </p>
     <div class="formula-block">
-      minutes-voyageurs = retard du train (min) × voyageurs_par_minute<br>
-      voyageurs_par_minute = voyageurs_par_jour × part_de_l'heure ÷ 60<br>
+      minutes-voyageurs = retard du train (min) × voyageurs_par_train<br>
+      voyageurs_par_train = voyageurs_par_jour × part_de_l'heure ÷ trains_de_l'heure<br>
       coût = minutes-voyageurs × <span class="ref-smic">—</span> €/h ÷ 60
       <div class="formula-note">
-        La <strong>part de l'heure</strong> est la fraction des voyageurs du jour qui embarquent pendant cette heure-là. Les 24 parts d'une journée somment à 1. Elles ne sont pas estimées mais mesurées, à partir des validations open data d'Île-de-France Mobilités, et diffèrent selon le réseau et le jour type : semaine et samedi, chacun décliné hors vacances et pendant les vacances scolaires, plus les dimanches et jours fériés — cinq profils par réseau. Sur le RER A, 8 h pèse <span class="ref-part-8">—</span> un jour de semaine ordinaire, <span class="ref-part-vac-8">—</span> pendant les vacances, et <span class="ref-part-sam-8">—</span> un samedi. L'heure retenue est celle du début du retard. Un train supprimé compte pour <span class="ref-suppression">—</span> min de retard.
+        La <strong>part de l'heure</strong> est la fraction des voyageurs du jour qui embarquent pendant cette heure-là. Les 24 parts d'une journée somment à 1. Elles ne sont pas estimées mais mesurées, à partir des validations open data d'Île-de-France Mobilités, et diffèrent selon le réseau et le jour type : semaine et samedi, chacun décliné hors vacances et pendant les vacances scolaires, plus les dimanches et jours fériés — cinq profils par réseau. Sur le RER A, 8 h pèse <span class="ref-part-8">—</span> un jour de semaine ordinaire, <span class="ref-part-vac-8">—</span> pendant les vacances, et <span class="ref-part-sam-8">—</span> un samedi. 
+        <br><br>
+        Les <strong>trains de l'heure</strong> viennent des horaires prévus publiés par Île-de-France Mobilités (GTFS), par ligne et par jour type : les voyageurs qui montent pendant une heure se répartissent entre les trains qui circulent pendant cette heure. Un train à cheval sur deux heures compte dans chacune au prorata de ses arrêts. Sur le RER A, un jour de semaine à 8 h, <span class="ref-trains-8">—</span> trains se partagent les voyageurs. L'heure retenue est l'heure prévue du train.
+        Un train supprimé compte pour l'intervalle jusqu'au train suivant à cette heure-là : <span class="ref-intervalle-a-8">—</span> min sur le RER A à 8 h, <span class="ref-intervalle-k-14">—</span> min sur la ligne K à 14 h, un jour de semaine.
       </div>
     </div>
     <p>
@@ -437,7 +440,7 @@
           </div>
           <div class="scope-item">
             <span class="scope-icon yes">✓</span>
-            <span>Trains supprimés (disparus du flux avant leur départ), comptés <span class="ref-suppression">—</span> min chacun</span>
+            <span>Trains supprimés (disparus du flux avant leur départ), comptés pour l'intervalle jusqu'au train suivant</span>
           </div>
           <div class="scope-item">
             <span class="scope-icon yes">✓</span>
@@ -521,6 +524,12 @@
         <strong>Dimanches et jours fériés non déclinés.</strong> Les jours ouvrés et les samedis ont chacun un profil hors vacances et un profil vacances scolaires, mais les dimanches et jours fériés n'en ont qu'un : le jeu de données source ne les distingue pas selon la période. Un dimanche d'août est donc pondéré comme un dimanche de mars.
       </div>
       <div class="limit-item">
+        <strong>Offre prévue, pas offre réalisée.</strong> Le nombre de trains de chaque heure vient des horaires prévus. Un jour de service réduit, les trains qui circulent encore sont plus chargés que ne le suppose le calcul. Les horaires publiés couvrent les 30 jours à venir ; tant qu'aucun jour de vacances scolaires n'y figure, les jours de vacances reprennent l'offre des jours ordinaires.
+      </div>
+      <div class="limit-item">
+        <strong>Même fréquentation tous les jours.</strong> Le nombre de voyageurs par jour est le même en semaine, le samedi et le dimanche ; seule sa répartition entre les heures change. Les week-ends sont donc surestimés.
+      </div>
+      <div class="limit-item">
         <strong>Un incident = une ligne.</strong> Un incident affectant plusieurs lignes est compté une fois par ligne, ce qui peut sur-estimer le nombre d'incidents distincts.
       </div>
       <div class="limit-item">
@@ -568,7 +577,12 @@
       set('.ref-quota', n(ref.quota_prim_jour));
       set('.ref-collecte-debut', n(ref.collecte_heure_debut));
       set('.ref-retard-min', n(ref.retard_min_minutes));
-      set('.ref-suppression', n(ref.suppression_minutes));
+      // Offre théorique GTFS : trains équivalents et intervalle, jour de semaine hors vacances
+      const offreT = (ref.offre_trains_heure || {}), offreI = (ref.offre_intervalle_min || {});
+      const dec = v => v.toLocaleString('fr-FR', { maximumFractionDigits: 0 });
+      if (offreT.RER_A) set('.ref-trains-8', dec(offreT.RER_A.JOHV[8]));
+      if (offreI.RER_A && offreI.RER_A.JOHV[8] != null) set('.ref-intervalle-a-8', n(Math.round(offreI.RER_A.JOHV[8])));
+      if (offreI.TRANSILIEN_K && offreI.TRANSILIEN_K.JOHV[14] != null) set('.ref-intervalle-k-14', n(Math.round(offreI.TRANSILIEN_K.JOHV[14])));
       set('.ref-fantome', n(ref.fantome_min_minutes));
       // Profils horaires réels : part des voyageurs du jour sur chaque heure (somme = 1 sur 24 h)
       const reseauA = (ref.profils_lignes || {}).RER_A;
@@ -582,13 +596,14 @@
 
         // Exemple : RER A, retard de 45 min à 8 h un jour de semaine, formule affichée au-dessus
         const voyJour = ref.frequentation.RER_A;
-        if (voyJour) {
+        const trains8 = offreT.RER_A ? offreT.RER_A.JOHV[8] : null;
+        if (voyJour && trains8) {
           const DUREE = 45;
-          const parMin = voyJour * profilA.JOHV[8] / 60;
-          const mv = Math.round(DUREE * parMin);
+          const parTrain = voyJour * profilA.JOHV[8] / Math.max(trains8, 1);  // plancher du backend
+          const mv = Math.round(DUREE * parTrain);
           const cout = Math.floor(mv * Math.round(ref.smic_horaire * 100) / 6000);  // arrondi du backend
-          set('.ref-exemple', `${n(voyJour)} voy./jour × ${pct(profilA.JOHV[8])} ÷ 60 = ${n(Math.round(parMin))} voy./min · ` +
-            `${DUREE} × ${n(Math.round(parMin))} = ${n(mv)} min-voy. · coût estimé =`);
+          set('.ref-exemple', `${n(voyJour)} voy./jour × ${pct(profilA.JOHV[8])} ÷ ${trains8.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} trains = ` +
+            `${n(Math.round(parTrain))} voy./train · ${DUREE} × ${n(Math.round(parTrain))} = ${n(mv)} min-voy. · coût estimé =`);
           set('.ref-exemple-cout', `${n(cout)} €`);
         }
       }
