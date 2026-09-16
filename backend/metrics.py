@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.config import get_settings
 from backend.database import AsyncSessionLocal
 from backend.models import Incident, DailyMetric
-from backend.profils import CHEMIN as _PROFILS_PATH, categorie_jour
+from backend.profils import categorie_jour, charger as _charger_profils
 
 logger = logging.getLogger(__name__)
 
@@ -32,16 +32,12 @@ def _load_frequentation() -> dict[str, int]:
 
 FREQUENTATION: dict[str, int] = _load_frequentation()
 
-def _load_profils() -> dict:
-    """Profils horaires réels, construits hors ligne par `python -m backend.profils build`."""
-    try:
-        return json.loads(_PROFILS_PATH.read_text(encoding="utf-8"))
-    except Exception as exc:
-        logger.error("Cannot load profils_horaires.json: %s", exc)
-        return {}
+# Profils horaires et calendrier scolaire, construits hors ligne par
+# `python -m backend.profils build`. Un seul lecteur, dans backend/profils.py.
+PROFILS: dict = _charger_profils()
 
-
-PROFILS: dict = _load_profils()
+if not PROFILS:
+    logger.error("profils_horaires.json illisible — repli sur la moyenne plate 18 h")
 
 
 def part_horaire(line_id: str, quand: datetime) -> float | None:

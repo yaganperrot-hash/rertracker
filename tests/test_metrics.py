@@ -14,7 +14,7 @@ from backend.metrics import (
     get_today_stats,
     get_line_stats,
 )
-from backend.profils import CATEGORIES, LIGNE_RESEAU, categorie_jour
+from backend.profils import CATEGORIES, LIGNE_RESEAU, categorie_jour, est_vacances
 
 PARIS = ZoneInfo("Europe/Paris")
 MARDI_8H = datetime(2026, 9, 15, 8, 30, tzinfo=PARIS)
@@ -135,6 +135,38 @@ class TestCategorieJour:
 
     def test_ferie_mobile(self):
         assert categorie_jour(date(2026, 5, 14)) == "DIJFP"   # Ascension 2026
+
+    def test_semaine_en_vacances(self):
+        assert categorie_jour(date(2026, 10, 19)) == "JOVS"   # lundi, vacances de la Toussaint
+
+    def test_samedi_en_vacances(self):
+        assert categorie_jour(date(2026, 10, 17)) == "SAVS"
+
+    def test_bornes_des_vacances(self):
+        """Toussaint 2026 zone C : du 17 octobre au 1er novembre, rentrée le 2."""
+        assert est_vacances(date(2026, 10, 16)) is False
+        assert est_vacances(date(2026, 10, 17)) is True
+        assert est_vacances(date(2026, 11, 1)) is True
+        assert est_vacances(date(2026, 11, 2)) is False
+
+    def test_conversion_utc_vers_paris(self):
+        """Les bornes sont publiées en UTC à 22 h : sans conversion tout glisserait d'un jour.
+        Rentrée de septembre 2026 le mardi 1er, donc le 31 août est encore en vacances."""
+        assert est_vacances(date(2026, 8, 31)) is True
+        assert est_vacances(date(2026, 9, 1)) is False
+
+
+class TestProfilsVacances:
+    def test_pointe_du_matin_ecrasee_en_vacances(self):
+        """Le pic pendulaire de 8 h s'effondre quand les écoles sont fermées."""
+        hors_vac = _minutes_voyageurs(45, "RER_A", MARDI_8H)
+        vac = _minutes_voyageurs(45, "RER_A", datetime(2026, 10, 20, 8, 30, tzinfo=PARIS))
+        assert vac < hors_vac, f"vacances ({vac}) devrait être < hors vacances ({hors_vac})"
+
+    def test_cinq_jours_types(self):
+        assert len(CATEGORIES) == 5
+        for reseau, cats in PROFILS["profils"].items():
+            assert set(cats) == set(CATEGORIES), f"{reseau} : {sorted(cats)}"
 
 
 class TestEffectiveDuration:

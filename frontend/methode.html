@@ -371,6 +371,15 @@
       <div class="source-item">
         <span class="source-dot"></span>
         <div class="source-body">
+          <div class="source-name">
+            <a href="https://data.education.gouv.fr/explore/dataset/fr-en-calendrier-scolaire/" target="_blank" rel="noopener">Calendrier scolaire — Éducation nationale</a>
+          </div>
+          <div class="source-desc">Vacances de la zone C (académies de Paris, Créteil et Versailles) · sert à choisir le jour type applicable à chaque date</div>
+        </div>
+      </div>
+      <div class="source-item">
+        <span class="source-dot"></span>
+        <div class="source-body">
           <div class="source-name">Fréquentation IDF Mobilités</div>
           <div class="source-desc">Données annuelles publiées par SNCF Voyageurs et IDF Mobilités · stockées dans <code style="background:var(--bg3);padding:1px 5px;font-size:11px">data/frequentation.json</code> · mise à jour mensuelle</div>
         </div>
@@ -403,7 +412,7 @@
       voyageurs_par_minute = voyageurs_par_jour × part_de_l'heure ÷ 60<br>
       coût = minutes-voyageurs × <span class="ref-smic">—</span> €/h ÷ 60
       <div class="formula-note">
-        La <strong>part de l'heure</strong> est la fraction des voyageurs du jour qui embarquent pendant cette heure-là. Les 24 parts d'une journée somment à 1. Elles ne sont pas estimées mais mesurées, à partir des validations open data d'Île-de-France Mobilités, et diffèrent selon le réseau et le jour de la semaine : sur le RER A, 8 h pèse <span class="ref-part-8">—</span> un jour de semaine, contre <span class="ref-part-sam-8">—</span> un samedi. L'heure retenue est celle du début du retard. Un train supprimé compte pour <span class="ref-suppression">—</span> min de retard.
+        La <strong>part de l'heure</strong> est la fraction des voyageurs du jour qui embarquent pendant cette heure-là. Les 24 parts d'une journée somment à 1. Elles ne sont pas estimées mais mesurées, à partir des validations open data d'Île-de-France Mobilités, et diffèrent selon le réseau et le jour type : semaine et samedi, chacun décliné hors vacances et pendant les vacances scolaires, plus les dimanches et jours fériés — cinq profils par réseau. Sur le RER A, 8 h pèse <span class="ref-part-8">—</span> un jour de semaine ordinaire, <span class="ref-part-vac-8">—</span> pendant les vacances, et <span class="ref-part-sam-8">—</span> un samedi. L'heure retenue est celle du début du retard. Un train supprimé compte pour <span class="ref-suppression">—</span> min de retard.
       </div>
     </div>
     <p>
@@ -509,7 +518,7 @@
         <strong>Profils groupés pour le Transilien.</strong> Les données open data sont publiées par réseau, pas par ligne. Les cinq RER ont chacun leur profil, mais H et K partagent celui de Paris-Nord, J et L celui de Saint-Lazare, N et U celui de Montparnasse. Deux lignes d'un même réseau aux rythmes différents sont donc lissées ensemble.
       </div>
       <div class="limit-item">
-        <strong>Vacances scolaires non distinguées.</strong> Trois jours types sont retenus : semaine, samedi, dimanche et jours fériés. Le jeu de données distingue aussi les périodes de vacances scolaires, où la fréquentation est sensiblement plus basse ; nous ne les utilisons pas encore, ce qui surestime le coût des retards pendant les vacances.
+        <strong>Dimanches et jours fériés non déclinés.</strong> Les jours ouvrés et les samedis ont chacun un profil hors vacances et un profil vacances scolaires, mais les dimanches et jours fériés n'en ont qu'un : le jeu de données source ne les distingue pas selon la période. Un dimanche d'août est donc pondéré comme un dimanche de mars.
       </div>
       <div class="limit-item">
         <strong>Un incident = une ligne.</strong> Un incident affectant plusieurs lignes est compté une fois par ligne, ce qui peut sur-estimer le nombre d'incidents distincts.
@@ -566,8 +575,9 @@
       const profilA = ((ref.profils_horaires || {})[reseauA]) || null;
       const pct = v => (v * 100).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %';
 
-      if (profilA && profilA.JOHV && profilA.SAHV) {
+      if (profilA && profilA.JOHV && profilA.JOVS && profilA.SAHV) {
         set('.ref-part-8', pct(profilA.JOHV[8]));
+        set('.ref-part-vac-8', pct(profilA.JOVS[8]));
         set('.ref-part-sam-8', pct(profilA.SAHV[8]));
 
         // Exemple : RER A, retard de 45 min à 8 h un jour de semaine, formule affichée au-dessus

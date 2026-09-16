@@ -18,14 +18,23 @@ Le profil décrit où et quand les voyageurs embarquent — bon indicateur du fl
 import json
 import re
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import httpx
+
+PARIS_TZ = ZoneInfo("Europe/Paris")
 
 OPENDATA = "https://data.iledefrance-mobilites.fr/api/explore/v2.1/catalog/datasets"
 DS_PROFILS = "validations-reseau-ferre-profils-horaires-par-jour-type-3eme-trimestre"
 DS_VOLUMES = "validations-reseau-ferre-nombre-validations-par-jour-3eme-trimestre"
+
+# Calendrier scolaire — académies d'Île-de-France (toutes en zone C)
+OPENDATA_EDU = "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets"
+DS_VACANCES = "fr-en-calendrier-scolaire"
+ACADEMIES_IDF = ("Paris", "Créteil", "Versailles")
+ANNEES_SCOLAIRES = ("2024-2025", "2025-2026", "2026-2027", "2027-2028")
 
 CHEMIN = Path(__file__).parent.parent / "data" / "profils_horaires.json"
 
@@ -50,10 +59,12 @@ RESEAU_LIBELLE: dict[str, str] = {
     "854": "Transilien Saint-Lazare",
 }
 
-# Jours types du jeu de données. On en retient trois : les vacances scolaires (JOVS, SAVS)
-# demanderaient le calendrier scolaire — limite documentée sur la page Méthode.
-CAT_SEMAINE, CAT_SAMEDI, CAT_DIMANCHE = "JOHV", "SAHV", "DIJFP"
-CATEGORIES = (CAT_SEMAINE, CAT_SAMEDI, CAT_DIMANCHE)
+# Les cinq jours types du jeu de données IDFM. Hors vacances / vacances scolaires pour les
+# jours ouvrés et les samedis ; les dimanches et fériés forment une seule catégorie.
+CAT_SEMAINE, CAT_SEMAINE_VAC = "JOHV", "JOVS"
+CAT_SAMEDI, CAT_SAMEDI_VAC = "SAHV", "SAVS"
+CAT_DIMANCHE = "DIJFP"
+CATEGORIES = (CAT_SEMAINE, CAT_SEMAINE_VAC, CAT_SAMEDI, CAT_SAMEDI_VAC, CAT_DIMANCHE)
 
 _TRANCHE = re.compile(r"^(\d{1,2})H-")
 
@@ -96,16 +107,44 @@ def feries(annee: int) -> set[date]:
     }
 
 
+# ─────────────────────── Vacances scolaires (zone C) ───────────────────────
+
+_cache: dict | None = None
+
+
+def charger() -> dict:
+    """Contenu de data/profils_horaires.json, lu une seule fois."""
+    global _cache
+    if _cache is None:
+        try:
+            _cache = json.loads(CHEMIN.read_text(encoding="utf-8"))
+        except Exception:
+            _cache = {}
+    return _cache
+
+
+def _vacances() -> list[tuple[date, date]]:
+    """Périodes de vacances scolaires, bornes incluses."""
+    return [(date.fromisoformat(a), date.fromisoformat(b))
+            for a, b in charger().get("vacances", [])]
+
+
+def est_vacances(jour: date) -> bool:
+    return any(debut <= jour <= fin for debut, fin in _vacances())
+
+
 def categorie_jour(jour: date) -> str:
-    """Jour type d'une date : semaine, samedi, ou dimanche et fériés."""
-    if jour in feries(jour.year):
+    """Jour type d'une date : semaine ou samedi (hors vacances / vacances), dimanche et fériés.
+
+    Un jour férié compte comme un dimanche, qu'il tombe en vacances ou non : c'est la
+    découpe du jeu de données IDFM, qui ne distingue pas les dimanches de vacances.
+    """
+    if jour in feries(jour.year) or jour.weekday() == 6:
         return CAT_DIMANCHE
-    j = jour.weekday()
-    if j == 6:
-        return CAT_DIMANCHE
-    if j == 5:
-        return CAT_SAMEDI
-    return CAT_SEMAINE
+    vac = est_vacances(jour)
+    if jour.weekday() == 5:
+        return CAT_SAMEDI_VAC if vac else CAT_SAMEDI
+    return CAT_SEMAINE_VAC if vac else CAT_SEMAINE
 
 
 # ─────────────────────────── Construction ───────────────────────────
@@ -168,11 +207,62 @@ def _profil_reseau(client: httpx.Client, res: str, cat: str,
     return [round(v / total, 6) for v in cumul]
 
 
+def _jour_paris(horodatage: str) -> date:
+    """Les bornes du calendrier scolaire sont publiées en UTC à 22 h, soit minuit heure de
+    Paris le lendemain. Sans conversion, chaque période serait décalée d'un jour."""
+    return datetime.fromisoformat(horodatage).astimezone(PARIS_TZ).date()
+
+
+def _fusionner(periodes: list[tuple[date, date]]) -> list[tuple[date, date]]:
+    """Fusionne les périodes qui se chevauchent — les trois académies publient les mêmes."""
+    fusion: list[tuple[date, date]] = []
+    for debut, fin in sorted(periodes):
+        if fusion and debut <= fusion[-1][1] + timedelta(days=1):
+            fusion[-1] = (fusion[-1][0], max(fusion[-1][1], fin))
+        else:
+            fusion.append((debut, fin))
+    return fusion
+
+
+def _vacances_scolaires(client: httpx.Client) -> list[tuple[date, date]]:
+    """Vacances scolaires de la zone C sur les années couvertes par ANNEES_SCOLAIRES."""
+    academies = ",".join(f'"{a}"' for a in ACADEMIES_IDF)
+    annees = ",".join(f'"{a}"' for a in ANNEES_SCOLAIRES)
+    r = client.get(
+        f"{OPENDATA_EDU}/{DS_VACANCES}/exports/json",
+        params={
+            "where": f"location in ({academies}) and annee_scolaire in ({annees})",
+            "select": "description,start_date,end_date,population",
+        },
+        timeout=120.0,
+    )
+    r.raise_for_status()
+
+    periodes: list[tuple[date, date]] = []
+    for v in r.json():
+        if v.get("population") == "Enseignants":   # les élèves font foi
+            continue
+        if not v.get("start_date") or not v.get("end_date"):
+            continue
+        debut = _jour_paris(v["start_date"])
+        fin = _jour_paris(v["end_date"]) - timedelta(days=1)   # la borne haute est la rentrée
+        if fin < debut:
+            # « Début des Vacances d'Été » : un repère sans fin, l'été court jusqu'à la rentrée
+            fin = date(debut.year, 8, 31)
+        periodes.append((debut, fin))
+
+    return _fusionner(periodes)
+
+
 def build() -> None:
     reseaux = sorted(set(LIGNE_RESEAU.values()))
     resultat: dict[str, dict[str, list[float]]] = {}
 
     with httpx.Client() as client:
+        vacances = _vacances_scolaires(client)
+        print(f"Vacances scolaires zone C : {len(vacances)} périodes "
+              f"({vacances[0][0]} → {vacances[-1][1]})\n", flush=True)
+
         for res in reseaux:
             print(f"Réseau {res} ({RESEAU_LIBELLE.get(res, '?')}) — volumes…", flush=True)
             volumes = _volumes_par_gare(client, res)
@@ -187,16 +277,19 @@ def build() -> None:
     contenu = {
         "_source": {
             "portail": "data.iledefrance-mobilites.fr",
-            "jeux": [DS_PROFILS, DS_VOLUMES],
+            "jeux": [DS_PROFILS, DS_VOLUMES, f"{DS_VACANCES} (education.gouv.fr)"],
             "genere_le": date.today().isoformat(),
             "methode": "moyenne des profils de gare pondérée par le volume de validations",
             "reserve": "une validation est une entrée dans le réseau, pas un voyageur à bord",
         },
         "reseaux_libelles": RESEAU_LIBELLE,
         "lignes": LIGNE_RESEAU,
+        "vacances": [[d.isoformat(), f.isoformat()] for d, f in vacances],
         "profils": resultat,
     }
     CHEMIN.write_text(json.dumps(contenu, ensure_ascii=False, indent=2), encoding="utf-8")
+    global _cache
+    _cache = None   # le fichier vient de changer : la prochaine lecture repart du disque
     print(f"\n{CHEMIN} écrit — {len(reseaux)} réseaux × {len(CATEGORIES)} jours types")
 
 

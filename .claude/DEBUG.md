@@ -578,3 +578,21 @@ Historique recalculé par `python -m backend.recalcul` — cumul total 9 773 907
 N+U — l'open data est publié par réseau, pas par ligne), vacances scolaires non distinguées, et une
 validation reste une entrée dans le réseau, pas un voyageur à bord.
 **Status** : ✅ Résolu
+
+### [2026-09-16] Bug 31 — Vacances scolaires non distinguées
+**Fichier(s)** : `backend/profils.py`, `backend/metrics.py`, `data/profils_horaires.json`, `frontend/methode.html`
+**Symptôme** : un retard du mardi de la Toussaint était pondéré avec la pointe pendulaire d'un mardi
+ordinaire, alors que la fréquentation chute quand les écoles sont fermées (RER A : 8 h pèse 12,1 % hors
+vacances contre 10,2 % en vacances, et la pointe bascule même de 8 h à 17 h).
+**Cause** : seuls trois des cinq jours types du jeu de données IDFM étaient exploités.
+**Fix** : calendrier scolaire zone C (data.education.gouv.fr, académies Paris / Créteil / Versailles)
+récupéré par `backend.profils build` et stocké dans le même JSON. `categorie_jour()` rend désormais
+JOHV / JOVS / SAHV / SAVS / DIJFP. Piège traité : les bornes du calendrier sont publiées en UTC à 22 h,
+soit minuit heure de Paris le lendemain — sans conversion chaque période glissait d'un jour
+(test `test_conversion_utc_vers_paris`). La borne haute est le jour de rentrée, donc exclue.
+**Effet sur les chiffres** : nul pour l'instant. Les deux seuls jours de vacances de l'historique
+(30 et 31 août 2026) ne portent aucun incident facturable ; le cumul reste à 8 811 726 min-voyageurs.
+Le correctif jouera à partir des vacances de la Toussaint, le 17 octobre 2026.
+**Limite restante** : les dimanches et jours fériés n'ont qu'un seul profil — le jeu de données source
+ne les décline pas selon la période. Documenté sur la page Méthode.
+**Status** : ✅ Résolu
