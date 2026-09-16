@@ -112,13 +112,21 @@ def _arrets(gares, retards=None, supprimes=(), attentes=None, quand=MARDI_8H):
             for i, (g, r) in enumerate(zip(gares, retards))]
 
 
+INTERVALLE_FICTIF = 6  # minutes — intervalle global de repli pour la ligne de test
+# Trains par heure par gare : A=20 (plafond 3 min), B=10 (plafond 6 min), C=6 (plafond 10 min)
+TRAINS_GARE = {"A": 20, "B": 10, "C": 6}
+PLAFOND_GARE = {g: round(60 / t) for g, t in TRAINS_GARE.items()}  # A=3, B=6, C=10
+
 @pytest.fixture
 def ligne_fictive(monkeypatch):
-    """Trois gares, 100 voyageurs montent dans chaque train à A et à B ; B et C attirent autant."""
+    """Trois gares, 100 voyageurs montent dans chaque train à A et à B ; B et C attirent autant.
+    Plafond par gare : A=3 min, B=6 min, C=10 min. Repli global = INTERVALLE_FICTIF (6 min)."""
     monkeypatch.setattr(frequentation, "_cache", {
         "montees_train": {"RER_A": {"JOHV": {g: [100.0] * 24 for g in "ABC"}}},
         "montees_jour": {"RER_A": {"JOHV": {"A": 1000.0, "B": 1000.0, "C": 1000.0}}},
     })
+    monkeypatch.setattr(offre, "trains_gare", lambda line_id, gare, quand: float(TRAINS_GARE.get(gare, 10)))
+    monkeypatch.setattr(offre, "intervalle_min", lambda line_id, quand: float(INTERVALLE_FICTIF))
 
 
 class TestMinutesVoyageursTrain:
@@ -128,8 +136,10 @@ class TestMinutesVoyageursTrain:
         assert minutes_voyageurs_train("RER_A", _arrets("ABC")) == 0
 
     def test_retard_au_terminus(self, ligne_fictive):
-        # A → B (moitié des montés en A) : 0 ; A → C : 50 × 10 ; B → C : 100 × 10
-        assert minutes_voyageurs_train("RER_A", _arrets("ABC", [0, 0, 10])) == 50 * 10 + 100 * 10
+        # Retard de 10 min au terminus C, plafonné à 10 min (plafond de C) → pas d'écrêtage
+        # A → C : 50 × 10 ; B → C : 100 × 10
+        plafond_c = PLAFOND_GARE["C"]  # 10
+        assert minutes_voyageurs_train("RER_A", _arrets("ABC", [0, 0, 10])) == 50 * plafond_c + 100 * plafond_c
 
     def test_retard_sous_le_seuil_non_compte(self, ligne_fictive):
         assert minutes_voyageurs_train("RER_A", _arrets("ABC", [1, 1, 1])) == 0
@@ -149,15 +159,38 @@ class TestMinutesVoyageursTrain:
         assert minutes_voyageurs_train("RER_A", arrets) == 50 * 15 + 100 * 15
 
     def test_attente_inconnue_intervalle_prevu(self, ligne_fictive):
-        from backend import offre
         arrets = _arrets("ABC", supprimes=(0, 1, 2))
-        intervalle = round(offre.intervalle_min("RER_A", MARDI_8H))
-        assert minutes_voyageurs_train("RER_A", arrets) == 200 * intervalle
+        assert minutes_voyageurs_train("RER_A", arrets) == 200 * INTERVALLE_FICTIF
 
     def test_invariant_chaque_voyageur_une_destination(self, ligne_fictive):
         """Même retard partout = voyageurs montés hors terminus × retard, quels que soient les poids."""
         frequentation._cache["montees_jour"]["RER_A"]["JOHV"] = {"A": 7.0, "B": 3000.0, "C": 11.0}
         assert minutes_voyageurs_train("RER_A", _arrets("ABC", [4, 4, 4])) == 200 * 4
+
+    def test_retard_plafonne_a_l_intervalle(self, ligne_fictive):
+        """Un retard supérieur à l'intervalle est capé par gare : le voyageur prend le train suivant."""
+        # Retard de 15 min partout, capé par gare : A=3, B=6, C=10
+        # Gare B et C sont destinations. Poids égaux → 50 % des montés à A vont en B, 50 % en C.
+        # A→B : 50 × min(15,6)=6 ; A→C : 50 × min(15,10)=10 ; B→C : 100 × min(15,10)=10
+        assert minutes_voyageurs_train("RER_A", _arrets("ABC", [15, 15, 15])) == 50 * 6 + 50 * 10 + 100 * 10
+
+    def test_retard_sous_l_intervalle(self, ligne_fictive):
+        """Un retard inférieur au plus petit plafond de destination n'est pas modifié."""
+        # Retard de 3 min partout, plafond le plus bas = A (3 min), mais A n'est destination de personne
+        # B plafond=6, C plafond=10 → retard 3 < tous les plafonds de destination → 200 × 3
+        assert minutes_voyageurs_train("RER_A", _arrets("ABC", [3, 3, 3])) == 200 * 3
+
+    def test_retard_plafond_varie_par_gare(self, ligne_fictive):
+        """Trois gares avec des caps différents : le retard est capé à la gare de destination."""
+        # Retard de 8 min partout. Caps : A=3 (pas destination), B=6, C=10
+        # A→B : 50 × min(8,6)=6 ; A→C : 50 × min(8,10)=8 ; B→C : 100 × min(8,10)=8
+        assert minutes_voyageurs_train("RER_A", _arrets("ABC", [8, 8, 8])) == 50 * 6 + 50 * 8 + 100 * 8
+
+    def test_suppression_non_affectee_par_plafond(self, ligne_fictive):
+        """Le plafond d'intervalle ne touche pas les trains supprimés (branche attentes, pas retards)."""
+        # Attente mesurée de 20 min > intervalle fictif de 6 min → pas capée
+        arrets = _arrets("ABC", supprimes=(0, 1, 2), attentes={0: 20, 1: 20})
+        assert minutes_voyageurs_train("RER_A", arrets) == 100 * 20 + 100 * 20
 
 
 class TestArretsDuTrain:
@@ -246,15 +279,15 @@ class TestEffectiveDuration:
         result = _effective_duration(inc, now)
         assert result == MAX_OPEN_DURATION_MIN, f"Expected {MAX_OPEN_DURATION_MIN}, got {result}"
 
-    def test_timestamp_diff_also_capped(self):
-        """Even with heure_fin, duration should be capped."""
+    def test_timestamp_diff_not_capped_when_closed(self):
+        """Incident fermé (heure_fin présente) : durée réelle, plus de cap à 180 min."""
         now = datetime.now(timezone.utc)
         inc = MagicMock()
         inc.duree_minutes = None
         inc.heure_debut = now - timedelta(hours=10)
         inc.heure_fin = now
         result = _effective_duration(inc, now)
-        assert result == MAX_OPEN_DURATION_MIN
+        assert result == 600, f"Expected 600 (10 h), got {result}"
 
 
 class TestNoDoubleCount:

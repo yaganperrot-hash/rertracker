@@ -46,10 +46,10 @@ async def recalculer() -> None:
 
     debut, fin = plage
     jours = [debut + timedelta(days=i) for i in range((fin - debut).days + 1)]
-    print(f"{len(jours)} jours à recalculer : {debut} → {fin}")
+    print(f"{len(jours)} jours a recalculer : {debut} -> {fin}")
     for j in jours:
         await compute_daily_metrics(target_date=j)
-        print(f"  {j} ✓", flush=True)
+        print(f"  {j} ok", flush=True)
 
     await generer_bilans()
     print("Bilans régénérés")

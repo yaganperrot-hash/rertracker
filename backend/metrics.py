@@ -69,7 +69,7 @@ def _effective_duration(incident, now_utc: datetime) -> int:
 
     if incident.heure_fin is not None and incident.heure_debut is not None:
         diff = (incident.heure_fin - incident.heure_debut).total_seconds() / 60
-        return min(int(diff), MAX_OPEN_DURATION_MIN)
+        return int(diff)
 
     # Open incident: diff from heure_debut to now, capped
     if incident.heure_debut is not None:
@@ -154,6 +154,18 @@ def minutes_voyageurs_train(line_id: str, arrets: list[dict]) -> int:
     poids = [p if p > 0 else repli for p in poids]
 
     retards = [a["r"] if a.get("r") is not None and a["r"] >= MIN_DELAY_MINUTES else 0 for a in arrets]
+    # Plafond par gare : un voyageur retardé ne perd au plus que l'intervalle à sa gare de destination
+    for j in range(len(retards)):
+        if retards[j] <= 0:
+            continue
+        tpg = offre.trains_gare(line_id, arrets[j]["g"], arrets[j]["quand"])
+        if tpg is not None and tpg > 0:
+            retards[j] = min(retards[j], round(60 / tpg))
+        else:
+            # Repli : intervalle global de la ligne
+            intervalle = offre.intervalle_min(line_id, arrets[j]["quand"])
+            if intervalle is not None:
+                retards[j] = min(retards[j], round(intervalle))
     attentes = [_attente(line_id, a) if a.get("s") else None for a in arrets]
 
     total = 0.0
