@@ -340,11 +340,15 @@ def trains_du_flux(data: dict) -> list[dict]:
     return trains
 
 
-def attentes_mesurees(trains: list[dict]) -> dict[tuple[str, str], int]:
+def attentes_mesurees(trains: list[dict], obs_dt: datetime | None = None) -> dict[tuple[str, str], int]:
     """Attente mesurée pour chaque arrêt supprimé : (uid-ref du train, numéro d'arrêt) → minutes.
 
     = heure estimée du premier train suivant du même sens (DirectionRef) qui dessert réellement cet
     arrêt, moins l'heure prévue du train supprimé. Absente si aucun train suivant n'est dans le flux.
+
+    Mesurée seulement pour un arrêt dont l'heure prévue n'est pas passée au relevé : le flux retire
+    les arrêts peu après le passage du train, un train passé entre l'heure prévue et le relevé serait
+    invisible et l'attente fausse.
     """
     passages: dict[tuple[str | None, str], list[datetime]] = defaultdict(list)
     appels_par_train = []
@@ -360,6 +364,9 @@ def attentes_mesurees(trains: list[dict]) -> dict[tuple[str, str], int]:
         ref = _valeur(j.get("DatedVehicleJourneyRef")) or ""
         for a in appels:
             if not a["supprime"] or not a["numero"]:
+                continue
+            # Arrêt déjà passé au relevé : le train suivant a pu disparaître du flux
+            if obs_dt is not None and a["prevu"] < obs_dt:
                 continue
             suivants = [t for t in passages.get((sens, a["numero"]), []) if t > a["prevu"]]
             if suivants:
@@ -483,12 +490,12 @@ def analyser_train(journey: dict, obs_dt: datetime, nom_arret, attentes: dict | 
 
 
 def fusionner_arrets(anciens: list | None, nouveaux: list) -> list:
-    """Arrêts d'un train fusionnés d'un relevé à l'autre : le flux ne montre que ~50 min de passé,
-    un arrêt sorti de la fenêtre garde sa dernière mesure. Clé : (gare, heure prévue)."""
+    """Arrêts d'un train fusionnés d'un relevé à l'autre : le flux retire les arrêts passés
+    (quelques minutes après le passage), un arrêt sorti garde sa dernière mesure. Clé : (gare, heure prévue)."""
     par_cle = {(a.get("g"), a.get("p")): a for a in (anciens or [])}
     for a in nouveaux:
         precedent = par_cle.get((a.get("g"), a.get("p")))
-        for champ in ("r", "w", "a"):
+        for champ in ("r", "w", "a", "k"):
             if precedent and a.get(champ) is None and precedent.get(champ) is not None:
                 a = {**a, champ: precedent[champ]}
         par_cle[(a.get("g"), a.get("p"))] = a
@@ -659,7 +666,7 @@ async def collect_rt_delays() -> None:
         archiver_flux(line_id, json.dumps(flux_siri(trains)).encode("utf-8"), obs_dt,
                       getattr(settings, "archive_flux_jours", 0))
         _journaliser_couverture(line_id, couverture_releve(trains))
-        attentes = attentes_mesurees(trains)
+        attentes = attentes_mesurees(trains, obs_dt)
         try:
             ecarts = ecarts_train_suivant(trains, obs_dt)
         except Exception:

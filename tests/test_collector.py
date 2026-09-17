@@ -473,6 +473,27 @@ class TestAnalyseFluxEstimatedTimetable:
         supprime = _train(1, [_appel(1, 0, statut="CANCELLED", terminus=True)])
         assert attentes_mesurees([supprime]) == {}
 
+    def test_attente_non_mesuree_pour_arret_deja_passe(self):
+        """Bug C : un arrêt supprimé dont l'heure prévue est passée au relevé ne doit pas être mesuré
+        (le train suivant a pu sortir du flux)."""
+        supprime = _train(1, [_appel(1, -5, statut="CANCELLED"), _appel(2, 10, statut="CANCELLED", terminus=True)])
+        suivant = _train(2, [_appel(1, 3), _appel(2, 22, terminus=True)])
+        ref = supprime["DatedVehicleJourneyRef"]["value"]
+        attentes = attentes_mesurees([supprime, suivant], obs_dt=T0)
+        # L'arrêt 1 (prévu à -5, passé) n'a pas d'attente mesurée
+        assert (ref, "1") not in attentes
+        # L'arrêt 2 (prévu à +10, futur) est mesuré
+        assert (ref, "2") in attentes
+        assert attentes[(ref, "2")] == 12  # 22 - 10
+
+    def test_attente_sans_obs_dt_mesure_tout(self):
+        """Sans obs_dt (rétrocompatibilité), tous les arrêts sont mesurés."""
+        supprime = _train(1, [_appel(1, -5, statut="CANCELLED"), _appel(2, 10, statut="CANCELLED", terminus=True)])
+        suivant = _train(2, [_appel(1, 3), _appel(2, 22, terminus=True)])
+        ref = supprime["DatedVehicleJourneyRef"]["value"]
+        attentes = attentes_mesurees([supprime, suivant])
+        assert (ref, "1") in attentes  # sans obs_dt, mesuré aussi
+
     def test_ecart_mesure_avec_le_train_suivant(self):
         """Voyageur à quai : premier AUTRE train du même sens qui dessert la montée puis la descente."""
         retarde = _train(1, [_appel(1, 10, retard=8), _appel(2, 20, retard=8), _appel(3, 30, retard=8, terminus=True)])
@@ -633,9 +654,12 @@ class TestArretsSautes:
         assert marquer_sautes(arrets, [("B", "2"), ("Z", "9")]) == [{"g": "A", "p": "1", "r": 3},
                                                                     {"g": "B", "p": "2", "r": 3, "k": True}]
 
-    def test_marque_perdue_si_l_arret_revient(self):
+    def test_marque_conservee_si_l_arret_revient(self):
+        """Un arrêt sauté (k=True) reste marqué même quand il réapparaît dans le flux."""
         anciens = [{"g": "B", "p": "2", "r": 3, "k": True}]
-        assert "k" not in fusionner_arrets(anciens, [{"g": "B", "p": "2", "r": 4, "s": False, "w": None}])[0]
+        fusionne = fusionner_arrets(anciens, [{"g": "B", "p": "2", "r": 4, "s": False, "w": None}])
+        assert fusionne[0].get("k") is True
+        assert fusionne[0]["r"] == 4  # le retard est mis à jour
 
 
 class TestArchiveFlux:

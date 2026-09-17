@@ -92,8 +92,8 @@ def _incident_dt_paris(incident) -> datetime | None:
 def arrets_du_train(incident, now_utc: datetime) -> list[dict] | None:
     """Arrêts du train, dans l'ordre : {"g", "quand" (Paris), "r", "s", "w", "a"}.
 
-    Relevés arrêt par arrêt dans le flux SIRI (colonne `arrets`) depuis la bascule. Le flux ne remonte
-    qu'une cinquantaine de minutes dans le passé : les gares déjà desservies quand le train a été relevé
+    Relevés arrêt par arrêt dans le flux SIRI (colonne `arrets`) depuis la bascule. Le flux retire
+    les arrêts passés (quelques minutes après le passage) : les gares déjà desservies quand le train a été relevé
     pour la première fois sont reprises de la mission GTFS, sans retard connu (leurs voyageurs comptent,
     avec le retard mesuré là où ils descendent).
     Pour un incident d'avant la bascule, parcours reconstitué depuis la mission GTFS : pas de retard
@@ -102,14 +102,15 @@ def arrets_du_train(incident, now_utc: datetime) -> list[dict] | None:
     """
     if getattr(incident, "arrets", None):
         releves = [{"g": a.get("g"), "quand": datetime.fromisoformat(a["p"]).astimezone(PARIS_TZ),
-                    "r": a.get("r"), "s": bool(a.get("s")), "w": a.get("w"), "a": a.get("a")}
+                    "r": a.get("r"), "s": bool(a.get("s")), "k": bool(a.get("k")),
+                    "w": a.get("w"), "a": a.get("a")}
                    for a in incident.arrets if a.get("p")]
         if not releves:
             return None
         parcours = offre.parcours_mission(incident.line_id, getattr(incident, "mission", None), releves[0]["g"])
         if parcours and releves[0]["g"] in parcours:
             avant = parcours[:parcours.index(releves[0]["g"])]
-            releves = [{"g": g, "quand": releves[0]["quand"], "r": None, "s": False, "w": None, "a": None}
+            releves = [{"g": g, "quand": releves[0]["quand"], "r": None, "s": False, "k": False, "w": None, "a": None}
                        for g in avant] + releves
         return releves
     quand = _incident_dt_paris(incident)
@@ -120,7 +121,7 @@ def arrets_du_train(incident, now_utc: datetime) -> list[dict] | None:
     debut = gares.index(gare) if gare in gares else 0
     supprime = bool(getattr(incident, "is_cancelled", False))
     retard = 0 if supprime else _effective_duration(incident, now_utc)
-    return [{"g": g, "quand": quand, "r": retard if i >= debut else 0, "s": supprime and i >= debut, "w": None, "a": None}
+    return [{"g": g, "quand": quand, "r": retard if i >= debut else 0, "s": supprime and i >= debut, "k": False, "w": None, "a": None}
             for i, g in enumerate(gares)]
 
 
@@ -174,7 +175,8 @@ def minutes_voyageurs_train(line_id: str, arrets: list[dict]) -> int:
     poids = [p if p > 0 else repli for p in poids]
 
     retards = [a["r"] if a.get("r") is not None and a["r"] >= MIN_DELAY_MINUTES else 0 for a in arrets]
-    attentes = [_attente(line_id, a) if a.get("s") else None for a in arrets]
+    # Un arrêt supprimé (s) ou sauté (k) : le voyageur attend le train suivant
+    attentes = [_attente(line_id, a) if a.get("s") or a.get("k") else None for a in arrets]
 
     total = 0.0
     for i in range(n - 1):

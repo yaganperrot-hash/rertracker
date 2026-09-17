@@ -105,11 +105,12 @@ def _inc(**kw):
 NOW = datetime(2026, 9, 15, 12, 0, tzinfo=timezone.utc)
 
 
-def _arrets(gares, retards=None, supprimes=(), attentes=None, ecarts=None, quand=MARDI_8H):
+def _arrets(gares, retards=None, supprimes=(), sautes=(), attentes=None, ecarts=None, quand=MARDI_8H):
     retards = retards or [0] * len(gares)
     attentes = attentes or {}
     ecarts = ecarts or {}
-    return [{"g": g, "quand": quand, "r": r, "s": i in supprimes, "w": attentes.get(i), "a": ecarts.get(i)}
+    return [{"g": g, "quand": quand, "r": r, "s": i in supprimes, "k": i in sautes,
+             "w": attentes.get(i), "a": ecarts.get(i)}
             for i, (g, r) in enumerate(zip(gares, retards))]
 
 
@@ -212,6 +213,23 @@ class TestMinutesVoyageursTrain:
         # Attente mesurée de 20 min > intervalle fictif de 6 min → pas capée
         arrets = _arrets("ABC", supprimes=(0, 1, 2), attentes={0: 20, 1: 20})
         assert minutes_voyageurs_train("RER_A", arrets) == 100 * 20 + 100 * 20
+
+    def test_arret_saute_traite_comme_supprime(self, ligne_fictive):
+        """Un arrêt sauté (k=True) fait attendre le voyageur comme un arrêt supprimé."""
+        # C est sauté avec attente mesurée de 15 min : voyageurs A→C et B→C attendent 15 min
+        arrets = _arrets("ABC", sautes=(2,), attentes={2: 15})
+        assert minutes_voyageurs_train("RER_A", arrets) == 50 * 15 + 100 * 15
+
+    def test_arret_saute_sans_attente_mesuree(self, ligne_fictive):
+        """Arrêt sauté sans attente mesurée : repli sur l'intervalle prévu."""
+        arrets = _arrets("ABC", sautes=(2,))
+        assert minutes_voyageurs_train("RER_A", arrets) == (50 + 100) * INTERVALLE_FICTIF
+
+    def test_arret_saute_en_milieu_de_parcours(self, ligne_fictive):
+        """Un arrêt sauté en B : tous les voyageurs vers B ou au-delà attendent dès B."""
+        arrets = _arrets("ABC", sautes=(1,), attentes={1: 10})
+        # A→B : 50 × 10 ; A→C : 50 × 10 (premier supprimé en B) ; B→C : 100 × 10
+        assert minutes_voyageurs_train("RER_A", arrets) == 50 * 10 + 50 * 10 + 100 * 10
 
 
 class TestArretsDuTrain:

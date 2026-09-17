@@ -104,8 +104,8 @@
 ## Mesure plutôt qu'estimation (2026-09-16)
 - Un modèle « voyageurs par jour × part de l'heure » appliqué **par train** suppose sans le dire un train par minute :
   vérifier l'unité de chaque produit (voyageurs d'un train, pas d'une minute de ligne) en comparant à l'offre réelle.
-- Le flux SIRI Estimated Timetable de PRIM : arrêts **non triés** dans la réponse, passé visible très court
-  (~3 min après le passage sur un flux observé le 17/09, max 27 — et non ~50 min),
+- Le flux SIRI Estimated Timetable de PRIM : arrêts **non triés** dans la réponse, passé visible court
+  (~3 min par ligne, 30-60 min en flux global `LineRef=ALL`, observé le 17/09),
   statut `CANCELLED` par arrêt, `JourneyNote` = code mission, `DatedVehicleJourneyRef` contient l'uuid du trip GTFS,
   `STIF:StopArea:SP:<n>:` = `IDFM:monomodalStopPlace:<n>` du GTFS. Appel `LineRef=ALL` (tout le réseau, 1 requête, même compteur) : 4,5 Mo compressés sur le fil
   (gzip), 52 Mo de JSON, ~4 h 30 d'horizon contre ~2 h par ligne — mesuré le 17/09 ; le « 59 Mo » était la taille
