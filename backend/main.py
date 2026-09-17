@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.config import get_settings, SLUG_TO_ID
 from backend.database import init_db
-from backend.collector import collect_disruptions, collect_rt_delays, collecte_autorisee
+from backend.collector import collect_disruptions, collect_rt_delays, collecte_autorisee, dernier_releve
 from backend.metrics import compute_daily_metrics
 from backend.bilans import generer_bilans
 from backend.api import router
@@ -45,6 +45,17 @@ async def _finalize_yesterday():
         logger.exception("Error finalizing yesterday's metrics")
 
 
+async def _releve_recent(source: str, intervalle_minutes: int) -> bool:
+    """Un relevé de cette source a-t-il été écrit il y a moins d'un intervalle ? Un redémarrage ne le refait
+    pas : chaque relevé est pris sur le quota PRIM. En cas de doute (erreur, base vide), on relève."""
+    try:
+        dernier = await dernier_releve(source)
+    except Exception:
+        logger.exception("Dernier relevé %s illisible", source)
+        return False
+    return dernier is not None and datetime.now(timezone.utc) - dernier < timedelta(minutes=intervalle_minutes)
+
+
 async def _startup_collect():
     """Collecte initiale séquentielle : collecte → métriques → bilans.
 
@@ -55,8 +66,16 @@ async def _startup_collect():
         # Finaliser la veille (incidents ouverts, serveur éteint la nuit…)
         await _finalize_yesterday()
         if collecte_autorisee():
-            await collect_disruptions()
-            await collect_rt_delays()
+            if await _releve_recent("disruption", settings.perturbations_interval_minutes):
+                logger.info("Perturbations relevées il y a moins de %d min : pas de relevé au démarrage",
+                            settings.perturbations_interval_minutes)
+            else:
+                await collect_disruptions()
+            if await _releve_recent("realtime", settings.polling_interval_minutes):
+                logger.info("Temps réel relevé il y a moins de %d min : pas de relevé au démarrage",
+                            settings.polling_interval_minutes)
+            else:
+                await collect_rt_delays()
         else:
             logger.info("Pause nocturne : aucun relevé PRIM avant %d h", settings.collecte_heure_debut)
         await compute_daily_metrics()
@@ -72,25 +91,36 @@ async def lifespan(app: FastAPI):
     logger.info("Initializing database...")
     await init_db()
 
-    logger.info("Starting scheduler (interval=%d min)", settings.polling_interval_minutes)
+    logger.info("Starting scheduler (temps réel toutes les %d min, perturbations toutes les %d min)",
+                settings.polling_interval_minutes, settings.perturbations_interval_minutes)
 
     # Premier cycle : séquentiel au démarrage pour éviter la race condition
     await _startup_collect()
 
-    # Cycle régulier : un seul job qui enchaîne collecte → métriques (pas de race)
+    # Cycle temps réel : collecte → métriques dans le même job (pas de race)
     async def _collect_cycle():
         # Pause nocturne : quota PRIM de 1 000 req/jour, et la nuit ne pèse rien dans le calcul
         if not collecte_autorisee():
             return
-        await collect_disruptions()
         await collect_rt_delays()
         await compute_daily_metrics()
+
+    # Perturbations déclarées : sans coût dans le calcul, cadence propre (compteur Navitia)
+    async def _perturbations_cycle():
+        if collecte_autorisee():
+            await collect_disruptions()
 
     scheduler.add_job(
         _collect_cycle,
         "interval",
         minutes=settings.polling_interval_minutes,
         id="collect_cycle",
+    )
+    scheduler.add_job(
+        _perturbations_cycle,
+        "interval",
+        minutes=settings.perturbations_interval_minutes,
+        id="perturbations_cycle",
     )
     scheduler.add_job(
         generer_bilans,

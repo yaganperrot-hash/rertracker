@@ -230,5 +230,6 @@ pytest tests/ -v
 - **API PRIM** — Île-de-France Mobilités
 - Endpoint : `https://prim.iledefrance-mobilites.fr/marketplace/`
 - Licence : Open Data Etalab
-- Quota : 1 000 req/jour (en-têtes `x-ratelimit-*`) — relevé toutes les 20 min de 6 h à minuit,
-  2 appels perturbations + 13 appels départs par relevé (810 req/jour)
+- Quota : 1 000 req/jour par flux (en-têtes `x-ratelimit-*`), de 6 h à minuit — temps réel toutes les 5 min,
+  1 appel Estimated Timetable pour tout le réseau (216 req/jour) ; perturbations toutes les 20 min, 2 appels Navitia
+  (108 req/jour)

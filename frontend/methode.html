@@ -357,7 +357,7 @@
           <div class="source-name">
             <a href="https://prim.iledefrance-mobilites.fr" target="_blank" rel="noopener">API PRIM — IDF Mobilités</a>
           </div>
-          <div class="source-desc">Horaires temps réel de chaque train, arrêt par arrêt, suppressions comprises (flux SIRI Estimated Timetable) et perturbations déclarées (Navitia) · relevé toutes les <span class="ref-polling">—</span> min, de <span class="ref-collecte-debut">—</span> h à minuit · <span class="ref-req-et">—</span> et <span class="ref-req-navitia">—</span> req/jour, sur <span class="ref-quota">—</span> autorisées pour chacun des deux flux</div>
+          <div class="source-desc">Horaires temps réel de chaque train, arrêt par arrêt, suppressions comprises (flux SIRI Estimated Timetable, relevé toutes les <span class="ref-polling">—</span> min) et perturbations déclarées (Navitia, relevé toutes les <span class="ref-polling-perturbations">—</span> min), de <span class="ref-collecte-debut">—</span> h à minuit · <span class="ref-req-et">—</span> et <span class="ref-req-navitia">—</span> req/jour, sur <span class="ref-quota">—</span> autorisées pour chacun des deux flux</div>
         </div>
       </div>
       <div class="source-item">
@@ -426,7 +426,7 @@
       <div class="formula-note">
         <strong>Voyageurs montés.</strong> Pour chaque gare, le nombre de voyageurs qui montent dans les trains de la ligne vient des comptages SNCF (correspondances comprises), par jour type et par tranche horaire, réparti heure par heure selon le profil de validations de la gare. Pour les gares sans comptage, surtout la partie RATP des RER A et B, ce sont les validations de la gare, partagées entre les lignes qui la desservent au prorata de leurs départs. On divise ensuite par le nombre de trains de la ligne au départ de la gare pendant cette heure (horaires prévus IDF Mobilités). Les jours de vacances scolaires appliquent le rapport mesuré sur les validations du réseau entre jours de vacances et jours ordinaires.
         <br><br>
-        <strong>Retard.</strong> Le flux temps réel donne, pour chaque arrêt, l'heure d'arrivée prévue et l'heure estimée ; leur écart est le retard subi par les voyageurs qui descendent là. Il est compté dès <span class="ref-retard-min">—</span> min. Un voyageur déjà à bord subit en entier le retard pris après sa montée : il ne peut pas changer de train. Un voyageur qui attend à quai quand son train passe en retard peut prendre un autre train, s'il en passe un plus tôt qui dessert aussi sa gare de descente : il ne perd alors que l'écart entre l'heure prévue de son train et le passage de cet autre train. Cet écart est mesuré dans le flux, gare de descente par gare de descente, car un train d'une autre branche ne lui sert à rien ; un jour de panne, les trains suivants sont eux aussi en retard et le voyageur ne gagne rien. Quand la mesure manque (heure prévue déjà passée au relevé, ou incident antérieur au 17 septembre 2026), l'écart est celui des horaires prévus à la gare de montée dans un sens. L'heure de chaque arrêt est son heure prévue.
+        <strong>Retard.</strong> Le flux temps réel donne, pour chaque arrêt, l'heure d'arrivée prévue et l'heure estimée ; leur écart est le retard subi par les voyageurs qui descendent là. Il est compté dès <span class="ref-retard-min">—</span> min, et seulement quand le passage du train à cet arrêt est estimé dans moins de <span class="ref-fenetre">—</span> min ou vient d'avoir lieu : un retard annoncé des heures à l'avance peut être rattrapé, ce n'est pas encore une mesure. Il en va de même d'un arrêt supprimé. Un voyageur déjà à bord subit en entier le retard pris après sa montée : il ne peut pas changer de train. Un voyageur qui attend à quai quand son train passe en retard peut prendre un autre train, s'il en passe un plus tôt qui dessert aussi sa gare de descente : il ne perd alors que l'écart entre l'heure prévue de son train et le passage de cet autre train. Cet écart est mesuré dans le flux, gare de descente par gare de descente, car un train d'une autre branche ne lui sert à rien ; un jour de panne, les trains suivants sont eux aussi en retard et le voyageur ne gagne rien. Quand la mesure manque (heure prévue déjà passée au relevé, ou incident antérieur au 17 septembre 2026), l'écart est celui des horaires prévus à la gare de montée dans un sens. L'heure de chaque arrêt est son heure prévue.
         <br><br>
         <strong>Suppression.</strong> Quand un arrêt est supprimé (train supprimé en entier, ou terminus avancé), un voyageur dont le trajet passe par cet arrêt attend le train suivant du même sens. L'attente est mesurée : heure estimée du premier train qui dessert réellement l'arrêt, moins l'heure prévue du train supprimé. Si aucun train suivant n'est encore visible dans le flux, on retient l'intervalle prévu à cette heure.
       </div>
@@ -548,6 +548,9 @@
         <strong>Incidents antérieurs au <span class="ref-bascule">16 septembre 2026</span>.</strong> Avant cette date, la collecte ne gardait que le plus grand retard de chaque train et la gare où il avait été vu. Ces incidents sont recalculés avec la même méthode, sur le parcours de leur mission : aucun retard avant cette gare, ce retard à partir d'elle, et pour un train supprimé l'intervalle prévu au lieu de l'attente mesurée.
       </div>
       <div class="limit-item">
+        <strong>Relevés espacés.</strong> Le flux est relevé toutes les <span class="ref-polling">—</span> min depuis le 17 septembre 2026 (toutes les 20 min avant, en comptant aussi les retards annoncés longtemps à l'avance) : un retard qui apparaît puis disparaît entre deux relevés n'est pas vu, et les jours d'avant cette date ne se comparent pas exactement aux suivants.
+      </div>
+      <div class="limit-item">
         <strong>Un incident = une ligne.</strong> Un incident affectant plusieurs lignes est compté une fois par ligne, ce qui peut sur-estimer le nombre d'incidents distincts.
       </div>
       <div class="limit-item">
@@ -591,6 +594,8 @@
       set('.ref-smic', ref.smic_horaire.toLocaleString('fr-FR', { minimumFractionDigits: 2 }));
       set('.ref-smic-source', ref.smic_source);
       set('.ref-polling', n(ref.polling_interval_minutes));
+      set('.ref-polling-perturbations', n(ref.perturbations_interval_minutes));
+      set('.ref-fenetre', n(ref.fenetre_mesure_minutes));
       set('.ref-req-et', n(ref.requetes_et_jour));
       set('.ref-req-navitia', n(ref.requetes_navitia_jour));
       set('.ref-quota', n(ref.quota_prim_jour));

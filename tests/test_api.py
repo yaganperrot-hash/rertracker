@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 from backend.api import _serialize_incident, reference
-from backend.collector import LIGNES_CIBLES
+from backend.collector import LIGNES_CIBLES, MODES_PHYSIQUES, REQUETES_ET_PAR_RELEVE
 from backend.config import Settings, get_settings
 from backend.metrics import FREQUENTATION, cout_eur, incident_minutes_voyageurs
 
@@ -76,22 +76,27 @@ class TestReference:
         assert ref["requetes_et_jour"] <= ref["quota_prim_jour"]
 
     async def test_requetes_prim_par_jour(self):
-        # Relevés de collecte_heure_debut à minuit ; à chacun 2 appels perturbations + 1 appel départs par ligne
+        # Relevés de collecte_heure_debut à minuit : 1 appel Estimated Timetable (flux global) par relevé temps réel,
+        # 2 appels Navitia (un par mode) par relevé des perturbations
         s = get_settings()
         ref = await reference()
-        releves = (24 - s.collecte_heure_debut) * 60 // s.polling_interval_minutes
-        assert ref["requetes_prim_jour"] == releves * (2 + len(LIGNES_CIBLES))
+        minutes = (24 - s.collecte_heure_debut) * 60
+        assert ref["requetes_et_jour"] == minutes // s.polling_interval_minutes
+        assert ref["requetes_navitia_jour"] == minutes // s.perturbations_interval_minutes * 2
 
     def test_reglage_par_defaut_sous_le_quota(self):
-        # Quota PRIM : 1 000 req/jour (en-tête x-ratelimit-limit-day). Défauts : 20 min, de 6 h à minuit → 810
+        # Quota PRIM : 1 000 req/jour par flux (en-tête x-ratelimit-limit-day). Défauts, de 6 h à minuit :
+        # temps réel toutes les 5 min → 216 ; perturbations toutes les 20 min → 108
         d = Settings(_env_file=None)
-        releves = (24 - d.collecte_heure_debut) * 60 // d.polling_interval_minutes
-        assert releves * (2 + len(LIGNES_CIBLES)) == 810
-        assert 810 <= d.prim_quota_jour
+        minutes = (24 - d.collecte_heure_debut) * 60
+        et = minutes // d.polling_interval_minutes * REQUETES_ET_PAR_RELEVE
+        navitia = minutes // d.perturbations_interval_minutes * len(MODES_PHYSIQUES)
+        assert (et, navitia) == (216, 108)
+        assert et <= d.prim_quota_jour and navitia <= d.prim_quota_jour
 
     async def test_parametres_du_calcul(self):
         # La page Méthode affiche ces valeurs : elles doivent être celles du code
-        from backend.collector import GHOST_MIN_DELAY_MINUTES, MIN_DELAY_MINUTES
+        from backend.collector import FENETRE_MESURE_MINUTES, GHOST_MIN_DELAY_MINUTES, MIN_DELAY_MINUTES
         from backend.metrics import PROFILS
         s = get_settings()
         ref = await reference()
@@ -100,6 +105,7 @@ class TestReference:
         assert ref["retard_min_minutes"] == MIN_DELAY_MINUTES
         assert ref["suppression_minutes"] == s.cancel_default_impact_minutes
         assert ref["fantome_min_minutes"] == GHOST_MIN_DELAY_MINUTES
+        assert ref["fenetre_mesure_minutes"] == FENETRE_MESURE_MINUTES
 
 
 class TestMonTrajet:

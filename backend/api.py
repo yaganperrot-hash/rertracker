@@ -14,7 +14,8 @@ from backend.metrics import (
     incident_minutes_voyageurs,
 )
 from backend.collector import (
-    GHOST_MIN_DELAY_MINUTES, LIGNES_CIBLES, MIN_DELAY_MINUTES, MODES_PHYSIQUES,
+    FENETRE_MESURE_MINUTES, GHOST_MIN_DELAY_MINUTES, LIGNES_CIBLES, MIN_DELAY_MINUTES, MODES_PHYSIQUES,
+    REQUETES_ET_PAR_RELEVE,
     collect_disruptions, collect_rt_delays,
 )
 from backend.causes import categoriser_cause, resume_perturbation, texte_lisible
@@ -78,17 +79,21 @@ async def stats_line(line_id: str, db: DbDep, period: int = Query(default=30, ge
 async def reference():
     """Paramètres de calcul affichés par les pages (méthode) : une seule source, la config."""
     s = get_settings()
-    releves_jour = (24 - s.collecte_heure_debut) * 60 // s.polling_interval_minutes  # pas de relevé la nuit
+    minutes_collecte = (24 - s.collecte_heure_debut) * 60   # pas de relevé la nuit
+    releves_jour = minutes_collecte // s.polling_interval_minutes
+    releves_perturbations_jour = minutes_collecte // s.perturbations_interval_minutes
     return {
         "smic_horaire": s.smic_horaire,
         "smic_source": s.smic_source,
         "polling_interval_minutes": s.polling_interval_minutes,
         "bilans_interval_minutes": s.bilans_interval_minutes,
-        # À chaque relevé : un appel perturbations par mode (RER, Transilien, compteur Navitia)
-        # + un appel Estimated Timetable par ligne (compteur distinct)
-        "requetes_prim_jour": releves_jour * (len(MODES_PHYSIQUES) + len(LIGNES_CIBLES)),
-        "requetes_navitia_jour": releves_jour * len(MODES_PHYSIQUES),
-        "requetes_et_jour": releves_jour * len(LIGNES_CIBLES),
+        "perturbations_interval_minutes": s.perturbations_interval_minutes,
+        # Relevé temps réel : un appel Estimated Timetable pour tout le réseau ; relevé des perturbations :
+        # un appel par mode (RER, Transilien), compteur Navitia distinct
+        "requetes_prim_jour": releves_jour * REQUETES_ET_PAR_RELEVE + releves_perturbations_jour * len(MODES_PHYSIQUES),
+        "requetes_navitia_jour": releves_perturbations_jour * len(MODES_PHYSIQUES),
+        "requetes_et_jour": releves_jour * REQUETES_ET_PAR_RELEVE,
+        "fenetre_mesure_minutes": FENETRE_MESURE_MINUTES,
         "quota_prim_jour": s.prim_quota_jour,
         "collecte_heure_debut": s.collecte_heure_debut,
         # Voyageurs montés par jour ouvré ordinaire, par ligne (comptages SNCF, validations IDFM)

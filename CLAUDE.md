@@ -22,14 +22,17 @@ sur les lignes RER et Transilien d'Île-de-France.
 ---
 
 ## Source de données
-- **API PRIM IDF Mobilités** : relevé toutes les 20 min, de 6 h à minuit (heure de Paris)
+- **API PRIM IDF Mobilités** : de 6 h à minuit (heure de Paris), temps réel toutes les 5 min, perturbations toutes les 20 min
 - Endpoints : retards et suppressions via le flux SIRI **Estimated Timetable**
-  (`/marketplace/estimated-timetable?LineRef=STIF:Line::<code>:`, un appel par ligne, ~2 h de trains arrêt par arrêt) ;
+  (`/marketplace/estimated-timetable?LineRef=ALL`, un seul appel pour tout le réseau : ~4,5 Mo compressés, ~50 Mo de
+  JSON, ~4 h 30 de trains arrêt par arrêt, filtré sur nos 13 lignes) ;
   perturbations déclarées via Navitia (`/marketplace/v2/navitia/physical_modes/{mode}/line_reports`).
+  Un retard ou une suppression n'est mesuré qu'à moins de 10 min du passage estimé (`FENETRE_MESURE_MINUTES`).
 - Auth : header `apikey: {PRIM_API_KEY}`
-- Quota : **1 000 req/jour par clé et par flux** — deux compteurs distincts constatés le 2026-09-16 dans les en-têtes
-  (`x-ratelimit-remaining-day`) : Navitia et Estimated Timetable. Remise à zéro à minuit UTC (2 h l'été).
-  Budget : Estimated Timetable 13 req/relevé × 54 = 702/jour ; Navitia 2 req/relevé × 54 = 108/jour.
+- Quota : **1 000 req/jour par clé et par flux** — compteurs distincts constatés dans les en-têtes
+  (`x-ratelimit-remaining-day`) : Navitia, Estimated Timetable (2026-09-16), Prochains passages / stop-monitoring
+  (2026-09-17, une requête par gare). Remise à zéro à minuit UTC (2 h l'été).
+  Budget : Estimated Timetable 1 req/relevé × 216 = 216/jour ; Navitia 2 req/relevé × 54 = 108/jour.
   Les deux restes sont loggués à chaque relevé (warning sous 150). Chaque requête manuelle est prise sur ces budgets.
 - **Données statiques** (open data, construites hors ligne, versionnées) — ordre de construction :
   `python -m backend.profils build` (profils horaires, vacances) → `python -m backend.offre build` (GTFS : départs
@@ -106,8 +109,8 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb reta
   jamais les recopier — les lignes « Remplacement … » (bus) portent la même lettre.
 - Collecte PRIM : une réponse HTTP 200 vide est une panne — chaque appel loggue un warning quand il ne renvoie rien.
 - Collecte PRIM : toute mesure ajoutée au relevé est protégée par un `try/except` avec repli — elle ne doit jamais
-  faire perdre le relevé (le 2026-09-17, un tri a fait perdre toutes les lignes). Chaque redémarrage du serveur
-  lance un relevé (15 requêtes) : redémarrer le moins possible.
+  faire perdre le relevé (le 2026-09-17, un tri a fait perdre toutes les lignes). Un redémarrage ne relance un relevé
+  que si le dernier date de plus d'un intervalle (1 requête temps réel, 2 Navitia).
 - Tout invariant énoncé dans la doc ou un commentaire (somme de poids, borne, plafond) doit être couvert
   par un test : sinon il devient faux en silence — les poids horaires ont annoncé « somme=18.0 » pendant
   une semaine en valant 19.2, majorant tous les chiffres de 6,7 %.
@@ -138,7 +141,7 @@ Chaque PC a sa propre base PostgreSQL. Pour ne pas perdre les données collecté
 - `/start` importe automatiquement les fichiers `transferts/*.json` présents.
 - `/wrap` exporte automatiquement la journée en cours avant le commit.
 - **Un seul serveur à la fois** : les deux PC partagent la clé PRIM et ses quotas de 1 000 req/jour par flux
-  (702 Estimated Timetable et 108 Navitia pour un serveur au réglage par défaut). Toute affirmation sur la limite PRIM se vérifie dans les en-têtes
+  (216 Estimated Timetable et 108 Navitia pour un serveur au réglage par défaut). Toute affirmation sur la limite PRIM se vérifie dans les en-têtes
   `x-ratelimit-*-day` d'une réponse, jamais de mémoire.
 
 ---

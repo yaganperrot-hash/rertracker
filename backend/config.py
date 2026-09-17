@@ -9,7 +9,10 @@ class Settings(BaseSettings):
     twitter_api_secret: str = ""
     twitter_access_token: str = ""
     twitter_access_secret: str = ""
-    polling_interval_minutes: int = 20    # 15 req/relevé × 54 relevés (6 h → minuit) = 810 req/jour
+    # Retards et suppressions : 1 req Estimated Timetable (flux global) par relevé × 216 relevés (6 h → minuit) = 216/jour
+    polling_interval_minutes: int = 5
+    # Perturbations déclarées : 2 req Navitia par relevé × 54 relevés = 108/jour (annonces qui changent lentement)
+    perturbations_interval_minutes: int = 20
     log_level: str = "INFO"
     max_open_incident_minutes: int = 180
     cancel_default_impact_minutes: int = 5

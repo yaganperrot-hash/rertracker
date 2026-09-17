@@ -31,7 +31,7 @@ Dans l'ordre, sans sauter d'étape :
 4. Signale chaque fichier : importé (nombre d'incidents) ou ignoré, avec la raison ; « aucun transfert en attente »
    s'il n'y en a pas.
 5. `POLLING_INTERVAL_MINUTES` dans `.env` : lire **uniquement cette ligne** (le reste contient des secrets). Si elle
-   ne vaut pas 20, le signaler.
+   ne vaut pas 5, le signaler.
 
 Restitue en 3 lignes max : objectif courant, où on en est, prochaine étape.
 Propose ensuite un plan priorisé pour cette session.

@@ -400,8 +400,9 @@ def _appel(numero, prevu, retard=0, statut=None, terminus=False):
     return c
 
 
-def _train(uuid_suffixe, appels, sens="Aller", mission="QYRO"):
+def _train(uuid_suffixe, appels, sens="Aller", mission="QYRO", ligne="C01742"):
     return {
+        "LineRef": {"value": f"STIF:Line::{ligne}:"},
         "DatedVehicleJourneyRef": {"value": f"SNCF_MAGENTA_PRD:VehicleJourney::00000000-0000-0000-0000-{uuid_suffixe:0>12}:LOC"},
         "DirectionRef": {"value": sens},
         "JourneyNote": [{"value": mission}],
@@ -429,7 +430,7 @@ class TestAnalyseFluxEstimatedTimetable:
     def test_pire_retard_et_arrets_dans_l_ordre(self):
         # Le flux ne trie pas les arrêts
         t = _train(1, [_appel(3, 20, retard=4, terminus=True), _appel(1, 0), _appel(2, 10, retard=6)])
-        o = analyser_train(t, T0, NOMS.get)
+        o = analyser_train(t, T0 + timedelta(minutes=20), NOMS.get)   # tous les arrêts dans la fenêtre
         assert o["uid"] == "rt_vehicle_journey:IDFM:TN:SNCF:00000000-0000-0000-0000-000000000001_20260917"
         assert (o["supprime"], o["retard"], o["gare"], o["mission"]) == (False, 6, "Gare Deux", "QYRO")
         assert o["prevu"] == T0 + timedelta(minutes=10)
@@ -442,7 +443,7 @@ class TestAnalyseFluxEstimatedTimetable:
 
     def test_suppression_en_fin_de_parcours(self):
         t = _train(1, [_appel(1, 0), _appel(2, 10, statut="CANCELLED"), _appel(3, 20, statut="CANCELLED", terminus=True)])
-        o = analyser_train(t, T0, NOMS.get)
+        o = analyser_train(t, T0 + timedelta(minutes=10), NOMS.get)
         assert o["supprime"] is True
         assert o["gare"] == "Gare Deux"
         assert [a["s"] for a in o["arrets"]] == [False, True, True]
@@ -453,8 +454,8 @@ class TestAnalyseFluxEstimatedTimetable:
         assert analyser_train(t, T0, NOMS.get)["fantome"] is True
 
     def test_gros_retard_estime_dans_le_futur_garde(self):
-        t = _train(1, [_appel(1, -60, retard=90, terminus=True)])
-        o = analyser_train(t, T0, NOMS.get)
+        t = _train(1, [_appel(1, -60, retard=90, terminus=True)])   # estimé à +30
+        o = analyser_train(t, T0 + timedelta(minutes=25), NOMS.get)
         assert (o["fantome"], o["retard"]) == (False, 90)
 
     def test_attente_mesuree_du_train_suivant(self):
@@ -483,7 +484,8 @@ class TestAnalyseFluxEstimatedTimetable:
         assert ecarts[(ref, "1")] == {"2": 6, "3": 4}
         assert ecarts[(ref, "2")] == {"3": 6}
         assert ecarts[(ref, "3")] == {}
-        o = analyser_train(retarde, T0, NOMS.get, ecarts=ecarts)
+        # Écarts relevés sur tout l'horizon, même hors de la fenêtre de mesure des retards
+        o = analyser_train(retarde, T0, NOMS.get, ecarts=ecarts, suivi=True)
         assert [a["a"] for a in o["arrets"]] == [{"Gare Deux": 6, "Gare Trois": 4}, {"Gare Trois": 6}, {}]
 
     def test_ecart_non_mesure_pour_un_arret_deja_prevu(self):
@@ -522,6 +524,61 @@ class TestAnalyseFluxEstimatedTimetable:
         couv = couverture_releve([_train(1, [_appel(1, 0), _appel(2, 10)]), _train(2, [_appel(1, 30)])])
         assert (couv["trains"], couv["passages"]) == (2, 3)
         assert couv["debut"] == T0 and couv["fin"] == T0 + timedelta(minutes=30)
+
+
+class TestFenetreDeMesure:
+    """Un retard ou une suppression n'est relevé qu'à moins de FENETRE_MESURE_MINUTES du passage estimé."""
+
+    def test_valeur(self):
+        assert collector.FENETRE_MESURE_MINUTES == 10
+
+    def test_retard_annonce_longtemps_a_l_avance_ignore(self):
+        t = _train(1, [_appel(1, 240, retard=12), _appel(2, 250, retard=12, terminus=True)])
+        assert analyser_train(t, T0, NOMS.get) is None
+
+    def test_retard_releve_a_dix_minutes_du_passage(self):
+        t = _train(1, [_appel(1, 60, retard=5), _appel(2, 70, retard=5, terminus=True)])   # estimé à +65
+        assert analyser_train(t, T0 + timedelta(minutes=54), NOMS.get) is None
+        o = analyser_train(t, T0 + timedelta(minutes=55), NOMS.get)
+        assert (o["retard"], o["gare"]) == (5, "Gare Un")
+        assert [a["r"] for a in o["arrets"]] == [5, None]
+
+    def test_fenetre_sur_l_heure_estimee(self):
+        # Prévu à +5, estimé à +20 : hors fenêtre au relevé de T0 alors que l'heure prévue y est
+        t = _train(1, [_appel(1, 5, retard=15, terminus=True)])
+        assert analyser_train(t, T0, NOMS.get) is None
+        assert analyser_train(t, T0 + timedelta(minutes=10), NOMS.get)["retard"] == 15
+
+    def test_arret_passe_mesure(self):
+        t = _train(1, [_appel(1, -3, retard=4), _appel(2, 30, retard=4, terminus=True)])
+        o = analyser_train(t, T0, NOMS.get)
+        assert [a["r"] for a in o["arrets"]] == [4, None]
+
+    def test_suppression_lointaine_ignoree(self):
+        t = _train(1, [_appel(1, 0), _appel(2, 40, statut="CANCELLED", terminus=True)])
+        assert analyser_train(t, T0, NOMS.get) is None
+        o = analyser_train(t, T0 + timedelta(minutes=30), NOMS.get)
+        assert o["supprime"] is True and o["gare"] == "Gare Deux"
+
+    def test_suppression_lointaine_non_marquee_sur_un_train_en_retard(self):
+        t = _train(1, [_appel(1, 0, retard=3), _appel(2, 40, statut="CANCELLED", terminus=True)])
+        o = analyser_train(t, T0, NOMS.get, attentes={(t["DatedVehicleJourneyRef"]["value"], "2"): 12})
+        assert o["supprime"] is False and o["retard"] == 3
+        assert [(a["s"], a["w"]) for a in o["arrets"]] == [(False, None), (False, None)]
+
+    def test_suivi_rend_un_train_sans_retard(self):
+        t = _train(1, [_appel(1, 0), _appel(2, 60, retard=8, terminus=True)])
+        assert analyser_train(t, T0, NOMS.get) is None
+        o = analyser_train(t, T0, NOMS.get, suivi=True)
+        assert (o["supprime"], o["retard"], o["fantome"]) == (False, 0, False)
+        assert [a["r"] for a in o["arrets"]] == [0, None]
+
+    def test_retard_rattrape_jamais_compte(self):
+        """Annoncé 6 min en retard 30 min avant, finalement à l'heure : aucune mesure de retard."""
+        annonce = _train(1, [_appel(1, 30, retard=6, terminus=True)])
+        a_l_heure = _train(1, [_appel(1, 30, terminus=True)])
+        assert analyser_train(annonce, T0, NOMS.get) is None
+        assert analyser_train(a_l_heure, T0 + timedelta(minutes=25), NOMS.get) is None
 
 
 class TestFusionArrets:
@@ -609,12 +666,12 @@ class TestArchiveFlux:
 class TestCollectRtDelays:
     """collect_rt_delays : appels, quota et écriture en base, sur un flux simulé."""
 
-    async def _executer(self, flux, anciens=()):
+    async def _executer(self, flux, anciens=(), executes=None):
         from sqlalchemy.dialects.postgresql import Insert
 
         resp = httpx.Response(200, json=flux, headers={"x-ratelimit-remaining-day": "640"},
                               request=httpx.Request("GET", collector.PRIM_ET_URL))
-        executes = []
+        executes = [] if executes is None else executes
 
         async def execute(stmt, *args, **kwargs):
             executes.append(stmt)
@@ -637,22 +694,29 @@ class TestCollectRtDelays:
             await collect_rt_delays()
         return get, [s for s in executes if isinstance(s, Insert)]
 
-    async def test_un_appel_estimated_timetable_par_ligne(self, monkeypatch):
+    async def test_un_seul_appel_pour_tout_le_reseau(self, monkeypatch):
         monkeypatch.setattr(collector, "quota_restant_et", None)
         get, _ = await self._executer(_flux())
-        assert get.await_count == len(LIGNES_CIBLES)
-        urls = {c.args[0] for c in get.await_args_list}
-        assert urls == {collector.PRIM_ET_URL}
-        refs = {c.kwargs["params"]["LineRef"] for c in get.await_args_list}
-        assert "STIF:Line::C01742:" in refs
+        assert get.await_count == collector.REQUETES_ET_PAR_RELEVE == 1
+        assert get.await_args.args[0] == collector.PRIM_ET_URL
+        assert get.await_args.kwargs["params"] == {"LineRef": "ALL"}
         assert collector.quota_restant_et == 640
+
+    async def test_trains_des_autres_lignes_ecartes(self):
+        from sqlalchemy.dialects import postgresql
+
+        rer_c = _train(1, [_appel(1, 0), _appel(2, 10, retard=6, terminus=True)], ligne="C01727")
+        bus = _train(2, [_appel(1, 0), _appel(2, 10, retard=9, terminus=True)], ligne="C00001")
+        _, inserts = await self._executer(_flux(rer_c, bus))
+        assert len(inserts) == 1
+        params = inserts[0].compile(dialect=postgresql.dialect()).params
+        assert (params["line_id"], params["duree_minutes"]) == ("RER_C", 6)
 
     async def test_retard_enregistre_avec_ses_arrets(self):
         from sqlalchemy.dialects import postgresql
 
         t = _train(1, [_appel(1, 0), _appel(2, 10, retard=6, terminus=True)])
         _, inserts = await self._executer(_flux(t))
-        # Le même flux est servi pour les 13 lignes : un seul train, donc une seule écriture par uid
         params = inserts[-1].compile(dialect=postgresql.dialect()).params
         assert params["duree_minutes"] == 6
         assert params["is_cancelled"] is False
@@ -705,11 +769,43 @@ class TestCollectRtDelays:
         assert [(a["g"], a.get("k")) for a in params["arrets"]] == [("Gare Un", None), ("Gare Deux", True),
                                                                     ("Gare Trois", None)]
 
-    async def test_chaque_reponse_archivee(self):
+    async def test_chaque_ligne_archivee_avec_ses_seuls_trains(self):
+        import json
+
+        rer_a = _train(1, [_appel(1, 0)])
+        bus = _train(2, [_appel(1, 0)], ligne="C00001")
         with patch.object(collector, "archiver_flux") as archive:
-            await self._executer(_flux())
+            await self._executer(_flux(rer_a, bus))
         assert archive.call_count == len(LIGNES_CIBLES)
-        assert {c.args[0] for c in archive.call_args_list} == set(LIGNES_CIBLES.values())
+        par_ligne = {c.args[0]: trains_du_flux(json.loads(c.args[1])) for c in archive.call_args_list}
+        assert set(par_ligne) == set(LIGNES_CIBLES.values())
+        assert par_ligne["RER_A"] == [rer_a]
+        assert par_ligne["RER_B"] == []
+
+    async def test_retard_rattrape_met_a_jour_le_train_en_base(self):
+        """Train déjà en base, plus aucun retard dans la fenêtre : ses arrêts reçoivent la dernière mesure."""
+        from sqlalchemy.sql.dml import Update
+        from sqlalchemy.dialects import postgresql
+
+        t = _train(1, [_appel(1, 0, retard=1), _appel(2, 10, terminus=True)])
+        uid = "rt_vehicle_journey:IDFM:TN:SNCF:00000000-0000-0000-0000-000000000001_20260917"
+        ancien = [{"g": "Gare Un", "p": T0.isoformat(), "r": 4, "s": False, "w": None}]
+        executes = []
+        _, inserts = await self._executer(_flux(t), anciens=[(uid, ancien)], executes=executes)
+        assert inserts == []
+        updates = [e for e in executes if isinstance(e, Update)]
+        assert len(updates) == 1
+        params = updates[0].compile(dialect=postgresql.dialect()).params
+        assert [a["r"] for a in params["arrets"]] == [1, 0]
+
+    async def test_train_sans_retard_absent_de_la_base_non_ecrit(self):
+        from sqlalchemy.sql.dml import Update
+
+        t = _train(1, [_appel(1, 0, retard=1), _appel(2, 10, terminus=True)])
+        executes = []
+        _, inserts = await self._executer(_flux(t), executes=executes)
+        assert inserts == []
+        assert not [e for e in executes if isinstance(e, Update)]
 
     async def test_skip_si_pas_de_cle_api(self):
         settings = MagicMock(prim_api_key=None)
@@ -732,3 +828,38 @@ class TestCollectRtDelays:
         ):
             await collect_rt_delays()
         session.execute.assert_not_called()
+
+
+class TestFluxGlobal:
+    def test_trains_par_ligne(self):
+        rer_a, ligne_u, bus = _train(1, []), _train(2, [], ligne="C01741"), _train(3, [], ligne="C00001")
+        sans_ligne = {k: v for k, v in _train(4, []).items() if k != "LineRef"}
+        par_ligne = collector.trains_par_ligne([rer_a, ligne_u, bus, sans_ligne])
+        assert dict(par_ligne) == {"RER_A": [rer_a], "TRANSILIEN_U": [ligne_u]}
+
+    def test_flux_reduit_relisible(self):
+        t = _train(1, [_appel(1, 0)])
+        assert trains_du_flux(collector.flux_siri([t])) == [t]
+
+
+class TestRedemarrage:
+    """Un redémarrage ne refait pas un relevé écrit il y a moins d'un intervalle (quota PRIM)."""
+
+    async def _recent(self, dernier):
+        import backend.main as main
+        with patch.object(main, "dernier_releve", AsyncMock(return_value=dernier)):
+            return await main._releve_recent("realtime", 5)
+
+    async def test_releve_recent_pas_refait(self):
+        assert await self._recent(datetime.now(timezone.utc) - timedelta(minutes=2)) is True
+
+    async def test_releve_ancien_refait(self):
+        assert await self._recent(datetime.now(timezone.utc) - timedelta(minutes=6)) is False
+
+    async def test_base_vide_releve_fait(self):
+        assert await self._recent(None) is False
+
+    async def test_erreur_de_lecture_releve_fait(self):
+        import backend.main as main
+        with patch.object(main, "dernier_releve", AsyncMock(side_effect=RuntimeError("base injoignable"))):
+            assert await main._releve_recent("realtime", 5) is False

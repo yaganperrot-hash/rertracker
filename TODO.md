@@ -12,11 +12,17 @@
     `arrets_du_train`, fermer l'angle mort de `attentes_mesurees` (train suivant déjà passé au relevé)
   - [ ] **D — trains absents du flux** (coupures) : comparer aux horaires GTFS ; vérifier la ligne K, vide après 10 h le 17/09
   - [ ] **E — train partiellement supprimé** redevenu « non supprimé » (compteur de suppressions)
-  - [ ] **Revoir les requêtes API et les quotas** : coût réel par relevé (Navitia, Estimated Timetable), relevés perdus
-    (9 h 33 le 17/09 : 15 requêtes sans écriture), requêtes manuelles, marge restante, fréquence de relevé
+  - [x] **Requêtes API et quotas** (17/09) : temps réel toutes les 5 min en 1 appel global (`LineRef=ALL`, 216 req/jour),
+    perturbations toutes les 20 min (108), pas de relevé au redémarrage si le dernier date de moins d'un intervalle ;
+    retard/suppression mesurés seulement à moins de 10 min du passage estimé
+  - [ ] **Ajuster la fenêtre de 10 min** sur les archives à 5 min : retard annoncé à 30 / 20 / 10 / 5 min du passage
+    comparé au retard final
+  - [ ] Surveiller après la bascule : taille de `logs/flux_brut/` (~9 Mo de JSON par relevé avant gzip), durée de
+    `compute_daily_metrics` toutes les 5 min, `ECART_MAX_RELEVES` (45 min) pour les arrêts sautés
 - [ ] **« Mon trajet » (bêta, aller simple, 2026-09-17)** — suite : aller-retour, correspondances entre lignes,
   garder les horaires passés quand le GTFS est reconstruit (`data/horaires.json.gz` ne couvre que sa fenêtre de 30 jours)
-- [ ] **PC Windows** : `git pull`, serveur arrêté, `python -m backend.recalcul` (plafond remplacé le 17/09)
+- [ ] **PC Windows** : `git pull`, serveur arrêté, `python -m backend.recalcul` (plafond remplacé le 17/09),
+  `POLLING_INTERVAL_MINUTES=5` dans `.env` (collecte globale du 17/09)
 - [ ] **Mac** : importer `transferts/incidents-2026-09-15.json` et `-16.json` (serveur arrêté), puis recalcul
 - [ ] Lot 5 (valeur du temps) : décidé le 2026-09-16 de garder le SMIC seul — TASK-29/30 abandonnées.
 

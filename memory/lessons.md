@@ -107,12 +107,18 @@
 - Le flux SIRI Estimated Timetable de PRIM : arrêts **non triés** dans la réponse, passé visible très court
   (~3 min après le passage sur un flux observé le 17/09, max 27 — et non ~50 min),
   statut `CANCELLED` par arrêt, `JourneyNote` = code mission, `DatedVehicleJourneyRef` contient l'uuid du trip GTFS,
-  `STIF:StopArea:SP:<n>:` = `IDFM:monomodalStopPlace:<n>` du GTFS. Appel `LineRef=ALL` : 59 Mo, à éviter.
+  `STIF:StopArea:SP:<n>:` = `IDFM:monomodalStopPlace:<n>` du GTFS. Appel `LineRef=ALL` (tout le réseau, 1 requête, même compteur) : 4,5 Mo compressés sur le fil
+  (gzip), 52 Mo de JSON, ~4 h 30 d'horizon contre ~2 h par ligne — mesuré le 17/09 ; le « 59 Mo » était la taille
+  décompressée, pas le coût réseau.
 - GTFS IDFM (117 Mo, 30 jours) : lire `stop_times.txt` en flux depuis le zip ; `route_id` = ligne PRIM sans `line:` ;
   le fichier ne contient pas de code UIC — rapprocher les comptages SNCF par les **mots du nom** de gare.
 - Comptages SNCF : plusieurs campagnes pour une même gare (ex. J 2025 et 2026) — garder la plus récente, sinon on
   additionne deux années (J affiché à 280 000 au lieu de 205 000).
 - Une vérification de quota se fait **par flux** : chaque produit PRIM a son propre `x-ratelimit-remaining-day`.
+  Prochains passages (`stop-monitoring`, une requête par gare) : lui aussi 1 000/jour (17/09) — inutilisable pour
+  suivre toutes les gares.
+- Un retard annoncé longtemps à l'avance n'est pas une mesure : ne relever un arrêt qu'à moins de 10 min de son passage
+  estimé, ce qui suppose un relevé plus fréquent que la fenêtre (5 min).
 - Un serveur relancé par Claude Code survit à la session avec `nohup … & disown` (logs en `>>` dans `logs/uvicorn.log`).
 
 ## Plafond de retard

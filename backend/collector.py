@@ -1,4 +1,6 @@
+import asyncio
 import gzip
+import json
 import logging
 import re
 import shutil
@@ -9,7 +11,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import httpx
-from sqlalchemy import case, func, select
+from sqlalchemy import case, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 
 from backend.config import get_settings
@@ -19,8 +21,10 @@ from backend.models import Incident
 logger = logging.getLogger(__name__)
 
 PRIM_BASE_URL = "https://prim.iledefrance-mobilites.fr/marketplace/v2/navitia"
-# Flux SIRI Estimated Timetable : tous les trains d'une ligne sur ~2 h, arrêt par arrêt, suppressions comprises
+# Flux SIRI Estimated Timetable, arrêt par arrêt, suppressions comprises. Interrogé pour tout le réseau d'un coup
+# (LineRef=ALL, ~4 h 30 d'horizon) : 1 requête par relevé au lieu d'une par ligne (13), même compteur de quota.
 PRIM_ET_URL = "https://prim.iledefrance-mobilites.fr/marketplace/estimated-timetable"
+REQUETES_ET_PAR_RELEVE = 1
 
 QUOTA_ALERTE = 150  # warning quand il reste moins de requêtes PRIM pour la journée
 # Derniers x-ratelimit-remaining-day lus. Deux compteurs distincts de 1 000 req/jour, constatés dans les
@@ -244,6 +248,12 @@ MIN_DELAY_MINUTES = 2  # retard minimum pour être enregistré (et compté, arr�
 GHOST_MIN_DELAY_MINUTES = 60
 GHOST_SLIDE_TOLERANCE_MIN = 3
 
+# Un arrêt n'est mesuré (retard, suppression) que si son passage est estimé dans moins de FENETRE_MESURE_MINUTES
+# au relevé, ou déjà passé : une annonce faite des heures à l'avance (retard rattrapé, suppression levée) n'est
+# pas une mesure. Avec un relevé toutes les 5 min, chaque arrêt est vu au moins deux fois dans la fenêtre
+# (10 min avant le passage, ~3 min après : durée de passé visible dans le flux).
+FENETRE_MESURE_MINUTES = 10
+
 CANCEL_DEFAULT_IMPACT_MIN = 5  # valeur stockée pour un train supprimé ; le calcul lit les attentes mesurées
 
 STATUT_SUPPRIME = "CANCELLED"
@@ -405,9 +415,19 @@ def _ecarts_par_gare(ecarts: dict[str, int] | None, nom_arret) -> dict[str, int]
     return {nom: m for numero, m in ecarts.items() if (nom := nom_arret(numero))}
 
 
+def _dans_la_fenetre(appel: dict, obs_dt: datetime) -> bool:
+    """Passage de l'arrêt estimé (prévu, si supprimé ou sans estimation) dans moins de FENETRE_MESURE_MINUTES,
+    ou déjà passé."""
+    return (appel["estime"] or appel["prevu"]) <= obs_dt + timedelta(minutes=FENETRE_MESURE_MINUTES)
+
+
 def analyser_train(journey: dict, obs_dt: datetime, nom_arret, attentes: dict | None = None,
-                   ecarts: dict | None = None) -> dict | None:
-    """Observation d'un train du flux. None si le train n'a ni retard ≥ MIN_DELAY_MINUTES ni arrêt supprimé.
+                   ecarts: dict | None = None, suivi: bool = False) -> dict | None:
+    """Observation d'un train du flux. None si le train n'a ni retard ≥ MIN_DELAY_MINUTES ni arrêt supprimé
+    (sauf `suivi` : l'observation est rendue quand même, avec retard 0, pour mettre à jour un train déjà en base).
+
+    Seuls les arrêts dans la fenêtre de mesure (voir FENETRE_MESURE_MINUTES) comptent : retard et suppression
+    d'un arrêt plus lointain ne sont ni relevés (r None, s False) ni retenus pour le train.
 
     * Un arrêt supprimé (train entier, ou fin de parcours) fait du train un train supprimé : gare et
       heure prévue du premier arrêt supprimé.
@@ -427,35 +447,36 @@ def analyser_train(journey: dict, obs_dt: datetime, nom_arret, attentes: dict | 
     ref = _valeur(journey.get("DatedVehicleJourneyRef")) or ""
     attentes = attentes or {}
     ecarts = ecarts or {}
+    proches = [_dans_la_fenetre(a, obs_dt) for a in appels]
     arrets = [{
         "g": nom_arret(a["numero"]) if a["numero"] else None,
         "p": a["prevu"].isoformat(),
-        "r": a["retard_arrivee"],
-        "s": a["supprime"],
-        "w": attentes.get((ref, a["numero"])) if a["supprime"] else None,
+        "r": a["retard_arrivee"] if proche else None,
+        "s": a["supprime"] and proche,
+        "w": attentes.get((ref, a["numero"])) if a["supprime"] and proche else None,
         "a": _ecarts_par_gare(ecarts.get((ref, a["numero"])), nom_arret) if not a["supprime"] else None,
-    } for a in appels]
+    } for a, proche in zip(appels, proches)]
     base = {"uid": uid, "mission": _valeur(journey.get("JourneyNote")),
             "direction": _valeur(journey.get("DestinationName")), "fantome": False, "arrets": arrets}
 
-    supprimes = [a for a in appels if a["supprime"]]
+    supprimes = [a for a, proche in zip(appels, proches) if a["supprime"] and proche]
     if supprimes:
         a = supprimes[0]
         return {**base, "supprime": True, "retard": 0, "prevu": a["prevu"],
                 "gare": nom_arret(a["numero"]) if a["numero"] else None}
 
     pire = None
-    for a in appels:
+    for a, proche in zip(appels, proches):
         if a["estime"] is None:
             continue
         retard = _minutes(a["prevu"], a["estime"])
         if (retard >= GHOST_MIN_DELAY_MINUTES
                 and abs((a["estime"] - obs_dt).total_seconds()) <= GHOST_SLIDE_TOLERANCE_MIN * 60):
             return {**base, "supprime": False, "retard": 0, "prevu": None, "gare": None, "fantome": True}
-        if retard >= MIN_DELAY_MINUTES and (pire is None or retard > pire[0]):
+        if proche and retard >= MIN_DELAY_MINUTES and (pire is None or retard > pire[0]):
             pire = (retard, a)
     if pire is None:
-        return None
+        return {**base, "supprime": False, "retard": 0, "prevu": None, "gare": None} if suivi else None
     retard, a = pire
     return {**base, "supprime": False, "retard": retard, "prevu": a["prevu"],
             "gare": nom_arret(a["numero"]) if a["numero"] else None}
@@ -572,8 +593,35 @@ def _journaliser_couverture(line_id: str, couv: dict) -> None:
                 line_id, couv["trains"], couv["passages"], d.strftime("%H:%M"), f.strftime("%H:%M"))
 
 
+def trains_par_ligne(trains: list[dict]) -> dict[str, list[dict]]:
+    """Trains du flux global rangés par ligne suivie (LineRef « STIF:Line::C01742: ») ; les autres sont écartés."""
+    codes = {nid.removeprefix("line:IDFM:"): lid for nid, lid in LIGNES_CIBLES.items()}
+    par_ligne: dict[str, list[dict]] = defaultdict(list)
+    for j in trains:
+        parties = [p for p in (_valeur(j.get("LineRef")) or "").split(":") if p]
+        line_id = codes.get(parties[-1]) if parties else None
+        if line_id:
+            par_ligne[line_id].append(j)
+    return par_ligne
+
+
+def flux_siri(trains: list[dict]) -> dict:
+    """Réponse SIRI Estimated Timetable réduite à ces trains (archive par ligne, relisible par trains_du_flux)."""
+    return {"Siri": {"ServiceDelivery": {"EstimatedTimetableDelivery": [
+        {"EstimatedJourneyVersionFrame": [{"EstimatedVehicleJourney": trains}]}]}}}
+
+
+async def dernier_releve(source: str) -> datetime | None:
+    """Dernière écriture en base d'une source (« realtime », « disruption ») : sert à ne pas refaire un relevé
+    tout juste fait quand le serveur redémarre."""
+    async with AsyncSessionLocal() as session:
+        return (await session.execute(
+            select(func.max(Incident.updated_at)).where(Incident.source == source))).scalar()
+
+
 async def collect_rt_delays() -> None:
-    """Retards et trains supprimés, depuis le flux SIRI Estimated Timetable (un appel par ligne)."""
+    """Retards et trains supprimés, depuis le flux SIRI Estimated Timetable : un seul appel pour tout le réseau
+    (LineRef=ALL : ~4,5 Mo compressés, ~50 Mo de JSON, mesuré le 2026-09-17), filtré sur les lignes suivies."""
     from backend.offre import nom_arret   # import local : offre.py importe LIGNES_CIBLES d'ici
 
     settings = get_settings()
@@ -585,60 +633,69 @@ async def collect_rt_delays() -> None:
     observations: dict[str, tuple[str, dict]] = {}   # uid → (line_id, observation)
     ghosts = 0
 
-    async with httpx.AsyncClient(timeout=30) as client:
-        for navitia_id, line_id in LIGNES_CIBLES.items():
-            code = navitia_id.removeprefix("line:IDFM:")
-            try:
-                resp = await client.get(PRIM_ET_URL, headers=headers,
-                                        params={"LineRef": f"STIF:Line::{code}:"})
-                _suivre_quota(resp, "et")
-                resp.raise_for_status()
-                archiver_flux(line_id, resp.content, datetime.now(timezone.utc),
-                              getattr(settings, "archive_flux_jours", 0))
-                trains = trains_du_flux(resp.json())
-            except httpx.HTTPError as exc:
-                logger.error("PRIM RT error for %s: %s", line_id, exc)
-                continue
-            except Exception as exc:
-                logger.error("Unexpected RT error for %s: %s", line_id, exc)
-                continue
+    try:
+        async with httpx.AsyncClient(timeout=120) as client:
+            resp = await client.get(PRIM_ET_URL, headers=headers, params={"LineRef": "ALL"})
+        _suivre_quota(resp, "et")
+        resp.raise_for_status()
+        # ~50 Mo de JSON : lu hors de la boucle d'événements, le site reste servi pendant ce temps
+        tous = trains_du_flux(await asyncio.to_thread(json.loads, resp.content))
+    except httpx.HTTPError as exc:
+        logger.error("PRIM RT error (flux global) : %s", exc)
+        _journaliser_quota()
+        return
+    except Exception as exc:
+        logger.error("Unexpected RT error (flux global) : %s", exc)
+        _journaliser_quota()
+        return
+    obs_dt = datetime.now(timezone.utc)
+    if not tous:
+        logger.warning("PRIM : 0 train dans le flux temps réel global")
+    par_ligne = trains_par_ligne(tous)
+    del tous
 
-            obs_dt = datetime.now(timezone.utc)
-            _journaliser_couverture(line_id, couverture_releve(trains))
-            attentes = attentes_mesurees(trains)
-            try:
-                ecarts = ecarts_train_suivant(trains, obs_dt)
-            except Exception:
-                # Mesure d'appoint : son échec ne doit jamais perdre le relevé (repli sur l'offre prévue)
-                logger.exception("Écarts avec le train suivant non mesurés pour %s", line_id)
-                ecarts = {}
-            sautes: dict[str, list[tuple[str, str]]] = defaultdict(list)   # uid-ref → [(gare, heure prévue ISO)]
-            precedent = _releves_precedents.get(line_id)
-            try:
-                if precedent and obs_dt - precedent[0] <= ECART_MAX_RELEVES:
-                    for ref, numero, prevu in arrets_sautes(precedent[1], trains):
-                        gare = nom_arret(numero) or numero
-                        sautes[ref].append((gare, prevu.isoformat()))
-                        logger.info("Arrêt sauté probable : %s %s %s (prévu %s)", line_id, ref, gare,
-                                    prevu.astimezone(PARIS_TZ).strftime("%H:%M"))
-                _releves_precedents[line_id] = (obs_dt, resume_releve(trains))
-            except Exception:
-                # Observation seulement : jamais au prix du relevé
-                logger.exception("Détection des arrêts sautés impossible pour %s", line_id)
-            for j in trains:
-                obs = analyser_train(j, obs_dt, nom_arret, attentes, ecarts)
-                if obs is None:
-                    continue
-                if obs["fantome"]:
-                    ghosts += 1
-                    logger.warning("Train fantôme écarté : %s %s", line_id, obs["uid"])
-                    continue
-                obs["sautes"] = sautes.get(_valeur(j.get("DatedVehicleJourneyRef")) or "", [])
-                observations[obs["uid"]] = (line_id, obs)
+    for line_id in LIGNES_CIBLES.values():
+        trains = par_ligne.get(line_id, [])
+        archiver_flux(line_id, json.dumps(flux_siri(trains)).encode("utf-8"), obs_dt,
+                      getattr(settings, "archive_flux_jours", 0))
+        _journaliser_couverture(line_id, couverture_releve(trains))
+        attentes = attentes_mesurees(trains)
+        try:
+            ecarts = ecarts_train_suivant(trains, obs_dt)
+        except Exception:
+            # Mesure d'appoint : son échec ne doit jamais perdre le relevé (repli sur l'offre prévue)
+            logger.exception("Écarts avec le train suivant non mesurés pour %s", line_id)
+            ecarts = {}
+        sautes: dict[str, list[tuple[str, str]]] = defaultdict(list)   # uid-ref → [(gare, heure prévue ISO)]
+        precedent = _releves_precedents.get(line_id)
+        try:
+            if precedent and obs_dt - precedent[0] <= ECART_MAX_RELEVES:
+                for ref, numero, prevu in arrets_sautes(precedent[1], trains):
+                    gare = nom_arret(numero) or numero
+                    sautes[ref].append((gare, prevu.isoformat()))
+                    logger.info("Arrêt sauté probable : %s %s %s (prévu %s)", line_id, ref, gare,
+                                prevu.astimezone(PARIS_TZ).strftime("%H:%M"))
+            _releves_precedents[line_id] = (obs_dt, resume_releve(trains))
+        except Exception:
+            # Observation seulement : jamais au prix du relevé
+            logger.exception("Détection des arrêts sautés impossible pour %s", line_id)
+        for j in trains:
+            # suivi=True : un train sans retard dans la fenêtre est gardé pour mettre à jour ses arrêts s'il est
+            # déjà en base (retard rattrapé : l'arrêt mesuré plus tôt reçoit sa dernière mesure)
+            obs = analyser_train(j, obs_dt, nom_arret, attentes, ecarts, suivi=True)
+            if obs is None:
+                continue
+            if obs["fantome"]:
+                ghosts += 1
+                logger.warning("Train fantôme écarté : %s %s", line_id, obs["uid"])
+                continue
+            obs["sautes"] = sautes.get(_valeur(j.get("DatedVehicleJourneyRef")) or "", [])
+            observations[obs["uid"]] = (line_id, obs)
 
     nb_supprimes = sum(1 for _, o in observations.values() if o["supprime"])
+    nb_retards = sum(1 for _, o in observations.values() if not o["supprime"] and o["retard"] > 0)
     logger.info("Fetched %d RT delays, %d cancelled trains from PRIM (%d trains fantômes écartés)",
-                len(observations) - nb_supprimes, nb_supprimes, ghosts)
+                nb_retards, nb_supprimes, ghosts)
     _journaliser_quota()
 
     now = datetime.now(timezone.utc)
@@ -653,8 +710,16 @@ async def collect_rt_delays() -> None:
             )
             anciens = {nid: arr for nid, arr in rows.all()}
 
+        suivis = 0
         for uid, (line_id, o) in observations.items():
             arrets = marquer_sautes(fusionner_arrets(anciens.get(uid), o["arrets"]), o.get("sautes", []))
+            if not o["supprime"] and o["retard"] <= 0:
+                # Aucun retard dans la fenêtre : seulement la mise à jour des arrêts d'un train déjà en base
+                if uid in anciens:
+                    await session.execute(update(Incident).where(Incident.navitia_id == uid).values(
+                        arrets=arrets, direction=o["direction"], mission=o["mission"], updated_at=now))
+                    suivis += 1
+                continue
             if o["supprime"]:
                 cause = f"Train supprimé à partir de {o['gare']}" if o["gare"] else "Train supprimé"
                 duree, type_incident = cancel_impact, "CANCELLED"
@@ -703,4 +768,5 @@ async def collect_rt_delays() -> None:
 
         await session.commit()
 
-    logger.info("Upserted %d RT incidents (%d cancelled)", len(observations), nb_supprimes)
+    logger.info("Upserted %d RT incidents (%d cancelled), %d trains déjà en base mis à jour sans retard",
+                nb_retards + nb_supprimes, nb_supprimes, suivis)
