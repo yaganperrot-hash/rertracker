@@ -100,3 +100,22 @@ class TestReference:
         assert ref["retard_min_minutes"] == MIN_DELAY_MINUTES
         assert ref["suppression_minutes"] == s.cancel_default_impact_minutes
         assert ref["fantome_min_minutes"] == GHOST_MIN_DELAY_MINUTES
+
+
+class TestMonTrajet:
+    async def test_gares_de_la_ligne(self):
+        from backend.api import trajet_gares
+        r = await trajet_gares(ligne="RER_C")
+        assert "Choisy-le-Roi" in r["gares"] and "Ivry-sur-Seine" in r["gares"]
+
+    async def test_ligne_inconnue(self):
+        import pytest
+        from fastapi import HTTPException
+        from backend.api import trajet, trajet_gares
+        with pytest.raises(HTTPException) as e:
+            await trajet_gares(ligne="METRO_1")
+        assert e.value.status_code == 404
+        with pytest.raises(HTTPException) as e:
+            await trajet(db=None, ligne="RER_C", depart="Nulle part", arrivee="Ivry-sur-Seine", heure="08:10",
+                         jours="1", periode=7)
+        assert e.value.status_code == 422

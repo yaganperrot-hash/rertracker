@@ -18,6 +18,7 @@ from backend.collector import (
     collect_disruptions, collect_rt_delays,
 )
 from backend.causes import categoriser_cause, resume_perturbation, texte_lisible
+from backend import trajets
 
 router = APIRouter(prefix="/api")
 
@@ -154,6 +155,36 @@ async def incidents_history(
     now = datetime.now(timezone.utc)
     smic = get_settings().smic_horaire
     return [_serialize_incident(r, now, smic) for r in rows]
+
+
+@router.get("/trajet/gares")
+async def trajet_gares(ligne: str = Query(...)):
+    """Gares proposées pour « Mon trajet » (horaires GTFS de la ligne)."""
+    if ligne not in LIGNES_CIBLES.values():
+        raise HTTPException(status_code=404, detail="ligne inconnue")
+    return {"ligne": ligne, "gares": trajets.gares_ligne(ligne)}
+
+
+@router.get("/trajet")
+async def trajet(
+    db: DbDep,
+    ligne: str = Query(...),
+    depart: str = Query(...),
+    arrivee: str = Query(...),
+    heure: str = Query(..., pattern=r"^\d{1,2}:\d{2}$"),
+    jours: str = Query(default="1,2,3,4,5", pattern=r"^[1-7](,[1-7])*$"),
+    periode: int = Query(default=30, ge=1, le=trajets.PERIODE_MAX_JOURS),
+):
+    """« Mon trajet » (bêta, aller simple) : temps et argent perdus jour par jour. Voir backend/trajets.py."""
+    if ligne not in LIGNES_CIBLES.values():
+        raise HTTPException(status_code=404, detail="ligne inconnue")
+    gares = trajets.gares_ligne(ligne)
+    if depart not in gares or arrivee not in gares or depart == arrivee:
+        raise HTTPException(status_code=422, detail="gares inconnues sur cette ligne")
+    try:
+        return await trajets.calculer(db, ligne, depart, arrivee, heure, {int(j) for j in jours.split(",")}, periode)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="heure invalide")
 
 
 @router.post("/admin/collect")

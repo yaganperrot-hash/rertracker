@@ -643,6 +643,10 @@ purge au-delà de 3 jours, aucune requête PRIM en plus.
 - **B — Arrêts sautés invisibles** : le flux semble retirer un arrêt sauté au lieu de le marquer `CANCELLED` ;
   `fusionner_arrets` le garde alors comme desservi. Indice : ZANI 7 h 58 et GOTA 8 h 02 (RER C, 17/09) mis à jour
   aux Ardoines et à BFM au relevé de 8 h 09, pas à Vitry ni Ivry. Non confirmé.
+  Le flux retire les arrêts passés dans l'ordre du parcours : la valeur d'un arrêt ne peut pas être plus ancienne que
+  celle d'un arrêt précédent, sauf s'il a quitté le flux plus tôt. Le GOTA (+11 à Choisy, +2 à Ivry) arriverait
+  avant d'être parti : « Mon trajet » écarte ces trains incohérents et signale le jour.
+  Détection en observation depuis le 17/09 vers 11 h (`arrets[].k`, logs « Arrêt sauté probable »).
 - **C — Passé visible** : sur un seul flux (RER C, 8 h 58), un arrêt disparaît ~3 min après le passage (max 27),
   pas ~50 min comme l'écrivent `lessons.md` et `arrets_du_train`. `attentes_mesurees` (arrêts supprimés) a le même
   angle mort que celui corrigé pour l'écart : un train suivant déjà passé au relevé est invisible.

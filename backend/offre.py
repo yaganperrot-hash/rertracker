@@ -34,6 +34,7 @@ route_id GTFS = ligne PRIM sans « line: », trip_id GTFS = vehicle_journey PRIM
 « vehicle_journey: », trip_headsign = code mission, stop_name = nom de gare PRIM.
 """
 import csv
+import gzip
 import io
 import json
 import statistics
@@ -384,6 +385,104 @@ def agreger(chemin_zip: Path | str) -> dict:
     return contenu
 
 
+# ─────────────────────────── Horaires train par train (« Mon trajet ») ───────────────────────────
+
+CHEMIN_HORAIRES = Path(__file__).parent.parent / "data" / "horaires.json.gz"
+
+
+def _minutes(hhmmss: str) -> int:
+    """« 25:10:00 » → 1510 : minutes depuis minuit du jour de service (au-delà de 24 h, service de la veille)."""
+    h, m, _ = hhmmss.split(":")
+    return int(h) * 60 + int(m)
+
+
+def horaires(chemin_zip: Path | str) -> dict:
+    """Passage prévu de chaque train des lignes suivies à chaque gare, et ses dates de circulation.
+
+    {"_source", "debut": date ISO, "services": [[décalages en jours depuis debut]],
+     "lignes": {ligne: {"gares": [noms], "trains": [[trip_id, mission, n° de service, [gare, minutes, …]]]}}}
+    trip_id GTFS = identifiant du train dans les incidents (« rt_vehicle_journey:<trip_id>_AAAAMMJJ »).
+    Deux arrêts consécutifs de la même gare (quais différents) n'en font qu'un, le premier.
+    """
+    with zipfile.ZipFile(chemin_zip) as z:
+        jours = jours_actifs(z)
+        trains = trains_des_lignes(z)
+        gares = arrets(z)
+        parcours = dessertes(z, set(trains))
+
+    services_utiles = {t["service"] for tid, t in trains.items() if tid in parcours and jours.get(t["service"])}
+    if not services_utiles:
+        raise RuntimeError("aucun train des lignes suivies dans le GTFS")
+    debut = min(min(jours[sv]) for sv in services_utiles)
+    fin = max(max(jours[sv]) for sv in services_utiles)
+    index_service: dict[str, int] = {}
+    services: list[list[int]] = []
+    lignes: dict[str, dict] = {}
+    index_gare: dict[str, dict[str, int]] = defaultdict(dict)
+    for trip_id in sorted(trains):
+        t, desserte = trains[trip_id], parcours.get(trip_id)
+        if not desserte or t["service"] not in services_utiles:
+            continue
+        if t["service"] not in index_service:
+            index_service[t["service"]] = len(services)
+            services.append(sorted((d - debut).days for d in jours[t["service"]]))
+        ligne = lignes.setdefault(t["ligne"], {"gares": [], "trains": []})
+        passages: list[int] = []
+        precedente = None
+        for _, depart, stop_id in desserte:
+            nom = gares.get(stop_id, (stop_id, stop_id))[1]
+            if nom == precedente:
+                continue
+            precedente = nom
+            if nom not in index_gare[t["ligne"]]:
+                index_gare[t["ligne"]][nom] = len(ligne["gares"])
+                ligne["gares"].append(nom)
+            passages += [index_gare[t["ligne"]][nom], _minutes(depart)]
+        ligne["trains"].append([trip_id, t["mission"], index_service[t["service"]], passages])
+
+    return {
+        "_source": {"portail": "data.iledefrance-mobilites.fr", "jeu": DS_GTFS,
+                    "genere_le": date.today().isoformat(), "fenetre": [debut.isoformat(), fin.isoformat()]},
+        "debut": debut.isoformat(),
+        "services": services,
+        "lignes": dict(sorted(lignes.items())),
+    }
+
+
+_cache_horaires: dict | None = None
+
+
+def charger_horaires() -> dict:
+    """Contenu de data/horaires.json.gz, lu une seule fois ({} si absent ou illisible)."""
+    global _cache_horaires
+    if _cache_horaires is None:
+        try:
+            _cache_horaires = json.loads(gzip.decompress(CHEMIN_HORAIRES.read_bytes()).decode("utf-8"))
+        except Exception:
+            _cache_horaires = {}
+    return _cache_horaires
+
+
+def build_horaires() -> None:
+    """N'écrit que data/horaires.json.gz : offre_theorique.json (et donc le calcul) n'est pas touché."""
+    with tempfile.TemporaryDirectory() as dossier:
+        chemin_zip = Path(dossier) / "gtfs.zip"
+        print("Téléchargement du GTFS IDFM…", flush=True)
+        telecharger(chemin_zip)
+        print("Horaires train par train…", flush=True)
+        contenu = horaires(chemin_zip)
+    brut = json.dumps(contenu, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    # mtime=0 : même contenu, même fichier (pas de diff git parasite)
+    CHEMIN_HORAIRES.write_bytes(gzip.compress(brut, mtime=0))
+    global _cache_horaires
+    _cache_horaires = None
+    src = contenu["_source"]
+    print(f"Fenêtre {src['fenetre'][0]} → {src['fenetre'][1]} · {len(contenu['services'])} services")
+    for ligne, c in contenu["lignes"].items():
+        print(f"    {ligne:14} {len(c['trains']):6d} trains · {len(c['gares']):3d} gares")
+    print(f"\n{CHEMIN_HORAIRES} écrit ({CHEMIN_HORAIRES.stat().st_size / 1e6:.1f} Mo)")
+
+
 def telecharger(destination: Path) -> None:
     with httpx.stream("GET", GTFS_URL, follow_redirects=True, timeout=600.0) as r:
         r.raise_for_status()
@@ -418,8 +517,10 @@ def build() -> None:
 def main() -> None:
     if len(sys.argv) >= 2 and sys.argv[1] == "build":
         build()
+    elif len(sys.argv) >= 2 and sys.argv[1] == "horaires":
+        build_horaires()
     else:
-        print("usage : python -m backend.offre build")
+        print("usage : python -m backend.offre build | horaires")
 
 
 if __name__ == "__main__":

@@ -1,12 +1,23 @@
 # TODO — Compteur de Retards IDF
 
 ## En cours
-- [ ] **Lot 6 « mesure plutôt qu'estimation » — recalcul à faire** (code livré le 2026-09-16) : serveur arrêté,
-  `python -m backend.recalcul`, puis relancer le serveur (nouvelle collecte Estimated Timetable, colonne `arrets`).
-  Vérifier dans les logs du premier relevé : « Couverture … », les deux lignes « Quota PRIM restant » (Navitia ne doit
-  perdre que 2 req/relevé).
-- [ ] **PC Windows** : `git pull`, serveur arrêté, `python -m backend.recalcul` (la colonne `arrets` est ajoutée au
-  premier démarrage du serveur ; lancer le serveur une fois avant le recalcul, ou l'inverse — le recalcul n'en a pas besoin).
+- [ ] **Fiabilité du calcul (2026-09-17)** — voir `.claude/DEBUG.md`, session du 17/09 :
+  - [x] Plafond remplacé par l'écart mesuré avec le train suivant, par destination (bug 35) ; historique recalculé sur le Mac
+  - [x] Réponses brutes du flux archivées dans `logs/flux_brut/` (3 jours)
+  - [ ] **B — arrêts sautés** : détection en observation depuis le 17/09 (`"k": true`, logs « Arrêt sauté probable »).
+    Valider sur les archives (`logs/flux_brut/`) et sur des trajets réels notés (heure du quai, mission affichée,
+    heure d'arrivée), puis compter les arrêts sautés dans `metrics.py` et dans « Mon trajet ».
+    Piste : garder l'heure du relevé de chaque mesure d'arrêt, pour savoir laquelle est périmée
+  - [ ] **C — passé visible** : ~3 min et non ~50 min (un seul flux observé) ; corriger `lessons.md` et
+    `arrets_du_train`, fermer l'angle mort de `attentes_mesurees` (train suivant déjà passé au relevé)
+  - [ ] **D — trains absents du flux** (coupures) : comparer aux horaires GTFS ; vérifier la ligne K, vide après 10 h le 17/09
+  - [ ] **E — train partiellement supprimé** redevenu « non supprimé » (compteur de suppressions)
+  - [ ] **Revoir les requêtes API et les quotas** : coût réel par relevé (Navitia, Estimated Timetable), relevés perdus
+    (9 h 33 le 17/09 : 15 requêtes sans écriture), requêtes manuelles, marge restante, fréquence de relevé
+- [ ] **« Mon trajet » (bêta, aller simple, 2026-09-17)** — suite : aller-retour, correspondances entre lignes,
+  garder les horaires passés quand le GTFS est reconstruit (`data/horaires.json.gz` ne couvre que sa fenêtre de 30 jours)
+- [ ] **PC Windows** : `git pull`, serveur arrêté, `python -m backend.recalcul` (plafond remplacé le 17/09)
+- [ ] **Mac** : importer `transferts/incidents-2026-09-15.json` et `-16.json` (serveur arrêté), puis recalcul
 - [ ] Lot 5 (valeur du temps) : décidé le 2026-09-16 de garder le SMIC seul — TASK-29/30 abandonnées.
 
 ## À faire
@@ -20,6 +31,7 @@
   couvre que 30 jours ; les jours de vacances y reprennent l'offre hors vacances tant qu'aucun n'est dans la fenêtre ;
   les comptages SNCF sont mis à jour par campagne) : `python -m backend.offre build`,
   `python -m backend.frequentation build`, puis `python -m backend.recalcul` sur chaque PC.
+  Avec eux, `python -m backend.offre horaires` (« Mon trajet », fenêtre GTFS actuelle : 14/09 → 16/10).
 - [ ] Surveiller `data/frequentation_gares.json` → `perdus` et `origine` « inconnue » après chaque build (gare renommée
   dans le GTFS ou les comptages).
 - [ ] Valider la maquette `frontend/carte.html`, puis reprendre le plan X/Instagram :

@@ -181,6 +181,11 @@ async def ancienne_page_stats():
     return RedirectResponse("/statistiques", status_code=301)
 
 
+@app.get("/mon-trajet", include_in_schema=False)
+async def page_mon_trajet():
+    return FileResponse(frontend_dir / "mon-trajet.html")
+
+
 @app.get("/temps-reel", include_in_schema=False)
 async def page_temps_reel():
     return FileResponse(frontend_dir / "temps-reel.html")

@@ -35,6 +35,8 @@ sur les lignes RER et Transilien d'Île-de-France.
   `python -m backend.profils build` (profils horaires, vacances) → `python -m backend.offre build` (GTFS : départs
   par gare, missions, noms d'arrêts) → `python -m backend.frequentation build` (comptages SNCF + validations IDFM :
   voyageurs montant dans un train par gare et heure), puis `python -m backend.recalcul`.
+  `python -m backend.offre horaires` (indépendant, sans recalcul) : `data/horaires.json.gz`, passage de chaque train à
+  chaque gare, lu par « Mon trajet » (`backend/trajets.py`).
   `data/frequentation.json` n'est plus utilisé par le calcul.
 
 ---

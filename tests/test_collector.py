@@ -22,7 +22,10 @@ from backend.collector import (
     analyser_train,
     attentes_mesurees,
     archiver_flux,
+    arrets_sautes,
     couverture_releve,
+    marquer_sautes,
+    resume_releve,
     ecarts_train_suivant,
     fusionner_arrets,
     trains_du_flux,
@@ -545,6 +548,39 @@ class TestFusionArrets:
         assert (fusion[0]["r"], fusion[0]["w"]) == (5, 12)
 
 
+class TestArretsSautes:
+    """Soupçon B (17/09) : arrêt retiré du flux alors que le train n'y est pas encore passé."""
+
+    def test_cas_du_zani_de_7h58(self):
+        # 8 h 09 : Les Ardoines (1) et BFM (4) mis à jour, Vitry (2) et Ivry (3) absents
+        avant = _train(1, [_appel(1, 1, retard=3), _appel(2, 4, retard=3), _appel(3, 6, retard=3),
+                           _appel(4, 9, retard=3, terminus=True)])
+        apres = _train(1, [_appel(1, 1, retard=10), _appel(4, 9, retard=10, terminus=True)])
+        ref = avant["DatedVehicleJourneyRef"]["value"]
+        sautes = arrets_sautes(resume_releve([avant]), [apres])
+        assert [(r, n) for r, n, _ in sautes] == [(ref, "2"), (ref, "3")]
+
+    def test_arrets_passes_sortis_du_flux_ne_sont_pas_sautes(self):
+        avant = _train(1, [_appel(1, 1), _appel(2, 4), _appel(3, 6, terminus=True)])
+        apres = _train(1, [_appel(3, 6, terminus=True)])
+        assert arrets_sautes(resume_releve([avant]), [apres]) == []
+
+    def test_arret_deja_supprime_ou_train_sorti_du_flux(self):
+        avant = _train(1, [_appel(1, 1), _appel(2, 4, statut="CANCELLED"), _appel(3, 6, terminus=True)])
+        apres = _train(1, [_appel(1, 1), _appel(3, 6, terminus=True)])
+        assert arrets_sautes(resume_releve([avant]), [apres]) == []
+        assert arrets_sautes(resume_releve([avant]), []) == []
+
+    def test_marquage_sur_les_arrets_connus(self):
+        arrets = [{"g": "A", "p": "1", "r": 3}, {"g": "B", "p": "2", "r": 3}]
+        assert marquer_sautes(arrets, [("B", "2"), ("Z", "9")]) == [{"g": "A", "p": "1", "r": 3},
+                                                                    {"g": "B", "p": "2", "r": 3, "k": True}]
+
+    def test_marque_perdue_si_l_arret_revient(self):
+        anciens = [{"g": "B", "p": "2", "r": 3, "k": True}]
+        assert "k" not in fusionner_arrets(anciens, [{"g": "B", "p": "2", "r": 4, "s": False, "w": None}])[0]
+
+
 class TestArchiveFlux:
     def test_reponse_brute_gzippee_par_jour(self, tmp_path):
         import gzip
@@ -653,6 +689,21 @@ class TestCollectRtDelays:
         params = inserts[-1].compile(dialect=postgresql.dialect()).params
         assert params["duree_minutes"] == 6
         assert all(a["a"] is None for a in params["arrets"])
+
+    async def test_arret_saute_marque_au_releve_suivant(self, monkeypatch):
+        from sqlalchemy.dialects import postgresql
+
+        monkeypatch.setattr(collector, "_releves_precedents", {})
+        avant = _train(1, [_appel(1, 1, retard=3), _appel(2, 4, retard=3), _appel(3, 9, retard=3, terminus=True)])
+        apres = _train(1, [_appel(1, 1, retard=5), _appel(3, 9, retard=5, terminus=True)])
+        await self._executer(_flux(avant))
+        uid = "rt_vehicle_journey:IDFM:TN:SNCF:00000000-0000-0000-0000-000000000001_20260917"
+        connus = [{"g": "Gare Un", "p": _iso(1).replace("Z", "+00:00"), "r": 3, "s": False, "w": None},
+                  {"g": "Gare Deux", "p": _iso(4).replace("Z", "+00:00"), "r": 3, "s": False, "w": None}]
+        _, inserts = await self._executer(_flux(apres), anciens=[(uid, connus)])
+        params = inserts[-1].compile(dialect=postgresql.dialect()).params
+        assert [(a["g"], a.get("k")) for a in params["arrets"]] == [("Gare Un", None), ("Gare Deux", True),
+                                                                    ("Gare Trois", None)]
 
     async def test_chaque_reponse_archivee(self):
         with patch.object(collector, "archiver_flux") as archive:

@@ -474,6 +474,48 @@ def fusionner_arrets(anciens: list | None, nouveaux: list) -> list:
     return sorted(par_cle.values(), key=lambda a: a.get("p") or "")
 
 
+# Relevé précédent de chaque ligne, en mémoire : line_id → (instant, {uid-ref: [(numéro, heure prévue, supprimé)]})
+_releves_precedents: dict[str, tuple[datetime, dict[str, list[tuple[str | None, datetime, bool]]]]] = {}
+ECART_MAX_RELEVES = timedelta(minutes=45)   # au-delà (nuit, serveur arrêté), pas de comparaison
+
+
+def resume_releve(trains: list[dict]) -> dict[str, list[tuple[str | None, datetime, bool]]]:
+    """Ce qu'il faut garder d'un relevé pour le comparer au suivant : arrêts de chaque train."""
+    return {ref: [(a["numero"], a["prevu"], a["supprime"]) for a in _appels(j)]
+            for j in trains if (ref := _valeur(j.get("DatedVehicleJourneyRef")))}
+
+
+def arrets_sautes(precedent: dict[str, list[tuple[str | None, datetime, bool]]],
+                  trains: list[dict]) -> list[tuple[str, str, datetime]]:
+    """Arrêts sautés probables (soupçon B, en observation) : (uid-ref, numéro d'arrêt, heure prévue).
+
+    Un arrêt desservi au relevé précédent qui disparaît du flux alors qu'un arrêt prévu AVANT lui sur le même train
+    est encore visible : le train n'y est pas encore passé (le flux retire les arrêts dans l'ordre du parcours),
+    l'arrêt a été retiré de sa desserte. Un train sorti du flux n'est pas comparé.
+    """
+    sautes = []
+    for j in trains:
+        ref = _valeur(j.get("DatedVehicleJourneyRef"))
+        if not ref or ref not in precedent:
+            continue
+        appels = _appels(j)
+        visibles = {a["numero"] for a in appels}
+        if not appels:
+            continue
+        premier_visible = appels[0]["prevu"]
+        for numero, prevu, supprime in precedent[ref]:
+            if numero and not supprime and numero not in visibles and prevu > premier_visible:
+                sautes.append((ref, numero, prevu))
+    return sautes
+
+
+def marquer_sautes(arrets: list, sautes: list[tuple[str, str]]) -> list:
+    """« k » : arrêt sauté probable, sur les arrêts déjà connus du train (clé gare + heure prévue). En observation :
+    le calcul ne le lit pas encore, et un arrêt absent de `arrets` n'y est pas ajouté."""
+    cles = set(sautes)
+    return [{**a, "k": True} if (a.get("g"), a.get("p")) in cles else a for a in arrets]
+
+
 def couverture_releve(trains: list[dict]) -> dict:
     """Ce qu'un relevé a vu : trains distincts, arrêts et plage des heures prévues (UTC)."""
     ids: set[str] = set()
@@ -570,6 +612,19 @@ async def collect_rt_delays() -> None:
                 # Mesure d'appoint : son échec ne doit jamais perdre le relevé (repli sur l'offre prévue)
                 logger.exception("Écarts avec le train suivant non mesurés pour %s", line_id)
                 ecarts = {}
+            sautes: dict[str, list[tuple[str, str]]] = defaultdict(list)   # uid-ref → [(gare, heure prévue ISO)]
+            precedent = _releves_precedents.get(line_id)
+            try:
+                if precedent and obs_dt - precedent[0] <= ECART_MAX_RELEVES:
+                    for ref, numero, prevu in arrets_sautes(precedent[1], trains):
+                        gare = nom_arret(numero) or numero
+                        sautes[ref].append((gare, prevu.isoformat()))
+                        logger.info("Arrêt sauté probable : %s %s %s (prévu %s)", line_id, ref, gare,
+                                    prevu.astimezone(PARIS_TZ).strftime("%H:%M"))
+                _releves_precedents[line_id] = (obs_dt, resume_releve(trains))
+            except Exception:
+                # Observation seulement : jamais au prix du relevé
+                logger.exception("Détection des arrêts sautés impossible pour %s", line_id)
             for j in trains:
                 obs = analyser_train(j, obs_dt, nom_arret, attentes, ecarts)
                 if obs is None:
@@ -578,6 +633,7 @@ async def collect_rt_delays() -> None:
                     ghosts += 1
                     logger.warning("Train fantôme écarté : %s %s", line_id, obs["uid"])
                     continue
+                obs["sautes"] = sautes.get(_valeur(j.get("DatedVehicleJourneyRef")) or "", [])
                 observations[obs["uid"]] = (line_id, obs)
 
     nb_supprimes = sum(1 for _, o in observations.values() if o["supprime"])
@@ -598,7 +654,7 @@ async def collect_rt_delays() -> None:
             anciens = {nid: arr for nid, arr in rows.all()}
 
         for uid, (line_id, o) in observations.items():
-            arrets = fusionner_arrets(anciens.get(uid), o["arrets"])
+            arrets = marquer_sautes(fusionner_arrets(anciens.get(uid), o["arrets"]), o.get("sautes", []))
             if o["supprime"]:
                 cause = f"Train supprimé à partir de {o['gare']}" if o["gare"] else "Train supprimé"
                 duree, type_incident = cancel_impact, "CANCELLED"
