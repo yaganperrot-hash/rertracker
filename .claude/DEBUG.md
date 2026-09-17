@@ -639,6 +639,36 @@ Effet : 15/09 ×1,58, 16/09 ×1,39, 17/09 ×1,41 par rapport au plafond par gare
 purge au-delà de 3 jours, aucune requête PRIM en plus.
 **Status** : ✅ En place
 
+### [2026-09-17] Bug 36 — Relevé perdu : tri impossible à égalité d'heure
+**Fichier(s)** : `backend/collector.py` (`ecarts_train_suivant`)
+**Symptôme** : « Error during startup collect » à 9 h 33, aucun incident écrit pour aucune ligne (15 requêtes perdues)
+**Cause** : `sorted` sur des tuples `(heure, dict)` : deux trains au même passage → comparaison de deux dict
+**Fix** : tri par l'heure seule ; la mesure d'écart est protégée par un `try/except` (repli sur l'offre prévue) ;
+test à égalité d'heure et test d'échec sans perte du relevé ; rejoué sur la réponse archivée du RER A
+**Status** : ✅ Résolu
+
+### [2026-09-17] Bug 37 — « Mon trajet » : jour du 16/09 compté « à l'heure » avant les mesures
+**Fichier(s)** : `backend/trajets.py`
+**Symptôme** : 16/09 à 8 h 10 affiché « aucun retard relevé »
+**Cause** : relevés arrêt par arrêt seulement depuis le 16/09 à 12 h 24 ; la couverture acceptait l'ancienne collecte
+**Fix** : trajet antérieur au premier relevé arrêt par arrêt → « hors mesure » ; couverture exigée sur `arrets`
+**Status** : ✅ Résolu
+
+### [2026-09-17] Bug 38 — « Mon trajet » : 0 min en retenant un train aux relevés périmés
+**Fichier(s)** : `backend/trajets.py`
+**Symptôme** : Choisy → Ivry 8 h 00 le 17/09 : 0 min (ZANI de 7 h 58 à +3 à Ivry, mais +10 aux Ardoines)
+**Cause** : seule la cohérence départ/arrivée était vérifiée ; la valeur d'Ivry datait d'un relevé antérieur
+**Fix** : `arrivee_perimee` — retard à l'arrivée plus faible qu'une gare précédente au-delà de 2 min + 10 % du trajet
+→ train écarté, jour signalé. Résultat : 16 min. Touche 0,9 % des arrêts relevés.
+**Status** : ✅ Résolu (heuristique, à confirmer avec B)
+
+### [2026-09-17] Page « Mon trajet » : menus des gares inutilisables en apparence
+**Fichier(s)** : `frontend/mon-trajet.html`
+**Symptôme** : impossible de choisir les gares ; aucune requête `/api/trajet/gares` dans les logs
+**Cause** : il fallait d'abord cliquer une ligne, mais les pastilles étaient estompées (air désactivé)
+**Fix** : pastilles pleines tant qu'aucune ligne n'est choisie, « Choisissez d'abord une ligne », étapes numérotées
+**Status** : ✅ Résolu
+
 ### [2026-09-17] Soupçons à vérifier sur les archives (non corrigés)
 - **B — Arrêts sautés invisibles** : le flux semble retirer un arrêt sauté au lieu de le marquer `CANCELLED` ;
   `fusionner_arrets` le garde alors comme desservi. Indice : ZANI 7 h 58 et GOTA 8 h 02 (RER C, 17/09) mis à jour

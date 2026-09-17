@@ -104,7 +104,8 @@
 ## Mesure plutôt qu'estimation (2026-09-16)
 - Un modèle « voyageurs par jour × part de l'heure » appliqué **par train** suppose sans le dire un train par minute :
   vérifier l'unité de chaque produit (voyageurs d'un train, pas d'une minute de ligne) en comparant à l'offre réelle.
-- Le flux SIRI Estimated Timetable de PRIM : arrêts **non triés** dans la réponse, ~50 min de passé visible,
+- Le flux SIRI Estimated Timetable de PRIM : arrêts **non triés** dans la réponse, passé visible très court
+  (~3 min après le passage sur un flux observé le 17/09, max 27 — et non ~50 min),
   statut `CANCELLED` par arrêt, `JourneyNote` = code mission, `DatedVehicleJourneyRef` contient l'uuid du trip GTFS,
   `STIF:StopArea:SP:<n>:` = `IDFM:monomodalStopPlace:<n>` du GTFS. Appel `LineRef=ALL` : 59 Mo, à éviter.
 - GTFS IDFM (117 Mo, 30 jours) : lire `stop_times.txt` en flux depuis le zip ; `route_id` = ligne PRIM sans `line:` ;
@@ -133,3 +134,17 @@
 - Changer la logique de calcul impose de recalculer l'historique **sur chaque PC** : les métriques
   dérivent des incidents bruts, mais chaque base a les siennes. Le JSON de profils est versionné, la
   base ne l'est pas.
+
+## Fiabilité et « Mon trajet » (2026-09-17)
+- Un arrêt garde en base la **dernière valeur vue avant de sortir du flux**. Le flux retire les arrêts dans l'ordre
+  du parcours : un arrêt moins en retard qu'une gare précédente (au-delà du rattrapage possible) porte une valeur
+  périmée — signature probable d'un arrêt sauté. Toujours vérifier la cohérence physique (arrivée ≥ départ + trajet).
+- Tester le calcul contre **un trajet réellement vécu** : un seul cas (4 min comptées, ~20 vécues) a révélé le
+  plafond faux, les arrêts sautés et les valeurs périmées. Noter heure du quai, mission affichée, heure d'arrivée.
+- `sorted` sur des tuples `(datetime, dict)` plante à égalité d'heure : trier avec `key=`. Un redémarrage perd aussi
+  la mémoire du relevé précédent (détection des arrêts sautés).
+- `trip_id` GTFS = train des incidents : `rt_vehicle_journey:<trip_id>_AAAAMMJJ` (98 % de correspondance).
+- Un fichier de données de quelques Mo fait échouer `git push` en HTTP 400 : `git -c http.postBuffer=524288000 push`.
+- Chrome headless ne descend pas sous 500 px de large : tester le mobile dans une iframe de 360/390 px, ou par le
+  protocole DevTools (`Emulation.setDeviceMetricsOverride`) ; pas de conclusion sur une capture rognée.
+- Une page qui attend un premier choix (ligne) ne doit pas afficher ce choix estompé : il a l'air désactivé.

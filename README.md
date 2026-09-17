@@ -97,6 +97,8 @@ docker-compose logs -f backend
 | GET | `/api/incidents/current` | Incidents ouverts en ce moment |
 | GET | `/api/incidents/history` | Historique (filtres : ligne, dates) |
 | GET | `/api/reference` | Paramètres de calcul (SMIC, relevés, quotas PRIM, fréquentation, offre, exemple calculé) |
+| GET | `/api/trajet/gares?ligne=RER_C` | Gares proposées pour « Mon trajet » |
+| GET | `/api/trajet?ligne=&depart=&arrivee=&heure=HH:MM&jours=1,2,3,4,5&periode=30` | « Mon trajet » : perte jour par jour (bêta) |
 | POST | `/api/admin/collect` | Déclencher une collecte manuelle |
 
 **Exemple `line_id`** : `RER_A`, `RER_B`, `TRANSILIEN_J`, etc.
@@ -165,7 +167,8 @@ Le serveur doit tourner à 20h00 (tolérance d'1 h en cas de retard du scheduler
 │   ├── collector.py       # Polling API PRIM (Estimated Timetable + perturbations Navitia)
 │   ├── metrics.py         # Calcul minutes-voyageurs (voyageur par voyageur)
 │   ├── profils.py         # Profils horaires depuis l'open data (build hors ligne) + jours types
-│   ├── offre.py           # Offre GTFS : départs par gare, intervalles, missions (build hors ligne)
+│   ├── offre.py           # Offre GTFS : départs par gare, intervalles, missions, horaires (build hors ligne)
+│   ├── trajets.py         # « Mon trajet » : perte jour par jour sur un trajet régulier (bêta)
 │   ├── frequentation.py   # Montées par train : comptages SNCF + validations IDFM (build hors ligne)
 │   ├── recalcul.py        # Reconstruction des métriques depuis les incidents bruts
 │   ├── bilans.py          # Génération JSON bilans
@@ -184,6 +187,7 @@ Le serveur doit tourner à 20h00 (tolérance d'1 h en cas de retard du scheduler
 │   ├── ligne.html         # Détail d'une ligne
 │   ├── temps-reel.html    # Vue temps réel
 │   ├── methode.html       # Page méthodologie
+│   ├── mon-trajet.html    # « Mon trajet » (bêta, aller simple)
 │   ├── carte.html         # Carte récap 1080×1080 (maquette réseaux sociaux)
 │   ├── bilan.css / .js    # Styles + logique bilans
 │   ├── nav.css            # Navigation unifiée
@@ -194,9 +198,11 @@ Le serveur doit tourner à 20h00 (tolérance d'1 h en cas de retard du scheduler
 ├── data/
 │   ├── frequentation.json      # Ancienne fréquentation par ligne (plus utilisée par le calcul)
 │   ├── frequentation_gares.json # Montées dans un train par ligne, gare, jour type et heure
+│   ├── horaires.json.gz        # Passage prévu de chaque train à chaque gare (« Mon trajet »)
 │   ├── offre_theorique.json    # Offre GTFS : départs par gare, intervalles, missions, noms d'arrêts
 │   └── profils_horaires.json   # Profils horaires par réseau et jour type + vacances scolaires
 ├── docs/maquettes/        # Maquettes de référence
+├── logs/                  # uvicorn.log ; flux_brut/ : réponses PRIM brutes, 3 jours (gitignored)
 ├── publications/          # Récaps quotidiens (AAAA-MM-JJ.txt)
 ├── tests/                 # pytest (test_*.py)
 ├── transferts/            # Exports JSON incidents inter-PC

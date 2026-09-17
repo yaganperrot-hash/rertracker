@@ -105,6 +105,9 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb reta
 - Identifiants PRIM : les vérifier sur l'API (`pt_objects?q=…&type[]=line`, mode « RER » / « Train Transilien »),
   jamais les recopier — les lignes « Remplacement … » (bus) portent la même lettre.
 - Collecte PRIM : une réponse HTTP 200 vide est une panne — chaque appel loggue un warning quand il ne renvoie rien.
+- Collecte PRIM : toute mesure ajoutée au relevé est protégée par un `try/except` avec repli — elle ne doit jamais
+  faire perdre le relevé (le 2026-09-17, un tri a fait perdre toutes les lignes). Chaque redémarrage du serveur
+  lance un relevé (15 requêtes) : redémarrer le moins possible.
 - Tout invariant énoncé dans la doc ou un commentaire (somme de poids, borne, plafond) doit être couvert
   par un test : sinon il devient faux en silence — les poids horaires ont annoncé « somme=18.0 » pendant
   une semaine en valant 19.2, majorant tous les chiffres de 6,7 %.
