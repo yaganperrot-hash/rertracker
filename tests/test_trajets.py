@@ -111,6 +111,19 @@ class TestPerteDuJour:
         r = perte_du_jour(_trains(), {uid: inc}, _hm(8, 10))
         assert (r["pris"]["mission"], r["perte_min"], r["saute"]) == ("GOTA", 4, True)
 
+    def test_arrivee_perimee_apres_une_gare_plus_en_retard(self, horaires):
+        # Cas du ZANI de 7 h 58 (17/09) : +3 au départ et à l'arrivée, mais +10 à une gare entre les deux
+        # (A 8 h 13, X 8 h 17, B 8 h 21) : 7 min rattrapées en 4 min, impossible → arrivée périmée
+        uid, inc = _incident(1, [_arret("A", 8, 13, 3), _arret("X", 8, 17, 10), _arret("B", 8, 21, 3)])
+        r = perte_du_jour(_trains(), {uid: inc}, _hm(8, 10))
+        assert (r["pris"]["mission"], r["perte_min"], r["saute"]) == ("GOTA", 4, True)
+
+    def test_rattrapage_plausible_garde(self, horaires):
+        # 2 min rattrapées sur 8 min de trajet : dans la marge (2 min + 10 % × 8 min = 2,8 min) → train gardé
+        uid, inc = _incident(1, [_arret("A", 8, 13, 6), _arret("B", 8, 21, 4)])
+        r = perte_du_jour(_trains(), {uid: inc}, _hm(8, 10))
+        assert (r["pris"]["mission"], r["perte_min"], r["saute"]) == ("ZANI", 4, False)
+
     def test_arret_saute_signale_sans_changer_le_calcul(self, horaires):
         uid, inc = _incident(1, [_arret("A", 8, 13, 4), _arret("B", 8, 21, 4, k=True)])
         r = perte_du_jour(_trains(), {uid: inc}, _hm(8, 10))

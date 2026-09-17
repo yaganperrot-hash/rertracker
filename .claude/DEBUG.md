@@ -645,7 +645,10 @@ purge au-delà de 3 jours, aucune requête PRIM en plus.
   aux Ardoines et à BFM au relevé de 8 h 09, pas à Vitry ni Ivry. Non confirmé.
   Le flux retire les arrêts passés dans l'ordre du parcours : la valeur d'un arrêt ne peut pas être plus ancienne que
   celle d'un arrêt précédent, sauf s'il a quitté le flux plus tôt. Le GOTA (+11 à Choisy, +2 à Ivry) arriverait
-  avant d'être parti : « Mon trajet » écarte ces trains incohérents et signale le jour.
+  avant d'être parti : « Mon trajet » écarte ces trains incohérents et signale le jour. Règle étendue le 17/09 :
+  retard à l'arrivée plus faible que celui d'une gare précédente au-delà de 2 min + 10 % du trajet → arrivée périmée
+  (cas du ZANI de 7 h 58). Sur la base au 17/09 : 134 arrêts sur 14 585 (0,9 %), 113 trains en retard sur 1 400
+  (RER C 35/236) — ordre de grandeur du soupçon B, à confirmer sur les archives.
   Détection en observation depuis le 17/09 vers 11 h (`arrets[].k`, logs « Arrêt sauté probable »).
 - **C — Passé visible** : sur un seul flux (RER C, 8 h 58), un arrêt disparaît ~3 min après le passage (max 27),
   pas ~50 min comme l'écrivent `lessons.md` et `arrets_du_train`. `attentes_mesurees` (arrêts supprimés) a le même

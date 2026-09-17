@@ -353,10 +353,17 @@
     $('total-eur').textContent = eur(r.total_eur);
     $('total-min').textContent = formatDuree(r.total_min) + ' ' + accordPerdu(r.total_min);
     const signales = r.jours.filter(j => j.arret_saute_probable).length;
+    const depuis = r.mesure_depuis
+      ? new Date(r.mesure_depuis + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+      : null;
+    const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
     $('total-note').textContent =
-      `Sur ${r.jours_comptes} jour${r.jours_comptes > 1 ? 's' : ''} comptés, dont ${r.jours_en_retard} avec du retard, ` +
-      `au SMIC horaire brut (${r.smic_horaire.toLocaleString('fr-FR')} €/h).` +
-      (signales ? ` ${signales} jour${signales > 1 ? 's' : ''} avec un arrêt sauté probable : perte sans doute plus élevée.` : '');
+      (r.jours_comptes
+        ? `Mesuré sur ${pluriel(r.jours_comptes, 'jour')} seulement, dont ${r.jours_en_retard} avec du retard`
+        : 'Aucun jour mesuré sur cette période') +
+      (depuis ? ` : les relevés arrêt par arrêt n'existent que depuis le ${depuis}. ` : '. ') +
+      `Coût au SMIC horaire brut (${r.smic_horaire.toLocaleString('fr-FR')} €/h).` +
+      (signales ? ` ${pluriel(signales, 'jour')} avec un arrêt sauté probable : perte sans doute plus élevée.` : '');
 
     const tbody = $('jours-detail');
     tbody.replaceChildren();

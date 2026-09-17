@@ -35,6 +35,7 @@ MARGE_RELEVE = timedelta(minutes=30)   # un relevé à moins de 30 min du passag
 # Un train ne rattrape pas plus que cela sur le trajet : au-delà, l'arrivée relevée est une valeur périmée,
 # laissée en base par un arrêt sorti du flux avant les précédents — signature d'un arrêt sauté (soupçon B)
 RATTRAPAGE_MAX = timedelta(minutes=2)
+RATTRAPAGE_PART = 0.10   # … plus 10 % du temps de trajet prévu entre deux gares
 PERIODE_MAX_JOURS = 60
 
 _UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
@@ -106,11 +107,33 @@ def _arret(arrets: list[dict], gare: str, prevu: datetime) -> dict:
     return {"reel": prevu + timedelta(minutes=retard), "supprime": False, "saute": False}
 
 
+def arrivee_perimee(arrets: list[dict], depart_prevu: datetime, gare_arrivee: str, arrivee_prevue: datetime) -> bool:
+    """Le retard relevé à l'arrivée est-il plus faible que celui d'une gare précédente du trajet (départ compris),
+    au-delà de ce qu'un train peut rattraper (RATTRAPAGE_MAX + RATTRAPAGE_PART du temps prévu entre les deux) ?
+    Alors la valeur d'arrivée est périmée : l'arrêt a quitté le flux avant les précédents (arrêt sauté probable)."""
+    arrivees = [a for a in arrets if a.get("g") == gare_arrivee and a.get("p") and a.get("r") is not None]
+    if not arrivees:
+        return False
+    arr = min(arrivees, key=lambda a: abs(datetime.fromisoformat(a["p"]) - arrivee_prevue))
+    p_arr = datetime.fromisoformat(arr["p"])
+    for a in arrets:
+        if not a.get("p") or a.get("r") is None or a.get("s"):
+            continue
+        p = datetime.fromisoformat(a["p"])
+        if not (depart_prevu - timedelta(minutes=1) <= p < p_arr):
+            continue
+        marge = RATTRAPAGE_MAX + (p_arr - p) * RATTRAPAGE_PART
+        if timedelta(minutes=a["r"] - arr["r"]) > marge:
+            return True
+    return False
+
+
 def perte_du_jour(trains: list[dict], incidents: dict[str, Incident], heure: datetime) -> dict | None:
     """Train prévu, train pris et perte d'un jour. `trains` : trains_du_jour complétés de "uid", "gare_depart",
     "gare_arrivee" ; `incidents` : uid → Incident. None si aucun train prévu à partir de `heure`.
 
-    Un train dont l'arrivée relevée précède son départ relevé + trajet prévu − RATTRAPAGE_MAX est incohérent :
+    Un train dont l'arrivée relevée précède son départ relevé + trajet prévu − RATTRAPAGE_MAX, ou dont le retard à
+    l'arrivée est plus faible que celui d'une gare précédente au-delà du rattrapage possible, est incohérent :
     il n'est pas retenu et le jour est marqué « arrêt sauté probable », comme un arrêt marqué « k » au départ ou
     à l'arrivée d'un train que le voyageur aurait pu prendre (celui-ci reste retenu : soupçon B en observation).
     """
@@ -132,7 +155,8 @@ def perte_du_jour(trains: list[dict], incidents: dict[str, Incident], heure: dat
             arr = {"reel": t["arrivee"], "supprime": False, "saute": False}
         if dep["supprime"] or arr["supprime"] or dep["reel"] < heure:
             continue
-        incoherent = arr["reel"] < dep["reel"] + (t["arrivee"] - t["depart"]) - RATTRAPAGE_MAX
+        incoherent = arr["reel"] < dep["reel"] + (t["arrivee"] - t["depart"]) - RATTRAPAGE_MAX or \
+            (inc is not None and bool(inc.arrets) and arrivee_perimee(inc.arrets, t["depart"], t["gare_arrivee"], t["arrivee"]))
         if incoherent:
             signales.append(heure)   # départ relevé douteux lui aussi : toujours signalé
         elif dep["saute"] or arr["saute"]:
