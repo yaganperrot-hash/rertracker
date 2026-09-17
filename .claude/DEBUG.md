@@ -669,23 +669,16 @@ test à égalité d'heure et test d'échec sans perte du relevé ; rejoué sur l
 **Fix** : pastilles pleines tant qu'aucune ligne n'est choisie, « Choisissez d'abord une ligne », étapes numérotées
 **Status** : ✅ Résolu
 
-### [2026-09-17] Soupçons à vérifier sur les archives (non corrigés)
-- **B — Arrêts sautés invisibles** : le flux semble retirer un arrêt sauté au lieu de le marquer `CANCELLED` ;
-  `fusionner_arrets` le garde alors comme desservi. Indice : ZANI 7 h 58 et GOTA 8 h 02 (RER C, 17/09) mis à jour
-  aux Ardoines et à BFM au relevé de 8 h 09, pas à Vitry ni Ivry. Non confirmé.
-  Le flux retire les arrêts passés dans l'ordre du parcours : la valeur d'un arrêt ne peut pas être plus ancienne que
-  celle d'un arrêt précédent, sauf s'il a quitté le flux plus tôt. Le GOTA (+11 à Choisy, +2 à Ivry) arriverait
-  avant d'être parti : « Mon trajet » écarte ces trains incohérents et signale le jour. Règle étendue le 17/09 :
-  retard à l'arrivée plus faible que celui d'une gare précédente au-delà de 2 min + 10 % du trajet → arrivée périmée
-  (cas du ZANI de 7 h 58). Sur la base au 17/09 : 134 arrêts sur 14 585 (0,9 %), 113 trains en retard sur 1 400
-  (RER C 35/236) — ordre de grandeur du soupçon B, à confirmer sur les archives.
-  Détection en observation depuis le 17/09 vers 11 h (`arrets[].k`, logs « Arrêt sauté probable »).
-- **C — Passé visible** : sur un seul flux (RER C, 8 h 58), un arrêt disparaît ~3 min après le passage (max 27),
-  pas ~50 min comme l'écrivent `lessons.md` et `arrets_du_train`. `attentes_mesurees` (arrêts supprimés) a le même
-  angle mort que celui corrigé pour l'écart : un train suivant déjà passé au relevé est invisible.
-- **D — Trains disparus pendant une coupure** : non marqués supprimés, donc comptés 0. Non vérifié sur ce flux.
-- **E — Train partiellement supprimé** redevenu « non supprimé » quand ses arrêts supprimés sortent du flux
-  (`collector.py`, upsert) ; minutes-voyageurs justes, compteur de suppressions faux.
+### [2026-09-17] Soupçons B / C / D / E — corrigés le 17/09 soir (Windows)
+- **B — Arrêts sautés** : ✅ Résolu. Le flag `k=True` est conservé par `fusionner_arrets` et traité comme un arrêt
+  supprimé dans `minutes_voyageurs_train`. Commit `36c7653`.
+- **C — Passé visible** : ✅ Résolu. `attentes_mesurees` filtre les arrêts déjà passés au relevé (`obs_dt`).
+  Docstrings corrigés. Commit `36c7653`.
+- **D — Trains disparus pendant une coupure** : 🔍 Diagnostic ajouté. `trains_attendus` compare GTFS vs flux
+  et loggue les manquants. Confirmé côté PRIM (ligne K : 4/36 prévus). Pas de création d'incidents automatique.
+  Commit `cb4013c`.
+- **E — Train partiellement supprimé** : ✅ Résolu. `is_cancelled` préservé dans l'upsert ; `s=None` hors fenêtre
+  (au lieu de `False`) conservé par `fusionner_arrets`. Commit `cb4013c`.
 
 ### [2026-09-17] Bug 39 — Suivi trop espacé : relevé toutes les 20 min, 13 requêtes par relevé
 **Fichier(s)** : `backend/collector.py`, `backend/main.py`, `backend/config.py`, `backend/api.py`, `frontend/methode.html`

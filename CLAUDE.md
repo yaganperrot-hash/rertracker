@@ -114,6 +114,9 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb reta
 - Tout invariant énoncé dans la doc ou un commentaire (somme de poids, borne, plafond) doit être couvert
   par un test : sinon il devient faux en silence — les poids horaires ont annoncé « somme=18.0 » pendant
   une semaine en valant 19.2, majorant tous les chiffres de 6,7 %.
+- Flags d'arrêts (`s`, `k`) : hors fenêtre de mesure → `None` (pas `False`), pour que `fusionner_arrets`
+  conserve la valeur précédente. Tout champ devant survivre à la fusion doit être dans la liste de
+  conservation. `is_cancelled` en base ne régresse jamais de `True` à `False` par upsert.
 
 
 ### 🔄 En maintenance — voir `TODO.md`

@@ -1,31 +1,30 @@
 # SESSION — État courant
 
-## 2026-09-17 (après-midi) — PC Mac (historique : `.claude/archive/`)
+## 2026-09-17 (soir) — PC Windows (historique : `.claude/archive/`)
 
 ### Objectif
-Suivre les trains de plus près sans dépasser les quotas PRIM, et ne compter que des retards mesurés.
+Fiabiliser le calcul des minutes-voyageurs perdues : corriger les bugs B, C, D, E identifiés le 17/09.
 
 ### Avancement
-- **Collecte temps réel toutes les 5 min en un seul appel** (`LineRef=ALL`, 4,5 Mo compressés, 52 Mo de JSON,
-  ~4 h 30 d'horizon), filtré sur les 13 lignes : 216 req/jour Estimated Timetable au lieu de 702. Perturbations
-  Navitia sur leur propre cadence (20 min, 108 req/jour). Pas de relevé au redémarrage si le dernier date de moins
-  d'un intervalle. Commit `5bb85bf`, en service depuis 12 h 18 : 1 requête par relevé vérifiée dans les en-têtes.
-- **Fenêtre de mesure de 10 min** : retard et suppression d'un arrêt comptés seulement à moins de 10 min du passage
-  estimé ; un train déjà en base sans retard dans la fenêtre voit ses arrêts mis à jour.
-- Tests de quota : l'API « Prochains passages » (une requête par gare) a aussi 1 000 req/jour → écartée.
-- Transferts du 15, 16 et 17 importés sur le Mac, recalcul fait. `.env` : `POLLING_INTERVAL_MINUTES=5`.
-- **Coupure Viroflay (≈ 9 h 40 → 13 h, RER C / N / U)** : trains bloqués jusqu'à 198 min (SICA, VERI, PORO).
-  Pris d'abord pour des fantômes, puis vérifiés réels (reprise de marche après la coupure). Aucune correction
-  (décision utilisateur : ne rien toucher). 282 tests verts.
+- **Bug B — Arrêts sautés** : le flag `k=True` est désormais conservé par `fusionner_arrets` et traité
+  comme un arrêt supprimé dans `minutes_voyageurs_train` (le voyageur attend le train suivant).
+- **Bug C — Passé visible** : `attentes_mesurees` filtre les arrêts déjà passés au relevé (même logique
+  que `ecarts_train_suivant`). Docstrings corrigés (« ~50 min » → description correcte).
+- **Bug D — Trains absents du flux** : diagnostic ajouté (`trains_attendus` compare GTFS vs flux, loggue
+  les manquants). Confirmé : trou côté PRIM (ligne K : 4/36 trains), pas de notre côté. Pas de création
+  d'incidents automatique pour l'instant.
+- **Bug E — Suppression sticky** : `is_cancelled` préservé dans l'upsert quand les arrêts supprimés
+  sortent de la fenêtre. Le flag `s` des arrêts mis à `None` hors fenêtre (au lieu de `False`) et
+  conservé par `fusionner_arrets`.
+- Transferts 15, 16, 17/09 importés. Polling passé à 5 min. Historique recalculé deux fois.
+  293 tests verts. Serveur lancé en tâche de fond Claude Code (à relancer dans un terminal séparé).
 
 ### Blocages
 - Clé PRIM toujours à régénérer (commit `c591442`).
-- Le 17/09 mélange deux méthodes (20 min jusqu'à 12 h 18, puis 5 min + fenêtre) : non comparable aux jours d'avant.
+- Bug D : pas de comptabilisation automatique des trains absents du flux — nécessite une décision.
 
 ### Prochaine étape
-1. **PC Windows** : `git pull`, serveur arrêté, `POLLING_INTERVAL_MINUTES=5` dans `.env`, importer
-   `transferts/incidents-2026-09-17.json`, `python -m backend.recalcul`, relancer. Un seul serveur à la fois.
-2. Après une journée complète à 5 min : ajuster la fenêtre de 10 min sur les archives (retard annoncé à 30 / 20 / 10 / 5 min
-   du passage comparé au retard final) ; surveiller `logs/flux_brut/` (~440 Ko par relevé) et `compute_daily_metrics`.
-3. Valider B (arrêts sautés) sur les archives à 5 min ; soupçons C, D (ligne K vide côté PRIM), E.
-4. Filtre anti-fantôme : écarte des trains réellement bloqués — à rediscuter avant toute modification.
+1. Surveiller les logs D (trains manquants) sur une journée complète à 5 min.
+2. Ajuster la fenêtre de mesure (10 min) sur les archives.
+3. Bug 23 (clic pastille picker) — diagnostic console F12.
+4. Filtre anti-fantôme : à rediscuter.

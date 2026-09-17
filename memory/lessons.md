@@ -165,3 +165,14 @@
   ligne — une mesure sur un flux ne vaut pas pour l'autre.
 - `RecordedAtTime` d'un train est ancien pour la plupart des trains (plus d'une heure) : inutilisable seul pour dire
   qu'une estimation est figée.
+
+## Fenêtre de mesure et flags sticky (2026-09-17)
+- Un flag d'arrêt (`s`, `k`) mis à `False` hors de la fenêtre de mesure (au lieu de `None`) empêche
+  `fusionner_arrets` de conserver la mesure précédente. Règle : hors fenêtre → `None` (pas de mesure),
+  dans la fenêtre → valeur réelle. Tout champ devant survivre à la fusion doit être dans la liste de
+  conservation de `fusionner_arrets`.
+- `is_cancelled` en base ne doit jamais régresser de `True` à `False` par un upsert qui voit le train
+  sans arrêts supprimés dans la fenêtre — les arrêts sortent de la fenêtre avant que le train sorte du
+  flux. L'upsert doit préserver la valeur existante (`Incident.is_cancelled`).
+- Comparer GTFS vs flux pour détecter des trains absents est faisable mais ne doit pas créer d'incidents
+  automatiquement : l'absence peut être un trou PRIM (confirmé pour la ligne K).
