@@ -21,6 +21,7 @@ ENV/
 # Logs
 logs/*.log
 logs/*.txt
+logs/flux_brut/
 
 # Database
 *.db

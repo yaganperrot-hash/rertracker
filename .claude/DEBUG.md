@@ -617,6 +617,41 @@ voyageurs le samedi et le dimanche qu'en semaine
 
 ---
 
+## Session 2026-09-17 — Mac (fiabilité du calcul)
+
+### [2026-09-17] Bug 35 — Plafond de retard : deux sens comptés, voyageurs à bord plafonnés
+**Fichier(s)** : `backend/metrics.py`, `backend/collector.py`, `frontend/methode.html`
+**Symptôme** : trajet réel Choisy → Ivry (RER C, panne de signalisation) compté 4 min pour ~20 min vécues ;
+recalcul sans plafond : ×1,5 à ×1,9 sur les 15, 16 et 17/09.
+**Cause** : (1) `offre.trains_gare` additionne les départs des deux sens → plafond deux fois trop bas ;
+(2) plafond appliqué au retard à la descente, y compris pour les voyageurs déjà à bord, qui ne peuvent pas changer
+de train ; (3) hypothèse d'un train suivant à l'heure, fausse un jour de panne.
+**Fix** : perte i → j = max(0, r_j − max(0, r_i − écart_ij)). écart_ij mesuré au relevé (`arrets[].a`, par gare
+de descente) : premier autre train du même sens qui dessert i puis j, seulement pour un arrêt dont l'heure prévue
+n'est pas passée au relevé. Repli : 60 ÷ (départs des deux sens ÷ 2) à la gare de montée, puis intervalle médian.
+Effet : 15/09 ×1,58, 16/09 ×1,39, 17/09 ×1,41 par rapport au plafond par gare.
+**Status** : ✅ Résolu — historique recalculé sur le Mac ; PC Windows à recalculer
+
+### [2026-09-17] Réponses brutes du flux archivées (vérité terrain)
+**Fichier(s)** : `backend/collector.py` (`archiver_flux`), `backend/config.py` (`archive_flux_jours`), `.gitignore`
+**Pourquoi** : les soupçons B/C/D ci-dessous reposent sur un seul flux brut ; il faut pouvoir rejouer un relevé.
+**Fix** : chaque réponse Estimated Timetable gzippée dans `logs/flux_brut/AAAA-MM-JJ/HHMMSS-<ligne>.json.gz`,
+purge au-delà de 3 jours, aucune requête PRIM en plus.
+**Status** : ✅ En place
+
+### [2026-09-17] Soupçons à vérifier sur les archives (non corrigés)
+- **B — Arrêts sautés invisibles** : le flux semble retirer un arrêt sauté au lieu de le marquer `CANCELLED` ;
+  `fusionner_arrets` le garde alors comme desservi. Indice : ZANI 7 h 58 et GOTA 8 h 02 (RER C, 17/09) mis à jour
+  aux Ardoines et à BFM au relevé de 8 h 09, pas à Vitry ni Ivry. Non confirmé.
+- **C — Passé visible** : sur un seul flux (RER C, 8 h 58), un arrêt disparaît ~3 min après le passage (max 27),
+  pas ~50 min comme l'écrivent `lessons.md` et `arrets_du_train`. `attentes_mesurees` (arrêts supprimés) a le même
+  angle mort que celui corrigé pour l'écart : un train suivant déjà passé au relevé est invisible.
+- **D — Trains disparus pendant une coupure** : non marqués supprimés, donc comptés 0. Non vérifié sur ce flux.
+- **E — Train partiellement supprimé** redevenu « non supprimé » quand ses arrêts supprimés sortent du flux
+  (`collector.py`, upsert) ; minutes-voyageurs justes, compteur de suppressions faux.
+
+---
+
 ## Notes de surveillance
 - Quota PRIM : 1 000 req/jour confirmé (en-têtes `x-ratelimit-*`, compteur unique, remise à zéro minuit UTC) —
   relevé 20 min de 6 h à minuit × 15 req = 810 req/jour ; reste loggué à chaque relevé, warning sous 150

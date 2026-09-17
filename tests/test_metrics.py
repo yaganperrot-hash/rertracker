@@ -105,22 +105,23 @@ def _inc(**kw):
 NOW = datetime(2026, 9, 15, 12, 0, tzinfo=timezone.utc)
 
 
-def _arrets(gares, retards=None, supprimes=(), attentes=None, quand=MARDI_8H):
+def _arrets(gares, retards=None, supprimes=(), attentes=None, ecarts=None, quand=MARDI_8H):
     retards = retards or [0] * len(gares)
     attentes = attentes or {}
-    return [{"g": g, "quand": quand, "r": r, "s": i in supprimes, "w": attentes.get(i)}
+    ecarts = ecarts or {}
+    return [{"g": g, "quand": quand, "r": r, "s": i in supprimes, "w": attentes.get(i), "a": ecarts.get(i)}
             for i, (g, r) in enumerate(zip(gares, retards))]
 
 
-INTERVALLE_FICTIF = 6  # minutes — intervalle global de repli pour la ligne de test
-# Trains par heure par gare : A=20 (plafond 3 min), B=10 (plafond 6 min), C=6 (plafond 10 min)
+INTERVALLE_FICTIF = 6  # minutes — intervalle médian de repli pour la ligne de test
+# Départs par heure par gare, deux sens : A=20, B=10, C=6 → un train toutes les 6, 12 et 20 min dans un sens
 TRAINS_GARE = {"A": 20, "B": 10, "C": 6}
-PLAFOND_GARE = {g: round(60 / t) for g, t in TRAINS_GARE.items()}  # A=3, B=6, C=10
+ECART_PREVU = {g: 60 / (t / 2) for g, t in TRAINS_GARE.items()}  # A=6, B=12, C=20
 
 @pytest.fixture
 def ligne_fictive(monkeypatch):
     """Trois gares, 100 voyageurs montent dans chaque train à A et à B ; B et C attirent autant.
-    Plafond par gare : A=3 min, B=6 min, C=10 min. Repli global = INTERVALLE_FICTIF (6 min)."""
+    Train suivant prévu dans un sens : A=6 min, B=12 min, C=20 min. Repli = INTERVALLE_FICTIF (6 min)."""
     monkeypatch.setattr(frequentation, "_cache", {
         "montees_train": {"RER_A": {"JOHV": {g: [100.0] * 24 for g in "ABC"}}},
         "montees_jour": {"RER_A": {"JOHV": {"A": 1000.0, "B": 1000.0, "C": 1000.0}}},
@@ -136,10 +137,8 @@ class TestMinutesVoyageursTrain:
         assert minutes_voyageurs_train("RER_A", _arrets("ABC")) == 0
 
     def test_retard_au_terminus(self, ligne_fictive):
-        # Retard de 10 min au terminus C, plafonné à 10 min (plafond de C) → pas d'écrêtage
-        # A → C : 50 × 10 ; B → C : 100 × 10
-        plafond_c = PLAFOND_GARE["C"]  # 10
-        assert minutes_voyageurs_train("RER_A", _arrets("ABC", [0, 0, 10])) == 50 * plafond_c + 100 * plafond_c
+        # Retard pris après la montée : subi en entier. A → C : 50 × 10 ; B → C : 100 × 10
+        assert minutes_voyageurs_train("RER_A", _arrets("ABC", [0, 0, 10])) == 50 * 10 + 100 * 10
 
     def test_retard_sous_le_seuil_non_compte(self, ligne_fictive):
         assert minutes_voyageurs_train("RER_A", _arrets("ABC", [1, 1, 1])) == 0
@@ -167,27 +166,49 @@ class TestMinutesVoyageursTrain:
         frequentation._cache["montees_jour"]["RER_A"]["JOHV"] = {"A": 7.0, "B": 3000.0, "C": 11.0}
         assert minutes_voyageurs_train("RER_A", _arrets("ABC", [4, 4, 4])) == 200 * 4
 
-    def test_retard_plafonne_a_l_intervalle(self, ligne_fictive):
-        """Un retard supérieur à l'intervalle est capé par gare : le voyageur prend le train suivant."""
-        # Retard de 15 min partout, capé par gare : A=3, B=6, C=10
-        # Gare B et C sont destinations. Poids égaux → 50 % des montés à A vont en B, 50 % en C.
-        # A→B : 50 × min(15,6)=6 ; A→C : 50 × min(15,10)=10 ; B→C : 100 × min(15,10)=10
-        assert minutes_voyageurs_train("RER_A", _arrets("ABC", [15, 15, 15])) == 50 * 6 + 50 * 10 + 100 * 10
+    def test_retard_pris_a_bord_subi_en_entier(self, ligne_fictive):
+        """Aucun plafond pour le voyageur déjà à bord : il ne peut pas prendre un autre train."""
+        # A à l'heure, 15 min en B et C. A→B : 50 × 15 ; A→C : 50 × 15.
+        # Montés en B : train prévu toutes les 12 min, le leur passe 15 min après l'heure → gain 3 → 100 × 12
+        assert minutes_voyageurs_train("RER_A", _arrets("ABC", [0, 15, 15])) == 50 * 15 + 50 * 15 + 100 * 12
 
-    def test_retard_sous_l_intervalle(self, ligne_fictive):
-        """Un retard inférieur au plus petit plafond de destination n'est pas modifié."""
-        # Retard de 3 min partout, plafond le plus bas = A (3 min), mais A n'est destination de personne
-        # B plafond=6, C plafond=10 → retard 3 < tous les plafonds de destination → 200 × 3
+    def test_voyageur_a_quai_prend_le_train_suivant_mesure(self, ligne_fictive):
+        """Écart mesuré avec le train suivant : le voyageur à quai perd au plus cet écart."""
+        # 15 min partout ; train suivant mesuré à 5 min en A (vers B et C), 4 min en B (vers C)
+        arrets = _arrets("ABC", [15, 15, 15], ecarts={0: {"B": 5, "C": 5}, 1: {"C": 4}})
+        assert minutes_voyageurs_train("RER_A", arrets) == 100 * 5 + 100 * 4
+
+    def test_train_suivant_d_une_autre_branche(self, ligne_fictive):
+        """Le train suivant ne dessert pas C : les voyageurs A → C gardent tout le retard."""
+        arrets = _arrets("ABC", [15, 15, 15], ecarts={0: {"B": 5}, 1: {}})
+        assert minutes_voyageurs_train("RER_A", arrets) == 50 * 5 + 50 * 15 + 100 * 15
+
+    def test_train_suivant_aussi_en_retard(self, ligne_fictive):
+        """Jour de panne : le train suivant passe après le sien, personne ne gagne rien à quai."""
+        arrets = _arrets("ABC", [15, 15, 15], ecarts={0: {"B": 20, "C": 20}, 1: {"C": 25}})
+        assert minutes_voyageurs_train("RER_A", arrets) == 200 * 15
+
+    def test_repli_sur_l_offre_prevue_dans_un_sens(self, ligne_fictive):
+        """Sans mesure : écart = 60 ÷ (départs des deux sens ÷ 2) à la gare de montée."""
+        # 8 min partout. A : train suivant prévu à 6 min → gain 2 → A→B et A→C : 6. B : 12 min → gain 0 → 8
+        assert minutes_voyageurs_train("RER_A", _arrets("ABC", [8, 8, 8])) == 50 * 6 + 50 * 6 + 100 * 8
+
+    def test_repli_sur_l_intervalle_de_la_ligne(self, ligne_fictive, monkeypatch):
+        monkeypatch.setattr(offre, "trains_gare", lambda line_id, gare, quand: None)
+        # Écart = INTERVALLE_FICTIF (6) partout → gain 2 pour tous → 200 × 6
+        assert minutes_voyageurs_train("RER_A", _arrets("ABC", [8, 8, 8])) == 200 * 6
+
+    def test_retard_resorbe_apres_la_montee(self, ligne_fictive):
+        """Le gain à quai ne rend jamais une perte négative."""
+        # A : 10 min, train suivant à 6 → gain 4 ; retard de 3 en B, 0 en C → pertes nulles. B→C : 0
+        assert minutes_voyageurs_train("RER_A", _arrets("ABC", [10, 3, 0])) == 0
+
+    def test_retard_sous_l_ecart_prevu(self, ligne_fictive):
+        """Un retard inférieur à l'écart avec le train suivant n'est pas diminué."""
         assert minutes_voyageurs_train("RER_A", _arrets("ABC", [3, 3, 3])) == 200 * 3
 
-    def test_retard_plafond_varie_par_gare(self, ligne_fictive):
-        """Trois gares avec des caps différents : le retard est capé à la gare de destination."""
-        # Retard de 8 min partout. Caps : A=3 (pas destination), B=6, C=10
-        # A→B : 50 × min(8,6)=6 ; A→C : 50 × min(8,10)=8 ; B→C : 100 × min(8,10)=8
-        assert minutes_voyageurs_train("RER_A", _arrets("ABC", [8, 8, 8])) == 50 * 6 + 50 * 8 + 100 * 8
-
     def test_suppression_non_affectee_par_plafond(self, ligne_fictive):
-        """Le plafond d'intervalle ne touche pas les trains supprimés (branche attentes, pas retards)."""
+        """L'écart avec le train suivant ne touche pas les trains supprimés (branche attentes, pas retards)."""
         # Attente mesurée de 20 min > intervalle fictif de 6 min → pas capée
         arrets = _arrets("ABC", supprimes=(0, 1, 2), attentes={0: 20, 1: 20})
         assert minutes_voyageurs_train("RER_A", arrets) == 100 * 20 + 100 * 20

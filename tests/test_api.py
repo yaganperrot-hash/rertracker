@@ -65,8 +65,9 @@ class TestReference:
     async def test_exemple_de_la_page_methode_calcule(self):
         ex = (await reference())["exemple_calcul"]
         assert ex["voyageurs"] > 0
-        # Le plafond varie par gare : on vérifie que le résultat est positif
-        # et inférieur au pire cas (tous les voyageurs × retard brut)
+        # Les voyageurs à quai peuvent prendre le train suivant : résultat positif et au plus
+        # le pire cas (tous les voyageurs × retard brut), affiché sur la page Méthode
+        assert ex["minutes_voyageurs_retard_max"] == ex["voyageurs"] * ex["retard"]
         assert 0 < ex["minutes_voyageurs_retard"] <= ex["voyageurs"] * ex["retard"]
 
     async def test_requetes_par_flux(self):

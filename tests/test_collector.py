@@ -21,7 +21,9 @@ from backend.collector import (
     collect_rt_delays,
     analyser_train,
     attentes_mesurees,
+    archiver_flux,
     couverture_releve,
+    ecarts_train_suivant,
     fusionner_arrets,
     trains_du_flux,
 )
@@ -467,6 +469,52 @@ class TestAnalyseFluxEstimatedTimetable:
         supprime = _train(1, [_appel(1, 0, statut="CANCELLED", terminus=True)])
         assert attentes_mesurees([supprime]) == {}
 
+    def test_ecart_mesure_avec_le_train_suivant(self):
+        """Voyageur à quai : premier AUTRE train du même sens qui dessert la montée puis la descente."""
+        retarde = _train(1, [_appel(1, 10, retard=8), _appel(2, 20, retard=8), _appel(3, 30, retard=8, terminus=True)])
+        omnibus = _train(2, [_appel(1, 16), _appel(2, 26), _appel(3, 36, terminus=True)])   # en 1 à +16
+        direct = _train(4, [_appel(1, 14), _appel(3, 30, terminus=True)])                    # en 1 à +14, sans 2
+        autre_sens = _train(3, [_appel(1, 11), _appel(2, 12)], sens="Retour")
+        ecarts = ecarts_train_suivant([retarde, omnibus, direct, autre_sens], T0)
+        ref = retarde["DatedVehicleJourneyRef"]["value"]
+        assert ecarts[(ref, "1")] == {"2": 6, "3": 4}
+        assert ecarts[(ref, "2")] == {"3": 6}
+        assert ecarts[(ref, "3")] == {}
+        o = analyser_train(retarde, T0, NOMS.get, ecarts=ecarts)
+        assert [a["a"] for a in o["arrets"]] == [{"Gare Deux": 6, "Gare Trois": 4}, {"Gare Trois": 6}, {}]
+
+    def test_ecart_non_mesure_pour_un_arret_deja_prevu(self):
+        """Heure prévue passée au relevé : un train passé entre-temps a pu sortir du flux → pas de mesure."""
+        retarde = _train(1, [_appel(1, -5, retard=10), _appel(2, 20, retard=10), _appel(3, 30, terminus=True)])
+        suivant = _train(2, [_appel(1, 3), _appel(2, 28), _appel(3, 38, terminus=True)])
+        ref = retarde["DatedVehicleJourneyRef"]["value"]
+        ecarts = ecarts_train_suivant([retarde, suivant], T0)
+        assert (ref, "1") not in ecarts
+        assert ecarts[(ref, "2")] == {"3": 8}
+        assert analyser_train(retarde, T0, NOMS.get, ecarts=ecarts)["arrets"][0]["a"] is None
+
+    def test_ecart_trains_suivants_a_la_meme_heure(self):
+        """Deux trains suivants au même passage (cas du RER A, 17/09 à 9 h 33) : pas d'erreur de tri."""
+        retarde = _train(1, [_appel(1, 10, retard=8), _appel(2, 20, retard=8, terminus=True)])
+        a = _train(2, [_appel(1, 14), _appel(3, 30, terminus=True)])
+        b = _train(4, [_appel(1, 14), _appel(2, 24, terminus=True)])
+        ref = retarde["DatedVehicleJourneyRef"]["value"]
+        assert ecarts_train_suivant([retarde, a, b], T0)[(ref, "1")] == {"2": 4}
+
+    def test_ecart_vide_sans_autre_train(self):
+        seul = _train(1, [_appel(1, 10, retard=8), _appel(2, 20, retard=8, terminus=True)])
+        ref = seul["DatedVehicleJourneyRef"]["value"]
+        assert ecarts_train_suivant([seul], T0)[(ref, "1")] == {}
+
+    def test_ecart_ignore_les_arrets_supprimes(self):
+        supprime = _train(1, [_appel(1, 10, statut="CANCELLED"), _appel(2, 20, statut="CANCELLED", terminus=True)])
+        suivant = _train(2, [_appel(1, 15), _appel(2, 25, statut="CANCELLED", terminus=True)])
+        retarde = _train(3, [_appel(1, 5, retard=12), _appel(2, 15, retard=12, terminus=True)])
+        ecarts = ecarts_train_suivant([supprime, suivant, retarde], T0)
+        assert (supprime["DatedVehicleJourneyRef"]["value"], "1") not in ecarts
+        # Le suivant ne dessert plus 2 : aucun train pour aller de 1 à 2
+        assert ecarts[(retarde["DatedVehicleJourneyRef"]["value"], "1")] == {}
+
     def test_couverture(self):
         couv = couverture_releve([_train(1, [_appel(1, 0), _appel(2, 10)]), _train(2, [_appel(1, 30)])])
         assert (couv["trains"], couv["passages"]) == (2, 3)
@@ -483,10 +531,43 @@ class TestFusionArrets:
         anciens = [{"g": "A", "p": "1", "r": 5, "s": False, "w": None}]
         assert fusionner_arrets(anciens, [{"g": "A", "p": "1", "r": 7, "s": False, "w": None}])[0]["r"] == 7
 
+    def test_ecart_mesure_conserve(self):
+        anciens = [{"g": "A", "p": "1", "r": 5, "s": False, "w": None, "a": {"B": 4}}]
+        fusion = fusionner_arrets(anciens, [{"g": "A", "p": "1", "r": 6, "s": False, "w": None, "a": None}])
+        assert (fusion[0]["r"], fusion[0]["a"]) == (6, {"B": 4})
+        # Une nouvelle mesure, même vide, remplace l'ancienne
+        fusion = fusionner_arrets(anciens, [{"g": "A", "p": "1", "r": 6, "s": False, "w": None, "a": {}}])
+        assert fusion[0]["a"] == {}
+
     def test_mesure_absente_ne_efface_pas(self):
         anciens = [{"g": "A", "p": "1", "r": 5, "s": True, "w": 12}]
         fusion = fusionner_arrets(anciens, [{"g": "A", "p": "1", "r": None, "s": True, "w": None}])
         assert (fusion[0]["r"], fusion[0]["w"]) == (5, 12)
+
+
+class TestArchiveFlux:
+    def test_reponse_brute_gzippee_par_jour(self, tmp_path):
+        import gzip
+        chemin = archiver_flux("RER_C", b'{"Siri": {}}', T0, 3, racine=tmp_path)
+        assert chemin == tmp_path / "2026-09-17" / "080000-RER_C.json.gz"
+        assert gzip.decompress(chemin.read_bytes()) == b'{"Siri": {}}'
+
+    def test_purge_au_dela_de_la_duree(self, tmp_path):
+        for jour in ("2026-09-13", "2026-09-14", "2026-09-15"):
+            (tmp_path / jour).mkdir()
+        (tmp_path / "notes").mkdir()
+        archiver_flux("RER_C", b"{}", T0, 3, racine=tmp_path)
+        assert sorted(p.name for p in tmp_path.iterdir()) == ["2026-09-14", "2026-09-15", "2026-09-17", "notes"]
+
+    def test_desactivee(self, tmp_path):
+        assert archiver_flux("RER_C", b"{}", T0, 0, racine=tmp_path) is None
+        assert archiver_flux("RER_C", b"{}", T0, MagicMock(), racine=tmp_path) is None
+        assert list(tmp_path.iterdir()) == []
+
+    def test_erreur_d_ecriture_sans_exception(self, tmp_path):
+        fichier = tmp_path / "pas-un-dossier"
+        fichier.write_text("x", encoding="utf-8")
+        assert archiver_flux("RER_C", b"{}", T0, 3, racine=fichier) is None
 
 
 class TestCollectRtDelays:
@@ -562,6 +643,22 @@ class TestCollectRtDelays:
         _, inserts = await self._executer(_flux(t), anciens=[(uid, ancien)])
         params = inserts[-1].compile(dialect=postgresql.dialect()).params
         assert [a["g"] for a in params["arrets"]] == ["Gare Un", "Gare Deux"]
+
+    async def test_echec_de_la_mesure_d_ecart_sans_perte_du_releve(self):
+        from sqlalchemy.dialects import postgresql
+
+        t = _train(1, [_appel(1, 0), _appel(2, 10, retard=6, terminus=True)])
+        with patch.object(collector, "ecarts_train_suivant", side_effect=TypeError("boum")):
+            _, inserts = await self._executer(_flux(t))
+        params = inserts[-1].compile(dialect=postgresql.dialect()).params
+        assert params["duree_minutes"] == 6
+        assert all(a["a"] is None for a in params["arrets"])
+
+    async def test_chaque_reponse_archivee(self):
+        with patch.object(collector, "archiver_flux") as archive:
+            await self._executer(_flux())
+        assert archive.call_count == len(LIGNES_CIBLES)
+        assert {c.args[0] for c in archive.call_args_list} == set(LIGNES_CIBLES.values())
 
     async def test_skip_si_pas_de_cle_api(self):
         settings = MagicMock(prim_api_key=None)

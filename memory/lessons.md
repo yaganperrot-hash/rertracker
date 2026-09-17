@@ -116,8 +116,13 @@
 
 ## Plafond de retard
 - Le plafond global (intervalle médian de la ligne) sous-estime les pertes en bout de branche et les
-  surestime au tronc commun. Le bon plafond est `60 / trains_gare` à la gare de destination du voyageur.
-- Impact mesuré sur une journée complète : +1,9 % au total, +6,5 % RER A, +13,5 % Transilien N.
+  surestime au tronc commun.
+- (2026-09-17) Le plafond `60 / trains_gare` à la gare de destination était faux deux fois : `trains_gare` compte
+  les **deux sens** (plafond divisé par deux), et un voyageur **à bord** ne peut pas prendre le train suivant.
+  Un plafond ne s'applique qu'au voyageur à quai, sur le retard déjà présent à sa montée, et le train suivant
+  doit desservir **sa gare de descente** (un train d'une autre branche ne sert à rien). Écart mesuré dans le flux ;
+  un jour de panne le train suivant est aussi en retard. Effet : ×1,4 à ×1,6 sur les pertes des 15-17/09.
+- Avant d'écrire qu'une grandeur est « par gare », vérifier l'unité dans le docstring du build (sens, jour type).
 - `recalcul.py` boucle sur toute la plage premier → dernier incident : sur 148 jours, seuls 19 avaient
   des incidents. Pas de dégât, mais inutilement lent.
 

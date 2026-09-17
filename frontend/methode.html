@@ -420,12 +420,12 @@
     <div class="formula-block">
       minutes-voyageurs d'un train = Σ<sub>montée i, descente j</sub> voyageurs(i → j) × perte(i → j)<br>
       voyageurs montés en i = voyageurs montés à la gare i pendant l'heure ÷ départs de la ligne à cette gare pendant l'heure<br>
-      perte(i → j) = retard mesuré à l'arrivée en j, ou attente mesurée du train suivant si un arrêt du trajet est supprimé<br>
+      perte(i → j) = retard mesuré à l'arrivée en j, moins ce que le voyageur gagne à quai en i en prenant un autre train vers j ; ou attente mesurée du train suivant si un arrêt du trajet est supprimé<br>
       coût = minutes-voyageurs × <span class="ref-smic">—</span> €/h ÷ 60
       <div class="formula-note">
         <strong>Voyageurs montés.</strong> Pour chaque gare, le nombre de voyageurs qui montent dans les trains de la ligne vient des comptages SNCF (correspondances comprises), par jour type et par tranche horaire, réparti heure par heure selon le profil de validations de la gare. Pour les gares sans comptage, surtout la partie RATP des RER A et B, ce sont les validations de la gare, partagées entre les lignes qui la desservent au prorata de leurs départs. On divise ensuite par le nombre de trains de la ligne au départ de la gare pendant cette heure (horaires prévus IDF Mobilités). Les jours de vacances scolaires appliquent le rapport mesuré sur les validations du réseau entre jours de vacances et jours ordinaires.
         <br><br>
-        <strong>Retard.</strong> Le flux temps réel donne, pour chaque arrêt, l'heure d'arrivée prévue et l'heure estimée ; leur écart est le retard subi par les voyageurs qui descendent là. Il est compté dès <span class="ref-retard-min">—</span> min. Le retard est plafonné à l'intervalle entre deux trains à la gare de destination du voyageur (horaires prévus) : au-delà, le voyageur prend le train suivant. Ce plafond varie d'une gare à l'autre — une gare de branche peu desservie a un plafond plus élevé qu'une gare du tronc commun. L'heure de chaque arrêt est son heure prévue.
+        <strong>Retard.</strong> Le flux temps réel donne, pour chaque arrêt, l'heure d'arrivée prévue et l'heure estimée ; leur écart est le retard subi par les voyageurs qui descendent là. Il est compté dès <span class="ref-retard-min">—</span> min. Un voyageur déjà à bord subit en entier le retard pris après sa montée : il ne peut pas changer de train. Un voyageur qui attend à quai quand son train passe en retard peut prendre un autre train, s'il en passe un plus tôt qui dessert aussi sa gare de descente : il ne perd alors que l'écart entre l'heure prévue de son train et le passage de cet autre train. Cet écart est mesuré dans le flux, gare de descente par gare de descente, car un train d'une autre branche ne lui sert à rien ; un jour de panne, les trains suivants sont eux aussi en retard et le voyageur ne gagne rien. Quand la mesure manque (heure prévue déjà passée au relevé, ou incident antérieur au 17 septembre 2026), l'écart est celui des horaires prévus à la gare de montée dans un sens. L'heure de chaque arrêt est son heure prévue.
         <br><br>
         <strong>Suppression.</strong> Quand un arrêt est supprimé (train supprimé en entier, ou terminus avancé), un voyageur dont le trajet passe par cet arrêt attend le train suivant du même sens. L'attente est mesurée : heure estimée du premier train qui dessert réellement l'arrêt, moins l'heure prévue du train supprimé. Si aucun train suivant n'est encore visible dans le flux, on retient l'intervalle prévu à cette heure.
       </div>
@@ -607,7 +607,8 @@
         const lettre = ex.ligne.replace('RER_', 'RER ').replace('TRANSILIEN_', 'ligne ');
         set('.ref-ex-train', `${lettre}, mission ${ex.mission}, ${ex.origine} → ${ex.terminus} (${n(ex.nb_gares)} gares), un mardi ordinaire à ${ex.heure}`);
         set('.ref-exemple', `${n(ex.voyageurs)} voyageurs montent le long du parcours (dont ${n(ex.montees_premiere_gare)} à ${ex.origine}). ` +
-          `Avec ${n(ex.retard)} min de retard à chaque arrivée : ${n(ex.voyageurs)} × ${n(ex.retard)} = ${n(ex.minutes_voyageurs_retard)} min-voy. · coût estimé =`);
+          `Avec ${n(ex.retard)} min de retard à chaque arrêt, dès le départ : au plus ${n(ex.voyageurs)} × ${n(ex.retard)} = ${n(ex.minutes_voyageurs_retard_max)} min-voy. ; ` +
+          `les voyageurs à quai prennent le train suivant quand il passe avant le leur (horaires prévus) : ${n(ex.minutes_voyageurs_retard)} min-voy. · coût estimé =`);
         set('.ref-exemple-cout', euros(ex.minutes_voyageurs_retard));
         if (ex.intervalle != null) {
           set('.ref-exemple-supp', `Supprimé en entier, chaque voyageur attend le train suivant, prévu ${n(ex.intervalle)} min plus tard : ` +

@@ -1,4 +1,5 @@
 import logging
+import math
 import statistics
 from datetime import date, datetime, time, timezone, timedelta
 from zoneinfo import ZoneInfo
@@ -89,7 +90,7 @@ def _incident_dt_paris(incident) -> datetime | None:
 
 
 def arrets_du_train(incident, now_utc: datetime) -> list[dict] | None:
-    """Arrêts du train, dans l'ordre : {"g", "quand" (Paris), "r", "s", "w"}.
+    """Arrêts du train, dans l'ordre : {"g", "quand" (Paris), "r", "s", "w", "a"}.
 
     Relevés arrêt par arrêt dans le flux SIRI (colonne `arrets`) depuis la bascule. Le flux ne remonte
     qu'une cinquantaine de minutes dans le passé : les gares déjà desservies quand le train a été relevé
@@ -101,13 +102,15 @@ def arrets_du_train(incident, now_utc: datetime) -> list[dict] | None:
     """
     if getattr(incident, "arrets", None):
         releves = [{"g": a.get("g"), "quand": datetime.fromisoformat(a["p"]).astimezone(PARIS_TZ),
-                    "r": a.get("r"), "s": bool(a.get("s")), "w": a.get("w")} for a in incident.arrets if a.get("p")]
+                    "r": a.get("r"), "s": bool(a.get("s")), "w": a.get("w"), "a": a.get("a")}
+                   for a in incident.arrets if a.get("p")]
         if not releves:
             return None
         parcours = offre.parcours_mission(incident.line_id, getattr(incident, "mission", None), releves[0]["g"])
         if parcours and releves[0]["g"] in parcours:
             avant = parcours[:parcours.index(releves[0]["g"])]
-            releves = [{"g": g, "quand": releves[0]["quand"], "r": None, "s": False, "w": None} for g in avant] + releves
+            releves = [{"g": g, "quand": releves[0]["quand"], "r": None, "s": False, "w": None, "a": None}
+                       for g in avant] + releves
         return releves
     quand = _incident_dt_paris(incident)
     gares = offre.parcours_mission(incident.line_id, getattr(incident, "mission", None), getattr(incident, "gare", None))
@@ -117,7 +120,7 @@ def arrets_du_train(incident, now_utc: datetime) -> list[dict] | None:
     debut = gares.index(gare) if gare in gares else 0
     supprime = bool(getattr(incident, "is_cancelled", False))
     retard = 0 if supprime else _effective_duration(incident, now_utc)
-    return [{"g": g, "quand": quand, "r": retard if i >= debut else 0, "s": supprime and i >= debut, "w": None}
+    return [{"g": g, "quand": quand, "r": retard if i >= debut else 0, "s": supprime and i >= debut, "w": None, "a": None}
             for i, g in enumerate(gares)]
 
 
@@ -130,6 +133,20 @@ def _attente(line_id: str, arret: dict) -> int:
     return round(intervalle) if intervalle is not None else get_settings().cancel_default_impact_minutes
 
 
+def _ecart_train_suivant(line_id: str, montee: dict, descente: dict) -> float | None:
+    """Minutes entre l'heure prévue du train à la gare de montée et le passage du train suivant du même sens
+    qui dessert aussi la gare de descente : mesuré au relevé (champ « a » de la montée, par gare de descente ;
+    gare absente = aucun train suivant visible, aucun gain) ; à défaut, offre prévue de la gare de montée dans
+    un sens (départs des deux sens ÷ 2) ; à défaut, intervalle médian de la ligne ; None si rien n'est connu."""
+    mesures = montee.get("a")
+    if mesures is not None:
+        return mesures.get(descente.get("g"), math.inf)
+    departs = offre.trains_gare(line_id, montee["g"], montee["quand"]) if montee.get("g") else None
+    if departs:
+        return 60 / (departs / 2)
+    return offre.intervalle_min(line_id, montee["quand"])
+
+
 def minutes_voyageurs_train(line_id: str, arrets: list[dict]) -> int:
     """Minutes perdues par les voyageurs d'un train.
 
@@ -138,7 +155,10 @@ def minutes_voyageurs_train(line_id: str, arrets: list[dict]) -> int:
     à la gare j (hypothèse : une gare voit descendre autant de voyageurs qu'elle en voit monter).
     Perte du voyageur i → j :
       * un arrêt supprimé entre i et j (inclus) : attente au premier arrêt supprimé ;
-      * sinon retard à l'arrivée mesuré en j, compté dès MIN_DELAY_MINUTES.
+      * sinon retard à l'arrivée mesuré en j, diminué de ce que le voyageur gagne à quai en i en prenant
+        le train suivant quand le sien y passe plus tard : max(0, r_j − max(0, r_i − écart_i)).
+        À bord, le retard pris après la montée est subi en entier : aucun plafond.
+      Retards comptés dès MIN_DELAY_MINUTES.
     Invariant : chaque voyageur monté (hors terminus) est affecté à exactement une destination.
     """
     from backend.collector import MIN_DELAY_MINUTES
@@ -154,18 +174,6 @@ def minutes_voyageurs_train(line_id: str, arrets: list[dict]) -> int:
     poids = [p if p > 0 else repli for p in poids]
 
     retards = [a["r"] if a.get("r") is not None and a["r"] >= MIN_DELAY_MINUTES else 0 for a in arrets]
-    # Plafond par gare : un voyageur retardé ne perd au plus que l'intervalle à sa gare de destination
-    for j in range(len(retards)):
-        if retards[j] <= 0:
-            continue
-        tpg = offre.trains_gare(line_id, arrets[j]["g"], arrets[j]["quand"])
-        if tpg is not None and tpg > 0:
-            retards[j] = min(retards[j], round(60 / tpg))
-        else:
-            # Repli : intervalle global de la ligne
-            intervalle = offre.intervalle_min(line_id, arrets[j]["quand"])
-            if intervalle is not None:
-                retards[j] = min(retards[j], round(intervalle))
     attentes = [_attente(line_id, a) if a.get("s") else None for a in arrets]
 
     total = 0.0
@@ -179,7 +187,16 @@ def minutes_voyageurs_train(line_id: str, arrets: list[dict]) -> int:
         for j in range(i + 1, n):
             if premier_supprime is None and attentes[j] is not None:
                 premier_supprime = j
-            perte = attentes[premier_supprime] if premier_supprime is not None else retards[j]
+            if premier_supprime is not None:
+                perte = attentes[premier_supprime]
+            else:
+                # Gain à quai : un autre train vers j passe en i avant le sien
+                gain = 0.0
+                if retards[i] > 0 and retards[j] > 0:
+                    ecart = _ecart_train_suivant(line_id, arrets[i], arrets[j])
+                    if ecart is not None:
+                        gain = max(0.0, retards[i] - ecart)
+                perte = max(0.0, retards[j] - gain)
             if perte:
                 total += montees[i] * poids[j] / somme_poids * perte
     return round(total)
@@ -227,6 +244,7 @@ def exemple_calcul() -> dict | None:
         "montees_premiere_gare": round(montes[0]) if montes else 0,
         "retard": EXEMPLE_RETARD,
         "minutes_voyageurs_retard": minutes_voyageurs_train(EXEMPLE_LIGNE, arrets),
+        "minutes_voyageurs_retard_max": round(sum(montes)) * EXEMPLE_RETARD,
         "intervalle": round(intervalle) if intervalle is not None else None,
         "minutes_voyageurs_suppression": minutes_voyageurs_train(EXEMPLE_LIGNE, supprime),
     }

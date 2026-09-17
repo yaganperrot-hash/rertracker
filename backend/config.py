@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     bilans_interval_minutes: int = 10     # période de régénération des JSON de bilans
     prim_quota_jour: int = 1000           # quota PRIM par clé — en-tête x-ratelimit-limit-day, remis à zéro à minuit UTC
     collecte_heure_debut: int = 6         # aucun relevé PRIM de minuit à cette heure (poids horaires nuls, quota épargné)
+    archive_flux_jours: int = 3           # réponses brutes du flux Estimated Timetable gardées dans logs/flux_brut/ (0 = aucune)
 
     class Config:
         env_file = ".env"
