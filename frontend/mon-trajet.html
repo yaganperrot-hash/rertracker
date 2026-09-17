@@ -50,10 +50,13 @@
     .pastille {
       width: 38px; height: 38px; border-radius: 50%; border: 3px solid transparent;
       font: 900 16px 'Roboto', sans-serif; color: #fff; cursor: pointer;
-      opacity: .45; transition: opacity .15s, transform .15s;
+      transition: opacity .15s, transform .15s;
     }
-    .pastille:hover { opacity: .8; }
-    .pastille[aria-pressed="true"] { opacity: 1; border-color: var(--ink); transform: scale(1.08); }
+    .pastille:hover { transform: scale(1.08); }
+    /* Estompées seulement une fois une ligne choisie : avant, elles doivent inviter au clic */
+    .lignes.choisie .pastille { opacity: .45; }
+    .lignes.choisie .pastille:hover { opacity: .8; }
+    .lignes.choisie .pastille[aria-pressed="true"] { opacity: 1; border-color: var(--ink); transform: scale(1.08); }
 
     .rangee { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     select, input[type="time"] {
@@ -145,26 +148,26 @@
 
   <form id="form" novalidate>
     <div>
-      <div class="champ-titre" id="titre-ligne">Ligne</div>
+      <div class="champ-titre" id="titre-ligne">1. Choisissez votre ligne</div>
       <div class="lignes" id="lignes" role="group" aria-labelledby="titre-ligne"></div>
     </div>
     <div class="rangee">
       <label>
-        <div class="champ-titre">Gare de départ</div>
-        <select id="depart" disabled><option value="">Choisir une ligne</option></select>
+        <div class="champ-titre">2. Gare de départ</div>
+        <select id="depart" disabled><option value="">Choisissez d'abord une ligne</option></select>
       </label>
       <label>
-        <div class="champ-titre">Gare d'arrivée</div>
-        <select id="arrivee" disabled><option value="">Choisir une ligne</option></select>
+        <div class="champ-titre">3. Gare d'arrivée</div>
+        <select id="arrivee" disabled><option value="">Choisissez d'abord une ligne</option></select>
       </label>
     </div>
     <div class="rangee">
       <label>
-        <div class="champ-titre">Arrivée sur le quai</div>
+        <div class="champ-titre">4. Arrivée sur le quai</div>
         <input type="time" id="heure" value="08:00" required>
       </label>
       <label>
-        <div class="champ-titre">Période</div>
+        <div class="champ-titre">5. Période</div>
         <select id="periode">
           <option value="7">7 derniers jours</option>
           <option value="14">14 derniers jours</option>
@@ -174,7 +177,7 @@
       </label>
     </div>
     <div>
-      <div class="champ-titre" id="titre-jours">Jours du trajet</div>
+      <div class="champ-titre" id="titre-jours">6. Jours du trajet</div>
       <div class="jours" id="jours" role="group" aria-labelledby="titre-jours"></div>
     </div>
     <button type="submit" class="calculer" id="calculer">Calculer</button>
@@ -308,6 +311,7 @@
 
   async function choisirLigne(id, depart, arrivee) {
     ligne = id;
+    $('lignes').classList.add('choisie');
     document.querySelectorAll('.pastille').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.ligne === id)));
     $('depart').disabled = $('arrivee').disabled = true;
     try {
