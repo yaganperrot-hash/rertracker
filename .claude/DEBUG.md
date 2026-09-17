@@ -687,11 +687,45 @@ test à égalité d'heure et test d'échec sans perte du relevé ; rejoué sur l
 - **E — Train partiellement supprimé** redevenu « non supprimé » quand ses arrêts supprimés sortent du flux
   (`collector.py`, upsert) ; minutes-voyageurs justes, compteur de suppressions faux.
 
+### [2026-09-17] Bug 39 — Suivi trop espacé : relevé toutes les 20 min, 13 requêtes par relevé
+**Fichier(s)** : `backend/collector.py`, `backend/main.py`, `backend/config.py`, `backend/api.py`, `frontend/methode.html`
+**Symptôme** : un arrêt n'est visible que peu de temps autour de son passage ; à 20 min d'intervalle, la plupart des
+passages ne sont vus qu'en prévision. Plancher de 14 min imposé par le quota (13 req × relevé).
+**Cause** : un appel Estimated Timetable par ligne ; perturbations relevées au même rythme que le temps réel.
+**Fix** : un seul appel `LineRef=ALL` par relevé (T2 : 4,5 Mo sur le fil, 52 Mo de JSON, 0,7 s de lecture), filtré
+par `trains_par_ligne`, archivé par ligne ; temps réel toutes les 5 min (216 req/jour), perturbations toutes les
+20 min (108) ; pas de relevé au démarrage si le dernier date de moins d'un intervalle. Commit `5bb85bf`.
+**Status** : ✅ Résolu — 1 requête par relevé vérifiée (684 → 683 à 12 h 23)
+
+### [2026-09-17] Bug 40 — Retards annoncés longtemps à l'avance comptés comme mesures
+**Fichier(s)** : `backend/collector.py` (`analyser_train`, `FENETRE_MESURE_MINUTES`)
+**Symptôme** : un retard prévu des heures avant le passage était enregistré, puis gardé comme pire retard même
+rattrapé ; avec l'horizon du flux global (~4 h 30), un train vu à 6 h pour 10 h serait aussi daté du mauvais jour.
+**Fix** : retard et suppression d'un arrêt relevés seulement à moins de 10 min du passage estimé (ou déjà passé) ;
+`suivi=True` : un train déjà en base sans retard dans la fenêtre voit ses arrêts mis à jour. Rejeu du flux de 11 h 38 :
+68 trains retenus sans fenêtre, 62 avec. Valeur de 10 min à ajuster sur les archives.
+**Status** : ✅ Résolu
+
+### [2026-09-17] Filtre anti-fantôme : écarte des trains réellement bloqués (observation, non traité)
+**Fichier(s)** : `backend/collector.py` (`GHOST_MIN_DELAY_MINUTES`, `GHOST_SLIDE_TOLERANCE_MIN`)
+**Constat** : coupure d'alimentation à Viroflay (≈ 9 h 40 → 13 h, RER C / N / U). Les trains immobilisés ont une
+heure estimée qui recule avec l'horloge (≈ relevé + 3 min) : SICA (C, 198 min), VERI (U, 190), PORO (N, 165), puis
+POGI / ROPO / GOPI (N). Tous ont repris leur marche après la coupure → retards réels. Le filtre les a écartés à
+certains relevés (redémarrage de 12 h 18) ; les valeurs passées au travers ont été gardées.
+Une détection « glissement ≥ 80 % sur 10 min » aurait effacé ces vrais retards (rejeu des archives) → abandonnée.
+**Status** : 🔍 Observé — décision utilisateur : ne rien modifier pour l'instant. Piste : un fantôme disparaît
+sans jamais reprendre sa marche ; recouper avec les interruptions déclarées.
+
+### [2026-09-17] Mesures complémentaires sur le flux global (soupçons C et D)
+- **C** : dans le flux global, les arrêts passés restent visibles bien plus longtemps que ~3 min (RER A, 12 h–13 h :
+  centaines d'arrêts passés de 30 à 60 min et plus). Le « ~3 min » vaut pour l'ancien appel par ligne.
+- **D** : ligne K à 4 trains dans le flux global aussi (11 h 38, 12 h 18) → trou côté PRIM, pas dans notre filtre.
+
 ---
 
 ## Notes de surveillance
-- Quota PRIM : 1 000 req/jour confirmé (en-têtes `x-ratelimit-*`, compteur unique, remise à zéro minuit UTC) —
-  relevé 20 min de 6 h à minuit × 15 req = 810 req/jour ; reste loggué à chaque relevé, warning sous 150
+- Quota PRIM : 1 000 req/jour par flux (Navitia, Estimated Timetable, Prochains passages), remise à zéro minuit UTC —
+  temps réel 5 min × 1 req = 216/jour, perturbations 20 min × 2 req = 108/jour ; restes loggués, warning sous 150
 - Bot X : planifié à 20h via APScheduler dans `main.py`
 - Logs applicatifs : `logs/` (monté en volume Docker)
 

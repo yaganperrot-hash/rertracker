@@ -154,3 +154,14 @@
 - Chrome headless ne descend pas sous 500 px de large : tester le mobile dans une iframe de 360/390 px, ou par le
   protocole DevTools (`Emulation.setDeviceMetricsOverride`) ; pas de conclusion sur une capture rognée.
 - Une page qui attend un premier choix (ligne) ne doit pas afficher ce choix estompé : il a l'air désactivé.
+
+## Flux temps réel et trains bloqués (2026-09-17)
+- Sur PRIM, un train immobilisé (coupure, panne) a une heure estimée qui recule avec l'horloge (≈ relevé + 3 min) :
+  il ressemble à un train fantôme. Avant de déclarer une donnée fausse, vérifier les perturbations déclarées de la
+  ligne et la suite du train dans les archives (reprise de marche = retard réel). Le SICA de 198 min était réel.
+- Rejouer une règle de détection sur les archives d'une journée avec incident avant de la coder : c'est ce qui a
+  montré qu'une détection de glissement aurait effacé les plus gros retards réels.
+- Flux global (`LineRef=ALL`) : arrêts passés visibles 30 à 60 min et plus, contre ~3 min observés sur l'appel par
+  ligne — une mesure sur un flux ne vaut pas pour l'autre.
+- `RecordedAtTime` d'un train est ancien pour la plupart des trains (plus d'une heure) : inutilisable seul pour dire
+  qu'une estimation est figée.
