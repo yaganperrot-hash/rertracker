@@ -1,6 +1,6 @@
 """Tests unitaires pour backend/collector.py"""
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import date, datetime, timezone, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -24,10 +24,12 @@ from backend.collector import (
     archiver_flux,
     arrets_sautes,
     couverture_releve,
+    diagnostiquer_trains_manquants,
     marquer_sautes,
     resume_releve,
     ecarts_train_suivant,
     fusionner_arrets,
+    trains_attendus,
     trains_du_flux,
 )
 
@@ -585,7 +587,8 @@ class TestFenetreDeMesure:
         t = _train(1, [_appel(1, 0, retard=3), _appel(2, 40, statut="CANCELLED", terminus=True)])
         o = analyser_train(t, T0, NOMS.get, attentes={(t["DatedVehicleJourneyRef"]["value"], "2"): 12})
         assert o["supprime"] is False and o["retard"] == 3
-        assert [(a["s"], a["w"]) for a in o["arrets"]] == [(False, None), (False, None)]
+        # Arrêt 2 hors fenêtre : s=None (pas de mesure), w=None (pas dans la fenêtre)
+        assert [(a["s"], a["w"]) for a in o["arrets"]] == [(False, None), (None, None)]
 
     def test_suivi_rend_un_train_sans_retard(self):
         t = _train(1, [_appel(1, 0), _appel(2, 60, retard=8, terminus=True)])
@@ -624,6 +627,29 @@ class TestFusionArrets:
         anciens = [{"g": "A", "p": "1", "r": 5, "s": True, "w": 12}]
         fusion = fusionner_arrets(anciens, [{"g": "A", "p": "1", "r": None, "s": True, "w": None}])
         assert (fusion[0]["r"], fusion[0]["w"]) == (5, 12)
+
+    def test_supprime_conserve_quand_hors_fenetre(self):
+        """Bug E : un arrêt supprimé (s=True) garde son statut quand il sort de la fenêtre de mesure
+        (le nouveau relevé envoie s=None, pas s=False)."""
+        anciens = [{"g": "A", "p": "1", "r": 5, "s": True, "w": 12}]
+        fusion = fusionner_arrets(anciens, [{"g": "A", "p": "1", "r": None, "s": None, "w": None}])
+        assert fusion[0]["s"] is True
+        assert fusion[0]["w"] == 12
+
+    def test_supprime_efface_quand_dans_la_fenetre(self):
+        """Un arrêt supprimé dont PRIM lève la suppression (s=False dans la fenêtre) est mis à jour."""
+        anciens = [{"g": "A", "p": "1", "r": 5, "s": True, "w": 12}]
+        fusion = fusionner_arrets(anciens, [{"g": "A", "p": "1", "r": 3, "s": False, "w": None}])
+        assert fusion[0]["s"] is False
+        assert fusion[0]["r"] == 3
+
+    def test_analyser_train_s_none_hors_fenetre(self):
+        """Arrêt supprimé dans le flux mais hors fenêtre (futur lointain) : s=None (pas False)."""
+        # Arrêt 1 dans la fenêtre (prévu à +5), arrêt 2 hors fenêtre (prévu à +40, > 10 min)
+        t = _train(1, [_appel(1, 5, statut="CANCELLED"), _appel(2, 40, statut="CANCELLED", terminus=True)])
+        o = analyser_train(t, T0, NOMS.get)
+        assert o["arrets"][0]["s"] is True   # dans la fenêtre
+        assert o["arrets"][1]["s"] is None   # hors fenêtre → pas de mesure
 
 
 class TestArretsSautes:
@@ -685,6 +711,51 @@ class TestArchiveFlux:
         fichier = tmp_path / "pas-un-dossier"
         fichier.write_text("x", encoding="utf-8")
         assert archiver_flux("RER_C", b"{}", T0, 3, racine=fichier) is None
+
+
+class TestTrainsAttendus:
+    """Bug D : comparaison flux vs horaires GTFS."""
+
+    def test_trains_attendus_filtre_par_jour_et_heure(self, monkeypatch):
+        horaires = {
+            "debut": "2026-09-14",
+            "services": [[0, 3]],  # circule le 14/09 (décalage 0) et le 17/09 (décalage 3)
+            "lignes": {
+                "RER_A": {
+                    "gares": ["A", "B"],
+                    "trains": [
+                        ["IDFM:TN:SNCF:aaa-bbb", "OBUT", 0, [0, 480, 1, 490]],   # départ 8:00
+                        ["IDFM:TN:SNCF:ccc-ddd", "NEGE", 0, [0, 600, 1, 610]],   # départ 10:00
+                    ],
+                },
+            },
+        }
+        from backend import offre
+        monkeypatch.setattr(offre, "_cache_horaires", horaires)
+        attendus = trains_attendus("RER_A", date(2026, 9, 17), 450, 510)  # 7:30 → 8:30
+        assert len(attendus) == 1
+        assert attendus[0][0] == "aaa-bbb"
+        assert attendus[0][1] == "OBUT"
+        # Jour sans service
+        assert trains_attendus("RER_A", date(2026, 9, 15), 450, 510) == []
+
+    def test_diagnostiquer_ne_plante_pas_sur_flux_vide(self, monkeypatch):
+        """Le diagnostic ne plante pas même avec un flux vide (bug D : en observation)."""
+        horaires = {
+            "debut": "2026-09-17",
+            "services": [[0]],
+            "lignes": {"RER_A": {"gares": ["A"], "trains": [
+                ["IDFM:TN:SNCF:aaa-bbb", "OBUT", 0, [0, 570]],
+            ]}},
+        }
+        from backend import offre
+        monkeypatch.setattr(offre, "_cache_horaires", horaires)
+        # Ne doit pas lever d'exception
+        diagnostiquer_trains_manquants("RER_A", [], T0)
+
+    def test_diagnostiquer_ne_plante_pas_sans_horaires(self):
+        """Sans horaires chargées, le diagnostic ne plante pas."""
+        diagnostiquer_trains_manquants("RER_A", [], T0)
 
 
 class TestCollectRtDelays:

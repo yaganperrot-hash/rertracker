@@ -459,7 +459,7 @@ def analyser_train(journey: dict, obs_dt: datetime, nom_arret, attentes: dict | 
         "g": nom_arret(a["numero"]) if a["numero"] else None,
         "p": a["prevu"].isoformat(),
         "r": a["retard_arrivee"] if proche else None,
-        "s": a["supprime"] and proche,
+        "s": a["supprime"] if proche else None,
         "w": attentes.get((ref, a["numero"])) if a["supprime"] and proche else None,
         "a": _ecarts_par_gare(ecarts.get((ref, a["numero"])), nom_arret) if not a["supprime"] else None,
     } for a, proche in zip(appels, proches)]
@@ -495,7 +495,7 @@ def fusionner_arrets(anciens: list | None, nouveaux: list) -> list:
     par_cle = {(a.get("g"), a.get("p")): a for a in (anciens or [])}
     for a in nouveaux:
         precedent = par_cle.get((a.get("g"), a.get("p")))
-        for champ in ("r", "w", "a", "k"):
+        for champ in ("r", "s", "w", "a", "k"):
             if precedent and a.get(champ) is None and precedent.get(champ) is not None:
                 a = {**a, champ: precedent[champ]}
         par_cle[(a.get("g"), a.get("p"))] = a
@@ -612,6 +612,62 @@ def trains_par_ligne(trains: list[dict]) -> dict[str, list[dict]]:
     return par_ligne
 
 
+def trains_attendus(line_id: str, jour: date, heure_debut: int, heure_fin: int) -> list[tuple[str, str, int]]:
+    """Trains GTFS attendus pour une ligne un jour donné entre deux heures (minutes depuis minuit).
+
+    Retourne [(trip_uuid, mission, premier départ en min), …] pour les trains dont le premier
+    départ est entre heure_debut et heure_fin. Ne dépend que des données statiques.
+    """
+    from backend.offre import charger_horaires
+    h = charger_horaires()
+    if not h:
+        return []
+    debut = date.fromisoformat(h["debut"])
+    decalage = (jour - debut).days
+    ligne = h.get("lignes", {}).get(line_id)
+    if not ligne:
+        return []
+    attendus = []
+    for t in ligne["trains"]:
+        trip_id, mission, service_idx, passages = t[0], t[1], t[2], t[3]
+        if decalage not in h["services"][service_idx]:
+            continue
+        premier = passages[1] if len(passages) >= 2 else None
+        if premier is not None and heure_debut <= premier < heure_fin:
+            uuid = trip_id.split(":")[-1] if ":" in trip_id else trip_id
+            attendus.append((uuid, mission, premier))
+    return attendus
+
+
+def diagnostiquer_trains_manquants(line_id: str, trains: list[dict], obs_dt: datetime) -> None:
+    """Compare les trains du flux aux trains GTFS attendus dans la dernière heure. Loggue les manquants.
+
+    Diagnostic seulement (bug D) : un train absent du flux n'est pas forcément supprimé (trou PRIM).
+    """
+    paris = obs_dt.astimezone(PARIS_TZ)
+    heure_fin = paris.hour * 60 + paris.minute
+    heure_debut = heure_fin - 60
+    if heure_debut < 0:
+        return  # pas de comparaison autour de minuit
+    attendus = trains_attendus(line_id, paris.date(), heure_debut, heure_fin)
+    if not attendus:
+        return
+    # UUIDs des trains dans le flux
+    vus: set[str] = set()
+    for j in trains:
+        ref = _valeur(j.get("DatedVehicleJourneyRef")) or ""
+        m = _UUID.search(ref)
+        if m:
+            vus.add(m.group(0))
+    manquants = [(uuid, mission, premier) for uuid, mission, premier in attendus if uuid not in vus]
+    if manquants:
+        h_m = lambda m: f"{m // 60}:{m % 60:02d}"
+        logger.info("Trains GTFS absents du flux %s (%d/%d dans la dernière heure) : %s",
+                    line_id, len(manquants), len(attendus),
+                    ", ".join(f"{mission} {h_m(premier)}" for _, mission, premier in manquants[:10])
+                    + (f" … +{len(manquants) - 10}" if len(manquants) > 10 else ""))
+
+
 def flux_siri(trains: list[dict]) -> dict:
     """Réponse SIRI Estimated Timetable réduite à ces trains (archive par ligne, relisible par trains_du_flux)."""
     return {"Siri": {"ServiceDelivery": {"EstimatedTimetableDelivery": [
@@ -666,6 +722,10 @@ async def collect_rt_delays() -> None:
         archiver_flux(line_id, json.dumps(flux_siri(trains)).encode("utf-8"), obs_dt,
                       getattr(settings, "archive_flux_jours", 0))
         _journaliser_couverture(line_id, couverture_releve(trains))
+        try:
+            diagnostiquer_trains_manquants(line_id, trains, obs_dt)
+        except Exception:
+            logger.exception("Diagnostic trains manquants impossible pour %s", line_id)
         attentes = attentes_mesurees(trains, obs_dt)
         try:
             ecarts = ecarts_train_suivant(trains, obs_dt)
@@ -757,8 +817,9 @@ async def collect_rt_delays() -> None:
                 set_ = {c: getattr(ex, c) for c in ("type_incident", "cause", "duree_minutes", "heure_fin",
                                                     "heure_theorique", "is_cancelled", "gare")}
             else:
-                # Pire retard observé du train sur l'ensemble des relevés. Un train qui n'a plus
-                # aucun arrêt supprimé dans le flux n'est plus un train supprimé.
+                # Pire retard observé du train sur l'ensemble des relevés. is_cancelled préservé :
+                # les arrêts supprimés sortent de la fenêtre de mesure avant la fin du relevé,
+                # l'absence de suppression visible ne signifie pas que la suppression n'a pas eu lieu.
                 remplace = (ex.duree_minutes >= Incident.duree_minutes) | Incident.is_cancelled.is_(True)
                 set_ = {
                     "duree_minutes": case((Incident.is_cancelled.is_(True), ex.duree_minutes),
@@ -767,7 +828,7 @@ async def collect_rt_delays() -> None:
                        for c in ("cause", "heure_theorique", "gare")},
                     "heure_fin": ex.heure_fin,
                     "type_incident": "DELAY_REALTIME",
-                    "is_cancelled": False,
+                    "is_cancelled": Incident.is_cancelled,
                 }
             set_.update({"direction": ex.direction, "mission": ex.mission, "arrets": ex.arrets,
                          "source": "realtime", "updated_at": now})
