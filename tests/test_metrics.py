@@ -475,3 +475,39 @@ class TestGetLineStats:
         assert day["duree_totale_min"] == 30
         assert day["minutes_voyageurs"] == 12000
         assert day["est_jour_perturbe"] is True
+
+
+class TestJourneeComptee:
+    """La journée comptée commence à la reprise des relevés : un train du premier relevé du matin compte ce jour-là."""
+
+    def test_commence_a_l_heure_de_reprise_de_la_collecte(self):
+        from backend.collector import collecte_autorisee
+        from backend.config import get_settings
+        from backend.metrics import debut_journee
+        debut = debut_journee(date(2026, 9, 18))
+        assert debut.hour == get_settings().collecte_heure_debut
+        assert collecte_autorisee(debut)
+        assert not collecte_autorisee(debut - timedelta(minutes=1))
+
+    def test_releve_du_matin_compte_le_jour_meme(self):
+        from backend.metrics import journee_de
+        assert journee_de(datetime(2026, 9, 18, 6, 57, tzinfo=PARIS)) == date(2026, 9, 18)
+        assert journee_de(datetime(2026, 9, 18, 5, 59, tzinfo=PARIS)) == date(2026, 9, 17)
+        assert journee_de(datetime(2026, 9, 18, 23, 50, tzinfo=PARIS)) == date(2026, 9, 18)
+
+    def test_journees_contigues_sans_trou_ni_recouvrement(self):
+        from backend.metrics import debut_journee, journee_de
+        for d in (date(2026, 3, 28), date(2026, 3, 29), date(2026, 10, 25), date(2026, 9, 18)):  # dont changements d'heure
+            debut, suivant = debut_journee(d), debut_journee(d + timedelta(days=1))
+            assert journee_de(debut) == d
+            assert journee_de(suivant - timedelta(microseconds=1)) == d
+            assert journee_de(suivant) == d + timedelta(days=1)
+
+
+class TestDonneesFiables:
+    def test_periode_jamais_avant_le_debut_des_donnees_fiables(self):
+        from backend.config import get_settings
+        from backend.metrics import premier_jour_affiche
+        fiables = get_settings().debut_donnees_fiables
+        assert premier_jour_affiche(fiables - timedelta(days=30)) == fiables
+        assert premier_jour_affiche(fiables + timedelta(days=2)) == fiables + timedelta(days=2)

@@ -549,7 +549,7 @@
 ════════════════════════════════════════════════════════ -->
 <section class="cumul">
   <div class="cumul-inner">
-    <div class="cumul-kicker">Cumul du jour · depuis 7 h</div>
+    <div class="cumul-kicker">Cumul du jour · depuis <span id="debut-journee">6</span> h</div>
     <div class="cumul-value" id="cumul-value">—</div>
     <div class="cumul-label" id="cumul-label">de vie perdus collectivement</div>
     <div class="cumul-note" id="cumul-note">base SMIC — €/h · ≈ — salaires journaliers</div>
@@ -636,7 +636,7 @@
   /* ── Tous les chiffres viennent du backend, seule source de calcul. ── */
 
   function fmt(n) {
-    return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return n.toLocaleString('fr-FR');
   }
   function esc(s) {
     return String(s ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
@@ -644,7 +644,7 @@
 
   /* ════════ 1. HERO (coût du jour) + CUMUL (temps du jour) ════════
      Même source, /api/stats/today : les deux chiffres portent sur la
-     même fenêtre (journée comptée à partir de 7 h, heure de Paris).  */
+     même fenêtre (journée comptée, qui commence à heure_debut_journee, heure de Paris).  */
   function renderCumul(mv, cout, smic) {
     document.getElementById('cumul-value').textContent = formatDuree(mv);
     document.getElementById('cumul-label').textContent = 'de vie ' + accordPerdu(mv) + ' collectivement';
@@ -660,6 +660,7 @@
       const stats = await res.json();
       const cout = stats.cout_eur || 0;
       document.getElementById('ctr-eur').textContent = fmt(cout) + ' €';
+      document.getElementById('debut-journee').textContent = stats.heure_debut_journee;
       renderCumul(stats.total_minutes_voyageurs || 0, cout, stats.smic_horaire);
     } catch (_) { /* on garde les placeholders « — » */ }
   }

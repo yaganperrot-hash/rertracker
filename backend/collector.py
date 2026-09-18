@@ -200,9 +200,9 @@ async def collect_disruptions() -> None:
             if heure_debut > now:
                 continue
 
-            # Ignorer les incidents de nuit (00h-07h heure Paris)
+            # Ignorer les incidents de nuit (avant le début de la journée comptée, heure de Paris)
             paris_hour = heure_debut.astimezone(ZoneInfo("Europe/Paris")).hour
-            if paris_hour < 7:
+            if paris_hour < get_settings().collecte_heure_debut:
                 continue
 
             duree_minutes = None

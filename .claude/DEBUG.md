@@ -714,6 +714,49 @@ sans jamais reprendre sa marche ; recouper avec les interruptions déclarées.
   centaines d'arrêts passés de 30 à 60 min et plus). Le « ~3 min » vaut pour l'ancien appel par ligne.
 - **D** : ligne K à 4 trains dans le flux global aussi (11 h 38, 12 h 18) → trou côté PRIM, pas dans notre filtre.
 
+
+## Session 2026-09-18 — Mac (audit des chiffres affichés)
+
+### [2026-09-18] Relevés sautés le matin : Mac en veille
+**Symptôme** : relevés toutes les 10 à 30 min au lieu de 5, « maximum number of running instances reached ».
+**Cause** : veille du Mac (réveils « DarkWake » de quelques secondes) ; un relevé seul dure ~10 s (68 Mo en 8 s).
+**Fix** : `caffeinate -ims -w <PID uvicorn>` à côté du serveur. Sur batterie, écran fermé = veille quand même.
+**Status** : ✅ Contourné (pas de changement de code)
+
+### [2026-09-18] Bug 41 — Trains de 6 h à 7 h comptés la veille
+**Fichier(s)** : `backend/metrics.py`, `bilans.py`, `transfert.py`, `main.py`, `recalcul.py`, `collector.py`, pages
+**Symptôme** : 51 trains relevés le 18/09 entre 6 h et 7 h (76 884 €) dans la journée du 17/09.
+**Cause** : journée comptée depuis 7 h alors que la collecte reprend à 6 h.
+**Fix** : la journée commence à `collecte_heure_debut` (`metrics.debut_journee` / `journee_de`, seule définition) ;
+finalisation de la veille à 6 h 05 ; pages lisent l'heure dans l'API. Tests `TestJourneeComptee`.
+**Status** : ✅ Résolu (historique recalculé sur le Mac)
+
+### [2026-09-18] Bug 42 — Comparaisons avec des jours incomplets (« +412,7 % » sur 7 jours)
+**Cause** : lignes à 0 du 31/08 et du 7 au 9/09 (tests), jours d'avant le 16/09 incomplets (9 lignes, Transilien faux,
+suppressions non détectées) : la semaine précédente passait pour « complète ».
+**Fix** : `Settings.debut_donnees_fiables` (2026-09-16) — jours antérieurs gardés en base, exclus de tout cumul et de
+toute comparaison (`metrics.premier_jour_affiche`, bilans, panneau de ligne).
+**Status** : ✅ Résolu
+
+### [2026-09-18] Bug 43 — Trains supprimés enregistrés comme retards
+**Symptôme** : RER D ZOCO affiché « 3 min » pour 5 929 € (12 arrêts supprimés) ; 58 trains du 16 au 18/09.
+**Cause** : serveur du Mac sur l'ancien code (bug E) jusqu'au 18/09 8 h 37, puis l'import gardait l'état du relevé le
+plus récent.
+**Fix** : `transfert import` — supprimé d'un seul côté ⇒ supprimé ; `python -m backend.recalcul` remet « supprimé »
+tout train dont un arrêt relevé l'est (`recalcul.reparer_suppressions`). Fusion vérifiée sur une base jetable.
+**Status** : ✅ Résolu (à relancer sur le Windows : `python -m backend.recalcul`)
+
+### [2026-09-18] Panneau de ligne : trois chiffres de natures différentes
+**Symptôme** : « 1 218 incidents · 972 104 € · 5 j 22 h » : période cachée (30 jours glissants), temps = retards des
+trains alors que le coût repose sur le temps des voyageurs.
+**Fix** : Aujourd'hui / Semaine / Année calendaires, période écrite, temps perdu par les voyageurs (base du coût).
+**Status** : ✅ Résolu (`cd02e23`)
+
+### [2026-09-18] À vérifier — attentes mesurées de plus d'une heure
+RER D LOPE supprimé à 5 h 56 : 110 min d'attente à Corbeil (128 224 min-voy.). 185 attentes ≥ 60 min sur le RER C
+depuis le 16/09. Contrôler sur `logs/flux_brut/` que le train suivant visible est bien le premier réel.
+**Status** : 🔍 Ouvert
+
 ---
 
 ## Notes de surveillance

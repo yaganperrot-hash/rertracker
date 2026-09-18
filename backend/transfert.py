@@ -1,20 +1,21 @@
 """Transfert des incidents d'un PC à l'autre (chaque PC a sa propre base).
 
     # PC de départ — serveur arrêté
-    ./venv/bin/python -m backend.transfert export            # journée en cours (depuis 7 h)
+    ./venv/bin/python -m backend.transfert export            # journée comptée en cours
     ./venv/bin/python -m backend.transfert export 2026-09-14
 
     # PC d'arrivée — après git pull, avant de lancer le serveur
     ./venv/bin/python -m backend.transfert import transferts/incidents-2026-09-14.json
 
 L'import fusionne sur navitia_id (même identifiant sur les deux PC) avec la règle du collecteur :
-pire retard observé, première heure vue, état (supprimé ou non) du relevé le plus récent.
+pire retard observé, première heure vue, état du relevé le plus récent — sauf un train supprimé d'un seul côté,
+qui reste supprimé (jamais de retour de supprimé à non supprimé).
 Puis il recalcule les daily_metrics des journées touchées et les bilans.
 """
 import asyncio
 import json
 import sys
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from sqlalchemy import case, func, or_, select
@@ -22,7 +23,7 @@ from sqlalchemy.dialects.postgresql import insert
 
 from backend.bilans import generer_bilans
 from backend.database import AsyncSessionLocal
-from backend.metrics import PARIS_TZ, compute_daily_metrics
+from backend.metrics import PARIS_TZ, compute_daily_metrics, debut_journee, journee_de
 from backend.models import Incident
 
 DOSSIER = Path(__file__).parent.parent / "transferts"
@@ -36,8 +37,8 @@ DATES = {"heure_debut", "heure_fin", "created_at", "heure_theorique", "updated_a
 
 
 def _jour_service(dt: datetime) -> date:
-    """Journée comptée depuis 7 h, heure de Paris (comme l'accueil et les bilans)."""
-    return (dt.astimezone(PARIS_TZ) - timedelta(hours=7)).date()
+    """Journée comptée, comme l'accueil et les bilans (metrics.journee_de)."""
+    return journee_de(dt)
 
 
 def _ecrire_json(chemin: Path, contenu: dict) -> None:
@@ -56,7 +57,7 @@ def _lire_json(chemin: Path) -> dict:
 
 
 async def exporter(jour: date) -> Path:
-    debut = datetime.combine(jour, time(7, 0), tzinfo=PARIS_TZ)
+    debut = debut_journee(jour)
     fin = debut + timedelta(days=1)
     async with AsyncSessionLocal() as session:
         stmt = select(Incident).where(or_(
@@ -91,7 +92,12 @@ async def importer(chemin: Path) -> None:
             deux_retards = (ex.is_cancelled.isnot(True)) & (Incident.is_cancelled.isnot(True)) \
                 & (ex.source == "realtime") & (Incident.source == "realtime")
             pire = ex.duree_minutes > Incident.duree_minutes
-            prendre = case((deux_retards, pire), else_=plus_recent)
+            # Supprimé d'un seul côté : la suppression l'emporte, quel que soit le relevé le plus récent (les arrêts
+            # supprimés sortent du flux avant la fin du train, un relevé plus tardif ne la voit plus)
+            ex_supprime, base_supprime = ex.is_cancelled.is_(True), Incident.is_cancelled.is_(True)
+            etat = case((ex_supprime & base_supprime.isnot(True), True),
+                        (base_supprime & ex_supprime.isnot(True), False), else_=plus_recent)
+            prendre = case((deux_retards, pire), else_=etat)
 
             stmt = stmt.on_conflict_do_update(
                 index_elements=["navitia_id"],
@@ -101,7 +107,7 @@ async def importer(chemin: Path) -> None:
                     "updated_at": func.greatest(Incident.updated_at, ex.updated_at),
                     **{c: case((prendre, getattr(ex, c)), else_=getattr(Incident, c))
                        for c in ("duree_minutes", "cause", "heure_theorique", "gare", "direction", "mission")},
-                    **{c: case((plus_recent, getattr(ex, c)), else_=getattr(Incident, c))
+                    **{c: case((etat, getattr(ex, c)), else_=getattr(Incident, c))
                        for c in ("type_incident", "is_cancelled", "heure_fin", "source")},
                     # Un export d'avant la bascule n'a pas d'arrêts : ne pas effacer ceux déjà en base
                     "arrets": case((plus_recent, func.coalesce(ex.arrets, Incident.arrets)),

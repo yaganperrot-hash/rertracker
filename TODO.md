@@ -23,7 +23,13 @@
   garder les horaires passés quand le GTFS est reconstruit (`data/horaires.json.gz` ne couvre que sa fenêtre de 30 jours)
 - [ ] **PC Windows** : `git pull`, serveur arrêté, `python -m backend.recalcul` (plafond remplacé le 17/09),
   `POLLING_INTERVAL_MINUTES=5` dans `.env` (collecte globale du 17/09)
-- [ ] **Mac** : importer `transferts/incidents-2026-09-15.json` et `-16.json` (serveur arrêté), puis recalcul
+- [x] **Mac** : transferts du 15 au 18/09 importés, recalcul fait (2026-09-18)
+- [ ] **PC Windows — après `git pull` (2026-09-18)** : serveur arrêté, `python -m backend.recalcul` (journée depuis 6 h,
+  trains supprimés réparés, données fiables depuis le 16/09) ; lancer le serveur avec la veille empêchée
+- [ ] **Audit des chiffres (2026-09-18)** — faits : panneau de ligne, journée depuis 6 h, données fiables, suppressions,
+  bot sans « Métro », séparateur des milliers. Restent : nombre d'incidents dépendant de la cadence des relevés
+  (compter des trains distincts ?), attentes mesurées > 1 h à vérifier (`.claude/DEBUG.md`), pages non auditées :
+  Mon trajet, Méthode, Carte
 - [ ] Lot 5 (valeur du temps) : décidé le 2026-09-16 de garder le SMIC seul — TASK-29/30 abandonnées.
 
 ## À faire

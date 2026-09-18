@@ -76,7 +76,7 @@ def _compose_tweet(total_incidents: int, total_mv: int, lignes: list[str], d: da
     pire = LINE_DISPLAY.get(lignes[0], lignes[0]) if lignes else None
 
     lines = [
-        f"🚨 {jour.capitalize()} {d.day:02d}/{d.month:02d}/{d.year} — Bilan RER, Transilien & Métro IDF",
+        f"🚨 {jour.capitalize()} {d.day:02d}/{d.month:02d}/{d.year} — Bilan RER & Transilien IDF",
         f"💶 {_fmt(euros)} € de temps de travail volé",
         f"⏱ {_fmt_duree(total_mv)} de vie {_accord_perdu(total_mv)} collectivement",
         f"🔴 {total_incidents} incident{'s' if total_incidents != 1 else ''}"

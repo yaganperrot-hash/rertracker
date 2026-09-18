@@ -48,6 +48,22 @@ if not OFFRE:
     logger.error("offre_theorique.json illisible — parcours et intervalles inconnus")
 
 
+def debut_journee(jour: date) -> datetime:
+    """Début de la journée comptée `jour` (heure de Paris) : l'heure de reprise de la collecte. Un train relevé
+    au premier relevé du matin compte ce jour-là, pas la veille. La journée court jusqu'au début de la suivante."""
+    return datetime.combine(jour, time(get_settings().collecte_heure_debut), tzinfo=PARIS_TZ)
+
+
+def journee_de(instant: datetime) -> date:
+    """Journée comptée à laquelle appartient un instant (voir debut_journee)."""
+    return (instant.astimezone(PARIS_TZ) - timedelta(hours=get_settings().collecte_heure_debut)).date()
+
+
+def premier_jour_affiche(jour: date) -> date:
+    """Premier jour d'une période affichée : jamais avant le début des données fiables."""
+    return max(jour, get_settings().debut_donnees_fiables)
+
+
 def part_horaire(line_id: str, quand: datetime) -> float | None:
     """Part des validations du jour sur l'heure de `quand` (heure de Paris), profil du réseau de la ligne.
     None quand la ligne n'a pas de profil open data."""
@@ -263,19 +279,18 @@ def cout_eur(minutes_voyageurs: int, smic_horaire: float) -> int:
 
 async def compute_daily_metrics(target_date: date | None = None, db: AsyncSession | None = None) -> None:
     if target_date is None:
-        target_date = datetime.now(PARIS_TZ).date()
+        target_date = journee_de(datetime.now(PARIS_TZ))
 
     async def _run(session: AsyncSession) -> None:
         now_utc = datetime.now(timezone.utc)
 
-        # Time window: 07h00 Paris on target_date → min(07h00 next day, now)
-        day_07h = datetime.combine(target_date, time(7, 0), tzinfo=PARIS_TZ).astimezone(timezone.utc)
-        next_day_07h = day_07h + timedelta(days=1)
-        upper_bound = min(next_day_07h, now_utc)
+        # Journée comptée : du début de target_date à celui du lendemain (ou maintenant)
+        debut = debut_journee(target_date).astimezone(timezone.utc)
+        upper_bound = min(debut_journee(target_date + timedelta(days=1)).astimezone(timezone.utc), now_utc)
 
         # Fetch all incidents in the window
         stmt = select(Incident).where(
-            Incident.heure_debut >= day_07h,
+            Incident.heure_debut >= debut,
             Incident.heure_debut < upper_bound,
         )
         rows = (await session.execute(stmt)).scalars().all()
@@ -363,7 +378,7 @@ async def compute_daily_metrics(target_date: date | None = None, db: AsyncSessio
 
 
 async def get_today_stats(db: AsyncSession) -> dict:
-    today = datetime.now(PARIS_TZ).date()
+    today = journee_de(datetime.now(PARIS_TZ))
     stmt = select(DailyMetric).where(DailyMetric.date == today)
     rows = (await db.execute(stmt)).scalars().all()
 
@@ -381,6 +396,7 @@ async def get_today_stats(db: AsyncSession) -> dict:
         # Arrondi par ligne puis sommé, comme les bilans : même coût du jour partout
         "cout_eur": sum(cout_eur(r.minutes_voyageurs, smic) for r in rows),
         "smic_horaire": smic,
+        "heure_debut_journee": get_settings().collecte_heure_debut,
         "lignes_perturbees": lignes_perturbees,
         "nb_lignes_perturbees": len(lignes_perturbees),
     }
@@ -392,8 +408,8 @@ async def _retard_moyen_pondere(line_id: str, start: date, end: date, db: AsyncS
     = Σ(durée_i × voyageurs_touchés_i) / Σ(voyageurs_touchés_i), voyageurs_touchés = minutes-voyageurs ÷ durée
     Un retard de 48 min en heure de pointe pèse plus qu'un retard de 5 min à 22 h.
     """
-    start_utc = datetime.combine(start, time(7, 0), tzinfo=PARIS_TZ).astimezone(timezone.utc)
-    end_utc = datetime.combine(end + timedelta(days=1), time(7, 0), tzinfo=PARIS_TZ).astimezone(timezone.utc)
+    start_utc = debut_journee(start).astimezone(timezone.utc)
+    end_utc = debut_journee(end + timedelta(days=1)).astimezone(timezone.utc)
     now_utc = datetime.now(timezone.utc)
     upper = min(end_utc, now_utc)
 
@@ -426,12 +442,13 @@ async def _retard_moyen_pondere(line_id: str, start: date, end: date, db: AsyncS
 
 
 async def get_line_stats(line_id: str, period: int, db: AsyncSession) -> dict:
-    end = datetime.now(PARIS_TZ).date()
-    start = end - timedelta(days=period - 1)
+    end = journee_de(datetime.now(PARIS_TZ))
+    periode_debut = end - timedelta(days=period - 1)
+    start = premier_jour_affiche(periode_debut)
 
     stmt = (
         select(DailyMetric)
-        .where(DailyMetric.line_id == line_id, DailyMetric.date >= start)
+        .where(DailyMetric.line_id == line_id, DailyMetric.date >= start, DailyMetric.date <= end)
         .order_by(DailyMetric.date)
     )
     rows = (await db.execute(stmt)).scalars().all()
@@ -442,8 +459,11 @@ async def get_line_stats(line_id: str, period: int, db: AsyncSession) -> dict:
     return {
         "line_id": line_id,
         "period_days": period,
-        "from": start.isoformat(),
+        "from": periode_debut.isoformat(),
         "to": end.isoformat(),
+        # Premier jour réellement compté (début des données fiables) et heure de début de chaque journée
+        "debut_donnees": start.isoformat(),
+        "heure_debut_journee": get_settings().collecte_heure_debut,
         "total_incidents": sum(r.nb_incidents for r in rows),
         "total_duree_min": sum(r.duree_totale_min for r in rows),
         "total_minutes_voyageurs": sum(r.minutes_voyageurs for r in rows),

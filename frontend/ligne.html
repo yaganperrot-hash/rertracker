@@ -352,7 +352,7 @@
         const stats = await res.json();
         const cout = stats.cout_eur || 0;
         document.getElementById('hc-value').textContent =
-          cout.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' €';
+          cout.toLocaleString('fr-FR') + ' €';
       } catch (_) {}
     }
     fetchGlobal();
@@ -362,7 +362,7 @@
       return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     }
     function fmt(n) {
-      return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      return n.toLocaleString('fr-FR');
     }
 
     async function fetchLineIncidents() {

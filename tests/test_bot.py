@@ -98,3 +98,8 @@ async def test_aucun_incident_aucune_publication(tmp_path):
          patch("backend.bot.get_settings", return_value=settings):
         await post_daily_recap(dossier=tmp_path)
     assert list(tmp_path.iterdir()) == []
+
+
+def test_bilan_ne_parle_que_des_lignes_suivies():
+    # Métro retiré de la collecte (2026-09-12) : le post ne doit pas l'annoncer
+    assert "Métro" not in _compose_tweet(3, 1000, ["RER_A"], date(2026, 9, 10), euros=205)

@@ -124,12 +124,15 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb reta
 ---
 
 ## Décisions de design
-- **Accueil = fenêtre unique « aujourd'hui »** (journée comptée depuis 7 h, heure de Paris) : hero, cumul et table
+- **Accueil = fenêtre unique « aujourd'hui »** (journée comptée depuis la reprise des relevés, 6 h heure de Paris —
+  `metrics.debut_journee`, 2026-09-18) : hero, cumul et table
   lisent les mêmes minutes-voyageurs du jour. Tout cumul pluri-jours (semaine, année) va sur une autre page.
   Charte : fond crème, Roboto, couleurs de ligne, accents noir + rouge uniquement.
 - **Calcul = mesure** (2026-09-16) : chaque hypothèse maison est remplacée dès qu'une donnée mesurée existe
   (flux temps réel arrêt par arrêt, comptages SNCF, validations et GTFS IDFM) ; ce qui reste estimé est listé
   dans les Limites de la page Méthode.
+- **Données fiables à partir du 2026-09-16** (`Settings.debut_donnees_fiables`) : les jours d'avant restent en base
+  mais n'entrent dans aucun cumul ni aucune comparaison affichés.
 - **Bilans = JSON statiques** (`frontend/data/`, ignoré par git) régénérés toutes les 10 min par le scheduler,
   servis avec `Cache-Control: max-age=600`. Coût arrondi **par ligne × jour** puis sommé : un total affiché est
   toujours la somme exacte de son détail. Deux unités à l'écran : € et minutes. Couleurs de ligne = celles de

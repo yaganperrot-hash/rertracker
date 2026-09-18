@@ -31,9 +31,11 @@
   // ── Périodes calendaires, date de Paris : journée en cours, semaine depuis lundi, année depuis le 1er janvier ──
   const PERIOD_LABEL = { jour: "aujourd'hui", semaine: 'cette semaine', annee: 'cette année' };
 
+  // Journée comptée en cours : elle commence à l'heure de reprise des relevés (collecte_heure_debut, /api/reference)
+  let heureDebutJournee = 6;
   function parisToday() {
     const [y, m, d] = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' })
-      .format(new Date()).split('-').map(Number);
+      .format(new Date(Date.now() - heureDebutJournee * 3600000)).split('-').map(Number);
     return { y, m, d };
   }
 
@@ -56,10 +58,10 @@
     let txt;
     if (period === 'semaine') txt = 'Cette semaine \u00B7 depuis le lundi ' + fmtJourMois(data.from);
     else if (period === 'annee') txt = 'En ' + data.from.slice(0, 4) + ' \u00B7 depuis le 1er janvier';
-    else txt = 'Aujourd\u2019hui \u00B7 depuis 7 h';
-    const premier = data.daily && data.daily.length ? data.daily[0].date : null;
-    if (period !== 'jour' && premier && premier > data.from) {
-      txt += ' (donn\u00E9es depuis le ' + fmtJourMois(premier) + ')';
+    else txt = 'Aujourd\u2019hui \u00B7 depuis ' + data.heure_debut_journee + ' h';
+    // Jours d'avant les données fiables : exclus par le backend, on le dit
+    if (period !== 'jour' && data.debut_donnees > data.from) {
+      txt += ' (donn\u00E9es depuis le ' + fmtJourMois(data.debut_donnees) + ')';
     }
     return txt;
   }
@@ -77,6 +79,7 @@
       const ref = await res.json();
       frequentation = ref.frequentation || {};
       smicHoraire = ref.smic_horaire || 12.31;
+      if (ref.collecte_heure_debut != null) heureDebutJournee = ref.collecte_heure_debut;
     } catch (_) { frequentation = {}; }
   }
 

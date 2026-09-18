@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from backend.config import get_settings, SLUG_TO_ID
 from backend.database import init_db
 from backend.collector import collect_disruptions, collect_rt_delays, collecte_autorisee, dernier_releve
-from backend.metrics import compute_daily_metrics
+from backend.metrics import compute_daily_metrics, journee_de
 from backend.bilans import generer_bilans
 from backend.api import router
 from backend.bot import post_daily_recap
@@ -37,7 +37,7 @@ async def _finalize_yesterday():
     veille étaient figées au dernier relevé et les incidents encore ouverts
     avaient une durée sous-estimée.
     """
-    yesterday = datetime.now(PARIS_TZ).date() - timedelta(days=1)
+    yesterday = journee_de(datetime.now(PARIS_TZ)) - timedelta(days=1)
     try:
         await compute_daily_metrics(target_date=yesterday)
         logger.info("Finalized yesterday's metrics (%s)", yesterday)
@@ -128,11 +128,11 @@ async def lifespan(app: FastAPI):
         minutes=settings.bilans_interval_minutes,
         id="generer_bilans",
     )
-    # À 07h05 Paris : finaliser les métriques de la veille (fenêtre 07h-07h bouclée)
+    # 5 min après le début de la journée comptée (collecte_heure_debut) : finaliser les métriques de la veille
     scheduler.add_job(
         _finalize_yesterday,
         "cron",
-        hour=7,
+        hour=settings.collecte_heure_debut,
         minute=5,
         timezone=PARIS_TZ,
         id="finalize_yesterday",

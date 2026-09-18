@@ -13,7 +13,7 @@ import math
 import os
 from calendar import monthrange
 from collections import Counter, defaultdict
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from sqlalchemy import func, select
@@ -23,7 +23,7 @@ from backend.causes import CATEGORIES, NON_PRECISE, categoriser_cause
 from backend.collector import LIGNES_CIBLES
 from backend.config import get_settings
 from backend.database import AsyncSessionLocal
-from backend.metrics import PARIS_TZ, cout_eur  # cout_eur : même arrondi que l'accueil
+from backend.metrics import PARIS_TZ, cout_eur, debut_journee, journee_de, premier_jour_affiche  # cout_eur : même arrondi que l'accueil
 from backend.models import DailyMetric, Incident
 
 logger = logging.getLogger(__name__)
@@ -67,8 +67,8 @@ def repartition_causes(categories: list[str]) -> dict:
 
 
 def journee_paris(dt: datetime) -> date:
-    """Journée de rattachement à Paris : comme compute_daily_metrics, elle commence à 7 h."""
-    return (dt.astimezone(PARIS_TZ) - timedelta(hours=7)).date()
+    """Journée de rattachement à Paris, la même que compute_daily_metrics (metrics.journee_de)."""
+    return journee_de(dt)
 
 
 def _vide() -> dict:
@@ -482,17 +482,19 @@ async def generer_bilans(db: AsyncSession | None = None, dossier: Path = DOSSIER
             contenu["meta"]["recalcul_minutes"] = settings.bilans_interval_minutes
             _ecrire(dossier, nom, contenu)
         genere_a = datetime.now(PARIS_TZ)
-        aujourdhui = genere_a.date()
+        aujourdhui = journee_de(genere_a)
 
-        debut_donnees = (await session.execute(select(func.min(DailyMetric.date)))).scalar()
+        # Jours d'avant les données fiables : en base, mais hors de tout cumul et de toute comparaison
+        premier = (await session.execute(select(func.min(DailyMetric.date)))).scalar()
+        debut_donnees = premier_jour_affiche(premier) if premier is not None else None
 
         # Une seule lecture : 2 × la plus longue période pour /statistiques, 2 années pleines pour /annee N-1
-        borne = min(aujourdhui - timedelta(days=2 * max(PERIODES)), date(aujourdhui.year - 2, 1, 1))
+        borne = premier_jour_affiche(min(aujourdhui - timedelta(days=2 * max(PERIODES)), date(aujourdhui.year - 2, 1, 1)))
         rows = (await session.execute(
             select(DailyMetric).where(DailyMetric.date >= borne, DailyMetric.date <= aujourdhui)
         )).scalars().all()
 
-        debut_utc = datetime.combine(borne, time(0, 0), tzinfo=PARIS_TZ)
+        debut_utc = debut_journee(borne)
         perturbations = [
             (journee_paris(heure), categoriser_cause(cause))
             for cause, heure in (await session.execute(
@@ -517,7 +519,7 @@ async def generer_bilans(db: AsyncSession | None = None, dossier: Path = DOSSIER
         directions_data = (await session.execute(
             select(Incident.line_id, Incident.direction).where(
                 Incident.source == "realtime",
-                Incident.heure_debut >= datetime.combine(date(aujourdhui.year, 1, 1), time(0, 0), tzinfo=PARIS_TZ),
+                Incident.heure_debut >= debut_journee(premier_jour_affiche(date(aujourdhui.year, 1, 1))),
                 Incident.direction.isnot(None),
                 Incident.direction != "",
             )

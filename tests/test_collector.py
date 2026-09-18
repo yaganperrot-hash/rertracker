@@ -203,6 +203,7 @@ class TestCollectDisruptions:
 
         mock_settings = MagicMock()
         mock_settings.prim_api_key = "test-prim-key"
+        mock_settings.collecte_heure_debut = 6
 
         mock_session = AsyncMock()
         mock_session.execute = AsyncMock()

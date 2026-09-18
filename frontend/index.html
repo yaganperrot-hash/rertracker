@@ -218,7 +218,7 @@
 <!-- Cumul du jour -->
 <section class="cumul">
   <div class="cumul-inner">
-    <div class="cumul-kicker">Cumul du jour · depuis 7 h</div>
+    <div class="cumul-kicker">Cumul du jour · depuis <span id="debut-journee">6</span> h</div>
     <div class="cumul-value" id="cumul-value">—</div>
     <div class="cumul-label" id="cumul-label">de vie perdus collectivement</div>
     <div class="cumul-note" id="cumul-note">base SMIC — €/h · ≈ — salaires journaliers</div>
@@ -259,7 +259,7 @@
   };
 
   function fmt(n) {
-    return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return n.toLocaleString('fr-FR');
   }
 </script>
 <script src="pick.js"></script>
@@ -281,6 +281,7 @@
       const stats = await res.json();
       const cout = stats.cout_eur || 0;
       document.getElementById('hero-eur').textContent = fmt(cout) + ' €';
+      document.getElementById('debut-journee').textContent = stats.heure_debut_journee;
       renderCumul(stats.total_minutes_voyageurs || 0, cout, stats.smic_horaire);
     } catch (_) {}
   }

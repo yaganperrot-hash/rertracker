@@ -59,13 +59,21 @@ class TestUtilitaires:
     def test_repartition_vide(self):
         assert repartition_causes([]) == {"total": 0, "repartition": []}
 
-    def test_journee_commence_a_7h(self):
-        # 04:00 UTC = 06:00 Paris → rattaché à la veille
-        assert journee_paris(datetime(2026, 9, 11, 4, 0, tzinfo=timezone.utc)) == date(2026, 9, 10)
-        assert journee_paris(datetime(2026, 9, 11, 6, 0, tzinfo=timezone.utc)) == date(2026, 9, 11)
+    def test_journee_commence_a_la_reprise_des_releves(self):
+        # 03:59 UTC = 05:59 Paris → veille ; 04:30 UTC = 06:30 Paris (premier relevé du matin) → jour même
+        assert journee_paris(datetime(2026, 9, 11, 3, 59, tzinfo=timezone.utc)) == date(2026, 9, 10)
+        assert journee_paris(datetime(2026, 9, 11, 4, 30, tzinfo=timezone.utc)) == date(2026, 9, 11)
 
 
 class TestStatistiques:
+    def test_pas_de_comparaison_avec_une_semaine_d_avant_les_donnees_fiables(self):
+        # Début des données fiables le 07/09 : la semaine précédente (29/08 → 04/09) n'est pas comparée,
+        # même si la base contient des jours plus anciens
+        rows = [row(date(2026, 9, 1), "RER_A", 10), row(date(2026, 9, 10), "RER_A", 5000)]
+        b = stats(7, rows, date(2026, 9, 7))
+        assert b["meta"]["precedente_complete"] is False
+        assert b["delta_pct"] is None and b["total_prec"] is None
+
     def test_total_egal_somme_des_lignes_avec_arrondis(self):
         rows = [
             row(date(2026, 9, 10), "RER_A", 97),
