@@ -41,6 +41,11 @@ PERIODE_MAX_JOURS = 60
 _UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
 
+def arrets_releves():
+    """Condition SQL : l'incident a une liste d'arrêts relevés (ni NULL, ni le JSON « null » des anciens imports)."""
+    return func.jsonb_typeof(Incident.arrets) == "array"
+
+
 def cle_gare(nom: str) -> str:
     """Tri et comparaison sans accents ni casse."""
     return unicodedata.normalize("NFKD", nom).encode("ascii", "ignore").decode().lower()
@@ -190,7 +195,7 @@ async def calculer(db: AsyncSession, line_id: str, depart: str, arrivee: str, hh
     fenetre = horaires.get("_source", {}).get("fenetre") or [None, None]
 
     mesure_depuis = (await db.execute(
-        select(func.min(Incident.heure_debut)).where(Incident.arrets.isnot(None)))).scalar()
+        select(func.min(Incident.heure_debut)).where(arrets_releves()))).scalar()
     mesure_depuis = mesure_depuis.astimezone(PARIS_TZ) if mesure_depuis else None
 
     jours = [maintenant.date() - timedelta(days=k) for k in range(periode)]
@@ -244,7 +249,7 @@ async def calculer(db: AsyncSession, line_id: str, depart: str, arrivee: str, hh
         # Relevé arrêt par arrêt autour du trajet (l'ancienne collecte ne voyait pas les trains supprimés en route)
         couvert = (await db.execute(select(Incident.id).where(
             Incident.source == "realtime",
-            Incident.arrets.isnot(None),
+            arrets_releves(),
             Incident.heure_debut <= prevu["depart"] + MARGE_RELEVE,
             Incident.updated_at >= prevu["depart"] - MARGE_RELEVE).limit(1))).first()
         if couvert is None:

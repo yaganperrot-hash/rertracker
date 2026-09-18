@@ -752,10 +752,28 @@ trains alors que le coût repose sur le temps des voyageurs.
 **Fix** : Aujourd'hui / Semaine / Année calendaires, période écrite, temps perdu par les voyageurs (base du coût).
 **Status** : ✅ Résolu (`cd02e23`)
 
-### [2026-09-18] À vérifier — attentes mesurées de plus d'une heure
-RER D LOPE supprimé à 5 h 56 : 110 min d'attente à Corbeil (128 224 min-voy.). 185 attentes ≥ 60 min sur le RER C
-depuis le 16/09. Contrôler sur `logs/flux_brut/` que le train suivant visible est bien le premier réel.
-**Status** : 🔍 Ouvert
+### [2026-09-18] Attentes mesurées de plus d'une heure
+RER C 17/09 9 h-13 h et ligne N : coupure de Viroflay ; RER D 18/09 vers 6 h : perturbation déclarée (ralentissements,
+suppressions). `DirectionRef` = Aller / Retour (pas la destination). LOPE 110 min à Corbeil non revérifiable (pas
+d'archive avant 6 h 57 sur le Mac).
+**Status** : ✅ Plausible, vraies perturbations
+
+### [2026-09-18] Bug 44 — Mon trajet « mesuré depuis le 07/09 »
+**Cause** : 711 incidents importés avec `arrets` = JSON `null` (pas NULL SQL) : `arrets IS NOT NULL` les prenait pour
+des relevés arrêt par arrêt.
+**Fix** : colonne `JSONB(none_as_null=True)`, filtre `jsonb_typeof(arrets) = 'array'` (`trajets.arrets_releves`),
+`recalcul` remet les JSON `null` à NULL.
+**Status** : ✅ Résolu
+
+### [2026-09-18] Arrêts sautés comptés dans le coût sans validation
+21 trains, 127 arrêts, 65 309 min-voy. les 17-18/09, non documentés sur la page Méthode.
+**Décision** : retirés du coût (`minutes_voyageurs_train`), toujours relevés (`k`) et signalés dans Mon trajet.
+**Status** : ✅ Résolu
+
+### [2026-09-18] « Semaine » : 7 jours glissants sur Statistiques, depuis lundi dans le panneau
+**Fix** : hall-of-shame en périodes calendaires, bornes écrites par le backend (`meta.periodes`) ; salaires journaliers
+arrondis à l'inférieur partout.
+**Status** : ✅ Résolu
 
 ---
 

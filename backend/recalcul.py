@@ -45,6 +45,14 @@ def premier_arret_supprime(arrets) -> dict | None:
     return next((a for a in arrets if a.get("s") is True and a.get("p")), None)
 
 
+async def nettoyer_arrets_json_null() -> int:
+    """Arrêts enregistrés en JSON « null » par l'import d'avant le 2026-09-18 → NULL SQL."""
+    async with AsyncSessionLocal() as db:
+        res = await db.execute(update(Incident).where(func.jsonb_typeof(Incident.arrets) == "null").values(arrets=None))
+        await db.commit()
+    return res.rowcount
+
+
 async def reparer_suppressions() -> int:
     """Remet « supprimé » les trains dont un arrêt relevé est supprimé mais enregistrés comme simples retards :
     même état que le collecteur (collector.analyser_train). Renvoie le nombre de trains réparés."""
@@ -70,6 +78,7 @@ async def reparer_suppressions() -> int:
 
 
 async def recalculer() -> None:
+    print(f"{await nettoyer_arrets_json_null()} incidents sans arrêts remis à NULL (JSON « null »)")
     print(f"{await reparer_suppressions()} trains remis « supprimé » d'après leurs arrêts")
     plage = await _plage_des_incidents()
     if plage is None:

@@ -119,6 +119,8 @@ async def reference():
         "offre_intervalle_min": OFFRE.get("intervalle_min", {}),
         "offre_source": OFFRE.get("_source", {}),
         "fantome_min_minutes": GHOST_MIN_DELAY_MINUTES,
+        # Premier jour compté dans les totaux et comparaisons affichés (jours d'avant : collecte incomplète)
+        "debut_donnees_fiables": s.debut_donnees_fiables.isoformat(),
     }
 
 

@@ -158,3 +158,15 @@ class TestHorairesGtfs:
         assert offre.CHEMIN_HORAIRES.stat().st_size < 5_000_000
         h = offre.charger_horaires()
         assert set(h["lignes"]) == set(offre.LIGNE_ROUTE)
+
+
+def test_arrets_releves_exclut_le_json_null():
+    """Un incident sans arrêts (NULL SQL ou JSON « null » d'un ancien import) n'est pas un relevé arrêt par arrêt."""
+    from sqlalchemy.dialects import postgresql
+    sql = str(trajets.arrets_releves().compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}))
+    assert sql == "jsonb_typeof(incidents.arrets) = 'array'"
+
+
+def test_arrets_absents_ecrits_null_sql():
+    from backend.models import Incident
+    assert Incident.__table__.c.arrets.type.none_as_null

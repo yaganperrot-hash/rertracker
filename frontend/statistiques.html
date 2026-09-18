@@ -351,9 +351,10 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
   const GRAVITE_COULEURS = ['#EAE3D3', '#E4BBA2', '#D68A63', '#BE4E2E', '#8A2817'];
 
   const PERIODES = {
-    semaine: { label: '7 derniers jours', jours: 7, cle: 'semaine', subtitle: 'Cette semaine, les retards des RER et Transiliens ont coûté', cumul_kicker: 'Cumul de la semaine' },
-    mois:    { label: '30 derniers jours', jours: 30, cle: 'mois', subtitle: 'Ce mois-ci, les retards des RER et Transiliens ont coûté', cumul_kicker: 'Cumul du mois' },
-    annee:   { label: 'Année en cours', jours: 365, cle: 'annee', subtitle: 'Cette année, les retards des RER et Transiliens ont coûté', cumul_kicker: 'Cumul de l\'année' },
+    // Périodes calendaires (bornes dans hall-of-shame.json → meta.periodes), comme le panneau de ligne
+    semaine: { label: 'Semaine en cours', cle: 'semaine', subtitle: 'Cette semaine, les retards des RER et Transiliens ont coûté', cumul_kicker: 'Cumul de la semaine' },
+    mois:    { label: 'Mois en cours', cle: 'mois', subtitle: 'Ce mois-ci, les retards des RER et Transiliens ont coûté', cumul_kicker: 'Cumul du mois' },
+    annee:   { label: 'Année en cours', cle: 'annee', subtitle: 'Cette année, les retards des RER et Transiliens ont coûté', cumul_kicker: 'Cumul de l\'année' },
   };
 
   let donnees = null;      // hall-of-shame.json chargé
@@ -361,6 +362,7 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
   let ligneSelectionnee = null;
   let majHeure = null;     // timestamp MÀJ
   let smicHoraire = null;  // SMIC depuis le JSON
+  let meta = null;         // meta de hall-of-shame.json (bornes des périodes, début des données)
 
   // ── Formats ────────────────────────────────────────────────
 
@@ -387,19 +389,19 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
     return d.getDate() + ' ' + MOIS_COURT[d.getMonth()];
   }
 
+  function dateIso(iso) {
+    var t = iso.split('-').map(Number);
+    return new Date(t[0], t[1] - 1, t[2]);
+  }
+
+  // Bornes écrites par le backend : le navigateur ne recalcule aucune période
   function labelPeriode() {
-    var aujourdhui = new Date();
-    var p = PERIODES[periodeActuelle];
-    var fin = fmtDateCourte(aujourdhui) + ' ' + aujourdhui.getFullYear();
-    var debut;
-    if (periodeActuelle === 'annee') {
-      debut = '1 jan.';
-    } else {
-      var d = new Date(aujourdhui);
-      d.setDate(d.getDate() - p.jours);
-      debut = fmtDateCourte(d);
+    if (!meta || !meta.periodes) return '';
+    var au = dateIso(meta.au);
+    var txt = fmtDateCourte(dateIso(meta.periodes[periodeActuelle])) + ' — ' + fmtDateCourte(au) + ' ' + au.getFullYear();
+    if (meta.debut_donnees && meta.debut_donnees > meta.periodes[periodeActuelle]) {
+      txt += ' · données depuis le ' + fmtDateCourte(dateIso(meta.debut_donnees));
     }
-    var txt = debut + ' — ' + fin;
     if (majHeure) {
       txt += ' · MÀJ ' + majHeure;
     }
@@ -432,7 +434,7 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
 
     // Note SMIC
     if (smicHoraire) {
-      var salairesJour = Math.round(totalEur / (smicHoraire * 7));
+      var salairesJour = Math.floor(totalEur / (smicHoraire * 7));   // arrondi inférieur, comme l'accueil
       $('h-note').innerHTML = 'base SMIC ' + smicHoraire.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + NBSP + '€/h · ≈ ' + fmtNombre(salairesJour) + ' salaires journaliers · <a href="/methode.html#bilans">Méthode →</a>';
     }
   }
@@ -697,6 +699,7 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
         if (json.meta) {
           majHeure = new Date(json.meta.genere_a).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }).replace(':', 'H');
           smicHoraire = json.meta.smic_horaire || 0;
+          meta = json.meta;
           $('pied').textContent = 'Données API PRIM · IDF Mobilités';
         }
       }

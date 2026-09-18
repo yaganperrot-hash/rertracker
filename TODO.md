@@ -7,6 +7,7 @@
   - [ ] **B — arrêts sautés** : détection en observation depuis le 17/09 (`"k": true`, logs « Arrêt sauté probable »).
     Valider sur les archives (`logs/flux_brut/`) et sur des trajets réels notés (heure du quai, mission affichée,
     heure d'arrivée), puis compter les arrêts sautés dans `metrics.py` et dans « Mon trajet ».
+    **2026-09-18 : retirés du coût** (comptés depuis `36c7653`, ~65 000 min-voy. les 17-18/09) jusqu'à validation.
     Piste : garder l'heure du relevé de chaque mesure d'arrêt, pour savoir laquelle est périmée
   - [ ] **C — passé visible** : ~3 min et non ~50 min (un seul flux observé) ; corriger `lessons.md` et
     `arrets_du_train`, fermer l'angle mort de `attentes_mesurees` (train suivant déjà passé au relevé)
@@ -27,9 +28,10 @@
 - [ ] **PC Windows — après `git pull` (2026-09-18)** : serveur arrêté, `python -m backend.recalcul` (journée depuis 6 h,
   trains supprimés réparés, données fiables depuis le 16/09) ; lancer le serveur avec la veille empêchée
 - [ ] **Audit des chiffres (2026-09-18)** — faits : panneau de ligne, journée depuis 6 h, données fiables, suppressions,
-  bot sans « Métro », séparateur des milliers. Restent : nombre d'incidents dépendant de la cadence des relevés
-  (compter des trains distincts ?), attentes mesurées > 1 h à vérifier (`.claude/DEBUG.md`), pages non auditées :
-  Mon trajet, Méthode, Carte
+  bot sans « Métro », séparateur des milliers ; puis Mon trajet (JSON « null »), arrêts sautés hors coût,
+  Statistiques en périodes calendaires, page Méthode, salaires journaliers, accord de la Carte. Attentes > 1 h
+  vérifiées : vraies perturbations (Viroflay 17/09, RER D 18/09). Reste : `statistiques-{7,30}.json` générés mais
+  lus par aucune page (à supprimer ou à brancher)
 - [ ] Lot 5 (valeur du temps) : décidé le 2026-09-16 de garder le SMIC seul — TASK-29/30 abandonnées.
 
 ## À faire

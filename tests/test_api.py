@@ -125,3 +125,9 @@ class TestMonTrajet:
             await trajet(db=None, ligne="RER_C", depart="Nulle part", arrivee="Ivry-sur-Seine", heure="08:10",
                          jours="1", periode=7)
         assert e.value.status_code == 422
+
+
+def test_reference_donne_le_debut_des_donnees_fiables():
+    import asyncio
+    ref = asyncio.run(reference())
+    assert ref["debut_donnees_fiables"] == get_settings().debut_donnees_fiables.isoformat()

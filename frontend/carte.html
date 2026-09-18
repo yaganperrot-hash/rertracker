@@ -116,7 +116,7 @@ const nb = v => v.toLocaleString('fr-FR').replace(/ | /g, ' ');
   document.getElementById('montant').textContent = nb(today.cout_eur) + ' €';
   document.getElementById('mv').textContent = nb(today.total_minutes_voyageurs);
   document.getElementById('mvtxt').textContent =
-    'minutes-voyageurs ' + accordPerdu(today.total_minutes_voyageurs) +
+    'minutes-voyageurs perdues' +
     ' — soit ' + formatDuree(today.total_minutes_voyageurs);
   document.getElementById('inc').textContent = nb(today.total_incidents);
   document.getElementById('nbl').textContent = today.nb_lignes_perturbees;

@@ -31,7 +31,8 @@ class Incident(Base):
     # Arrêts du train relevés dans le flux SIRI Estimated Timetable, dans l'ordre du parcours :
     # [{"g": gare, "p": heure prévue ISO UTC, "r": retard à l'arrivée (min) ou null,
     #   "s": arrêt supprimé, "w": attente mesurée du train suivant (min) ou null}]. Null avant la bascule.
-    arrets: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    # none_as_null : None s'écrit NULL SQL, pas le JSON « null » (qui passait pour des arrêts relevés en SQL)
+    arrets: Mapped[list | None] = mapped_column(JSONB(none_as_null=True), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )

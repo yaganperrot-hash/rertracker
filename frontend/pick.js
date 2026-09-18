@@ -61,7 +61,7 @@
     else txt = 'Aujourd\u2019hui \u00B7 depuis ' + data.heure_debut_journee + ' h';
     // Jours d'avant les données fiables : exclus par le backend, on le dit
     if (period !== 'jour' && data.debut_donnees > data.from) {
-      txt += ' (donn\u00E9es depuis le ' + fmtJourMois(data.debut_donnees) + ')';
+      txt += ' \u2014 avant le ' + fmtJourMois(data.debut_donnees) + ' non compt\u00E9 : collecte incompl\u00E8te';
     }
     return txt;
   }

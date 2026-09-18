@@ -315,12 +315,15 @@ def construire_hall_of_shame(
     directions_par_ligne: dict[str, list[str]],
     smic_horaire: float,
     genere_a: datetime,
+    debut_donnees: date | None = None,
 ) -> dict:
-    """Construit le JSON hall-of-shame avec coûts, gravité quotidienne, causes et directions."""
+    """Construit le JSON hall-of-shame avec coûts, gravité quotidienne, causes et directions.
+    Périodes calendaires, comme le panneau de ligne : semaine depuis lundi, mois depuis le 1er, année depuis le
+    1er janvier (jours d'avant les données fiables déjà absents de `lignes_metriques`)."""
     annee = aujourdhui.year
     debut_annee = date(annee, 1, 1)
-    du_semaine = aujourdhui - timedelta(days=6)
-    du_mois = aujourdhui - timedelta(days=29)
+    du_semaine = aujourdhui - timedelta(days=aujourdhui.weekday())
+    du_mois = aujourdhui.replace(day=1)
 
     # Agréger les daily_metrics par ligne
     par_ligne: dict[str, dict] = {}
@@ -457,6 +460,8 @@ def construire_hall_of_shame(
             "annee": annee,
             "au": aujourdhui.isoformat(),
             "smic_horaire": smic_horaire,
+            "periodes": {"semaine": du_semaine.isoformat(), "mois": du_mois.isoformat(), "annee": debut_annee.isoformat()},
+            "debut_donnees": _iso(debut_donnees),
         },
         "lignes": resultats,
     }
@@ -530,7 +535,7 @@ async def generer_bilans(db: AsyncSession | None = None, dossier: Path = DOSSIER
 
         ecrire("hall-of-shame.json", construire_hall_of_shame(
             aujourdhui, rows, dict(perturbations_par_ligne),
-            dict(directions_par_ligne), smic, genere_a,
+            dict(directions_par_ligne), smic, genere_a, debut_donnees,
         ))
 
         for p in PERIODES:

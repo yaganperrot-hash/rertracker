@@ -214,22 +214,11 @@ class TestMinutesVoyageursTrain:
         arrets = _arrets("ABC", supprimes=(0, 1, 2), attentes={0: 20, 1: 20})
         assert minutes_voyageurs_train("RER_A", arrets) == 100 * 20 + 100 * 20
 
-    def test_arret_saute_traite_comme_supprime(self, ligne_fictive):
-        """Un arrêt sauté (k=True) fait attendre le voyageur comme un arrêt supprimé."""
-        # C est sauté avec attente mesurée de 15 min : voyageurs A→C et B→C attendent 15 min
-        arrets = _arrets("ABC", sautes=(2,), attentes={2: 15})
-        assert minutes_voyageurs_train("RER_A", arrets) == 50 * 15 + 100 * 15
-
-    def test_arret_saute_sans_attente_mesuree(self, ligne_fictive):
-        """Arrêt sauté sans attente mesurée : repli sur l'intervalle prévu."""
-        arrets = _arrets("ABC", sautes=(2,))
-        assert minutes_voyageurs_train("RER_A", arrets) == (50 + 100) * INTERVALLE_FICTIF
-
-    def test_arret_saute_en_milieu_de_parcours(self, ligne_fictive):
-        """Un arrêt sauté en B : tous les voyageurs vers B ou au-delà attendent dès B."""
-        arrets = _arrets("ABC", sautes=(1,), attentes={1: 10})
-        # A→B : 50 × 10 ; A→C : 50 × 10 (premier supprimé en B) ; B→C : 100 × 10
-        assert minutes_voyageurs_train("RER_A", arrets) == 50 * 10 + 50 * 10 + 100 * 10
+    def test_arret_saute_non_compte(self, ligne_fictive):
+        """Un arrêt sauté probable (k=True) n'est pas compté tant que la détection n'est pas validée (soupçon B)."""
+        sans = minutes_voyageurs_train("RER_A", _arrets("ABC", [0, 5, 5]))
+        for sautes, attentes in (((2,), {2: 15}), ((2,), None), ((1,), {1: 10})):
+            assert minutes_voyageurs_train("RER_A", _arrets("ABC", [0, 5, 5], sautes=sautes, attentes=attentes)) == sans
 
 
 class TestArretsDuTrain:

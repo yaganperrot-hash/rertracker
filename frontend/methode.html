@@ -483,6 +483,10 @@
           </div>
           <div class="scope-item">
             <span class="scope-icon no">✗</span>
+            <span>Arrêts sautés probables (un train passe sans marquer un arrêt prévu) : repérés, pas encore comptés tant que leur détection n'est pas validée</span>
+          </div>
+          <div class="scope-item">
+            <span class="scope-icon no">✗</span>
             <span>Voyageurs qui renoncent à leur trajet ou changent d'itinéraire, trains bondés</span>
           </div>
           <div class="scope-item">
@@ -502,13 +506,13 @@
     </div>
     <div class="limits-list">
       <div class="limit-item">
-        <strong>Recalcul toutes les 10 minutes.</strong> Les pages <a href="/statistiques">Statistiques</a> et <a href="/annee">Année</a> sont calculées à partir des métriques journalières par ligne, puis servies en fichiers statiques.
+        <strong>Recalcul toutes les <span class="ref-bilans">—</span> minutes.</strong> Les pages <a href="/statistiques">Statistiques</a> et <a href="/annee">Année</a> sont calculées à partir des métriques journalières par ligne, puis servies en fichiers statiques.
       </div>
       <div class="limit-item">
         <strong>Totaux réconciliés.</strong> Le coût est arrondi à l'euro inférieur par ligne et par jour, puis additionné : le total affiché est exactement la somme du classement par ligne, et, pour l'année, la somme des mois.
       </div>
       <div class="limit-item">
-        <strong>Statistiques.</strong> Fenêtres glissantes de 7 ou 30 jours, aujourd'hui inclus. La comparaison porte sur la période précédente de même durée, uniquement si celle-ci est entièrement couverte par les données.
+        <strong>Périodes.</strong> Aujourd'hui, semaine en cours (depuis lundi), mois en cours (depuis le 1er) et année en cours (depuis le 1er janvier), aujourd'hui inclus — les mêmes sur toutes les pages. Une comparaison avec une période précédente n'est faite que si celle-ci est entièrement couverte par des données fiables.
       </div>
       <div class="limit-item">
         <strong>Année.</strong> Cumul des bilans mensuels disponibles. La comparaison avec l'année précédente se fait à date équivalente, du 1er janvier au même jour.
@@ -545,13 +549,13 @@
         <strong>Départs prévus.</strong> Le nombre de trains qui se partagent les voyageurs d'une heure est celui des horaires prévus, cohérent avec les comptages, qui décrivent un jour ordinaire. Les voyageurs d'un train supprimé sont comptés pour leur attente ; leur report sur le train suivant, plus chargé, ne l'est pas.
       </div>
       <div class="limit-item">
-        <strong>Incidents antérieurs au <span class="ref-bascule">16 septembre 2026</span>.</strong> Avant cette date, la collecte ne gardait que le plus grand retard de chaque train et la gare où il avait été vu. Ces incidents sont recalculés avec la même méthode, sur le parcours de leur mission : aucun retard avant cette gare, ce retard à partir d'elle, et pour un train supprimé l'intervalle prévu au lieu de l'attente mesurée.
+        <strong>Données fiables depuis le <span class="ref-fiables">—</span>.</strong> Avant cette date, la collecte était incomplète : 10 lignes sur 13 jusqu'au 14 septembre, lignes P, R et N enregistrées sous une autre lettre, trains supprimés non détectés, et seul le plus grand retard de chaque train était gardé. Ces jours restent en base mais n'entrent dans aucun total ni aucune comparaison affichés.
       </div>
       <div class="limit-item">
         <strong>Relevés espacés.</strong> Le flux est relevé toutes les <span class="ref-polling">—</span> min depuis le 17 septembre 2026 (toutes les 20 min avant, en comptant aussi les retards annoncés longtemps à l'avance) : un retard qui apparaît puis disparaît entre deux relevés n'est pas vu, et les jours d'avant cette date ne se comparent pas exactement aux suivants.
       </div>
       <div class="limit-item">
-        <strong>Un incident = une ligne.</strong> Un incident affectant plusieurs lignes est compté une fois par ligne, ce qui peut sur-estimer le nombre d'incidents distincts.
+        <strong>Un incident = un train.</strong> Le nombre d'incidents est celui des trains relevés en retard d'au moins <span class="ref-retard-min">—</span> min ou supprimés, chacun une fois par jour. Il dépend de la fréquence des relevés : un retard bref entre deux relevés n'est pas vu.
       </div>
       <div class="limit-item">
         <strong>Le SMIC n'est pas une perte économique directe.</strong> La conversion en euros au SMIC est un indicateur d'ordre de grandeur, pas une estimation économique précise.
@@ -602,6 +606,8 @@
       set('.ref-collecte-debut', n(ref.collecte_heure_debut));
       set('.ref-retard-min', n(ref.retard_min_minutes));
       set('.ref-fantome', n(ref.fantome_min_minutes));
+      set('.ref-bilans', n(ref.bilans_interval_minutes));
+      set('.ref-fiables', new Date(ref.debut_donnees_fiables + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }));
 
       const vacC = ((ref.frequentation_rapports_vacances || {})['803'] || {}).JOVS;
       if (vacC != null) set('.ref-vac-c', `${Math.round(vacC * 100)} %`);

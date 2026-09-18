@@ -211,3 +211,19 @@ class TestAnnee:
         assert a["total"] == {"cout_eur": 0, "minutes": 0, "incidents": 0}
         assert a["pire_mois"] is None and a["meilleure_progression"] is None
         assert all(m["cout_eur"] is None for m in a["mois"])
+
+
+class TestHallOfShame:
+    """Périodes calendaires, comme le panneau de ligne : semaine depuis lundi, mois depuis le 1er."""
+
+    def test_semaine_et_mois_calendaires(self):
+        from backend.bilans import construire_hall_of_shame
+        vendredi = date(2026, 9, 18)
+        rows = [row(date(2026, 8, 31), "RER_A", 1000), row(date(2026, 9, 1), "RER_A", 100),
+                row(date(2026, 9, 13), "RER_A", 10), row(date(2026, 9, 14), "RER_A", 1)]
+        h = construire_hall_of_shame(vendredi, rows, {}, {}, SMIC, GENERE_A, date(2026, 9, 16))
+        cout = ligne(h, "RER_A")["cout"]
+        assert cout["semaine"]["minutes"] == 1            # lundi 14 → vendredi 18
+        assert cout["mois"]["minutes"] == 111             # 1er → 18 septembre
+        assert h["meta"]["periodes"] == {"semaine": "2026-09-14", "mois": "2026-09-01", "annee": "2026-01-01"}
+        assert h["meta"]["debut_donnees"] == "2026-09-16"
