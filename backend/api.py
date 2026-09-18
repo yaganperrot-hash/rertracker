@@ -71,7 +71,7 @@ async def stats_today(db: DbDep):
 
 
 @router.get("/stats/line/{line_id}")
-async def stats_line(line_id: str, db: DbDep, period: int = Query(default=30, ge=1, le=365)):
+async def stats_line(line_id: str, db: DbDep, period: int = Query(default=30, ge=1, le=366)):
     return await get_line_stats(line_id, period, db)
 
 

@@ -28,9 +28,41 @@
   }
   const NET_LABEL = { rer: 'RER', transilien: 'Transilien', metro: 'M\u00E9tro' };
 
-  // ── Période → nombre de jours pour l'API ──
-  const PERIOD_DAYS = { jour: 1, mois: 30, annee: 365 };
-  const PERIOD_LABEL = { jour: "aujourd'hui", mois: 'ce mois', annee: 'cette année' };
+  // ── Périodes calendaires, date de Paris : journée en cours, semaine depuis lundi, année depuis le 1er janvier ──
+  const PERIOD_LABEL = { jour: "aujourd'hui", semaine: 'cette semaine', annee: 'cette année' };
+
+  function parisToday() {
+    const [y, m, d] = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' })
+      .format(new Date()).split('-').map(Number);
+    return { y, m, d };
+  }
+
+  // Nombre de jours à demander à l'API (période glissante qui se termine aujourd'hui)
+  function periodDays(period) {
+    const t = parisToday();
+    const jour = Date.UTC(t.y, t.m - 1, t.d);
+    if (period === 'semaine') return (new Date(jour).getUTCDay() + 6) % 7 + 1;
+    if (period === 'annee') return Math.round((jour - Date.UTC(t.y, 0, 1)) / 86400000) + 1;
+    return 1;
+  }
+
+  function fmtJourMois(iso) {
+    const [, m, d] = iso.split('-');
+    return d + '/' + m;
+  }
+
+  // Ce que couvrent les trois chiffres, écrit au-dessus d'eux
+  function periodCaption(period, data) {
+    let txt;
+    if (period === 'semaine') txt = 'Cette semaine \u00B7 depuis le lundi ' + fmtJourMois(data.from);
+    else if (period === 'annee') txt = 'En ' + data.from.slice(0, 4) + ' \u00B7 depuis le 1er janvier';
+    else txt = 'Aujourd\u2019hui \u00B7 depuis 7 h';
+    const premier = data.daily && data.daily.length ? data.daily[0].date : null;
+    if (period !== 'jour' && premier && premier > data.from) {
+      txt += ' (donn\u00E9es depuis le ' + fmtJourMois(premier) + ')';
+    }
+    return txt;
+  }
 
   // ── Cache des données (fréquentation + stats par ligne/période) ──
   let frequentation = null;
@@ -98,7 +130,7 @@
       showRank: false,
       preselect: null,
       defaultTab: null,       // 'rer', 'transilien', 'metro'
-      defaultPeriod: 'mois',
+      defaultPeriod: 'jour',
       onSelect: null,
     }, options);
 
@@ -115,7 +147,7 @@
     // HTML du sélecteur
     let html = '';
     if (opts.showTitle) {
-      html += '<h2 class="pick-title">Et toi, ta ligne t\'a co\u00FBt\u00E9 combien ce mois-ci\u00A0?</h2>';
+      html += '<h2 class="pick-title">Et toi, ta ligne t\'a co\u00FBt\u00E9 combien aujourd\u2019hui\u00A0?</h2>';
       html += '<div class="pick-sub">Un tap. Le jour reste \u00E0 port\u00E9e de clic.</div>';
     }
 
@@ -148,13 +180,15 @@
     html += '  <div class="pp-amount"><span id="pp-eur"></span><span class="pp-unit">\u20AC <span id="pp-scope"></span></span></div>';
     html += '  <div class="pp-time">soit <b id="pp-min"></b> minutes de vie \u00B7 au SMIC brut</div>';
     html += '  <div class="pp-line-stats">';
-    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-incidents">—</span><span class="pp-stat-label">Incidents</span></div>';
-    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-cout">—</span><span class="pp-stat-label">Co\u00FBt total</span></div>';
-    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-duree">—</span><span class="pp-stat-label">Temps perdu</span></div>';
+    // Mêmes voyageurs, même période : le coût est le temps perdu valorisé au SMIC
+    html += '    <div class="pp-period" id="pp-period"></div>';
+    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-duree">—</span><span class="pp-stat-label">Temps perdu par les voyageurs</span></div>';
+    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-cout">—</span><span class="pp-stat-label">Co\u00FBt pour les voyageurs (SMIC)</span></div>';
+    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-incidents">—</span><span class="pp-stat-label">Trains en retard ou supprim\u00E9s</span></div>';
     html += '  </div>';
     html += '  <div class="pp-toggle">';
     html += '    <button type="button" data-p="jour"' + (currentPeriod === 'jour' ? ' class="on"' : '') + '>Aujourd\u2019hui</button>';
-    html += '    <button type="button" data-p="mois"' + (currentPeriod === 'mois' ? ' class="on"' : '') + '>Mois</button>';
+    html += '    <button type="button" data-p="semaine"' + (currentPeriod === 'semaine' ? ' class="on"' : '') + '>Semaine</button>';
     html += '    <button type="button" data-p="annee"' + (currentPeriod === 'annee' ? ' class="on"' : '') + '>Ann\u00E9e</button>';
     html += '  </div>';
     if (opts.showRank) {
@@ -184,6 +218,7 @@
     const ppStatIncidents = container.querySelector('#pp-stat-incidents');
     const ppStatCout = container.querySelector('#pp-stat-cout');
     const ppStatDuree = container.querySelector('#pp-stat-duree');
+    const ppPeriod = container.querySelector('#pp-period');
 
     // ── Onglets (rétro-compatibilité) ──
     function switchTab(net) { currentTab = net; }
@@ -232,7 +267,7 @@
     async function updatePanel() {
       if (!currentLine) return;
       await loadReference();
-      const days = PERIOD_DAYS[currentPeriod];
+      const days = periodDays(currentPeriod);
       const data = await loadLineStats(currentLine, days);
 
       const user = perUser(data);
@@ -242,9 +277,10 @@
       ppMin.textContent = fmtMin(user.minutes);
 
       // Stats réseau de la ligne
-      ppStatIncidents.textContent = data ? (data.total_incidents || 0).toLocaleString('fr-FR') : '—';
+      ppPeriod.textContent = data ? periodCaption(currentPeriod, data) : '';
+      ppStatDuree.textContent = data ? formatDuree(data.total_minutes_voyageurs || 0, true) : '—';
       ppStatCout.textContent = data ? (data.total_cout_eur || 0).toLocaleString('fr-FR') + ' \u20AC' : '—';
-      ppStatDuree.textContent = data ? formatDuree(data.total_duree_min || 0, true) : '—';
+      ppStatIncidents.textContent = data ? (data.total_incidents || 0).toLocaleString('fr-FR') : '—';
 
       // Statut : perturbé si incidents aujourd'hui
       const todayData = await loadLineStats(currentLine, 1);
@@ -285,7 +321,7 @@
     ppShare.addEventListener('click', async () => {
       if (!currentLine) return;
       const meta = LINE_META[currentLine];
-      const days = PERIOD_DAYS[currentPeriod];
+      const days = periodDays(currentPeriod);
       await loadReference();
       const data = await loadLineStats(currentLine, days);
       const user = perUser(data);
