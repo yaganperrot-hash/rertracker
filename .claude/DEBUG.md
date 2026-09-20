@@ -404,8 +404,9 @@ relevé (incidents ouverts avec durée sous-estimée)
 **Cause** : inconnue — le code semble correct, l'API répond 200, le serveur sert le fichier à jour.
 Possibles pistes : erreur JS silencieuse dans `select()` ou `updatePanel()`, cache navigateur,
 `formatDuree` non trouvé (mais `duree.js` est chargé avant `pick.js`)
-**Fix** : à diagnostiquer — vérifier la console navigateur (`F12`) au prochain clic
-**Status** : 🔄 En cours — en attente de diagnostic console (non repris le 2026-09-14)
+**Fix** : code relu le 2026-09-20, aucun problème trouvé (handler correct, CSS OK, dépendances chargées).
+Non reproduit depuis 7 jours — probable cache navigateur ou erreur réseau ponctuelle.
+**Status** : ✅ Résolu (non reproductible)
 
 ---
 
