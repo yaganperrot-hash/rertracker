@@ -477,9 +477,9 @@ def build_horaires() -> None:
     global _cache_horaires
     _cache_horaires = None
     src = contenu["_source"]
-    print(f"Fenêtre {src['fenetre'][0]} → {src['fenetre'][1]} · {len(contenu['services'])} services")
+    print(f"Fenetre {src['fenetre'][0]} -> {src['fenetre'][1]} - {len(contenu['services'])} services")
     for ligne, c in contenu["lignes"].items():
-        print(f"    {ligne:14} {len(c['trains']):6d} trains · {len(c['gares']):3d} gares")
+        print(f"    {ligne:14} {len(c['trains']):6d} trains - {len(c['gares']):3d} gares")
     print(f"\n{CHEMIN_HORAIRES} écrit ({CHEMIN_HORAIRES.stat().st_size / 1e6:.1f} Mo)")
 
 
@@ -506,9 +506,9 @@ def build() -> None:
     global _cache
     _cache = None
     src = contenu["_source"]
-    print(f"Fenêtre {src['fenetre'][0]} → {src['fenetre'][1]} · replis : {src['replis'] or 'aucun'}")
+    print(f"Fenetre {src['fenetre'][0]} -> {src['fenetre'][1]} - replis : {src['replis'] or 'aucun'}")
     for ligne in LIGNE_ROUTE:
-        print(f"    {ligne:14} {contenu['trains_jour'][ligne][CAT_SEMAINE]:7.1f} trains/jour · "
+        print(f"    {ligne:14} {contenu['trains_jour'][ligne][CAT_SEMAINE]:7.1f} trains/jour - "
               f"8 h : {contenu['trains_heure'][ligne][CAT_SEMAINE][8]:5.1f} trains, "
               f"intervalle {contenu['intervalle_min'][ligne][CAT_SEMAINE][8]} min")
     print(f"\n{CHEMIN} écrit")
