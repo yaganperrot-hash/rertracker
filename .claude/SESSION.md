@@ -1,24 +1,26 @@
 # SESSION — État courant
 
-## 2026-09-20 — PC Windows (historique : `.claude/archive/`)
+## 2026-09-21 — Mac (historique : `.claude/archive/`)
 
 ### Objectif
-Collecte continue + régénération des données statiques (GTFS, fréquentation, recalcul historique).
+Reprise sur le Mac : récupérer la collecte Windows du 18 au 20/09, relancer la collecte.
 
 ### Avancement
-- `git pull` OK (`cb5f521`). 304 tests verts.
-- Export 19/09 (740 incidents) et 20/09 (600 incidents).
-- Données statiques régénérées : offre GTFS (fenêtre 17/09 -> 19/10), fréquentation (0 inconnues),
-  horaires Mon trajet (33 773 trains), recalcul 151 jours (23/04 -> 20/09).
-- Bug 23 (pastille picker) : résolu (non reproductible). Bugs B/C/D/E : résolus ou observation passive.
-- Fix cp1252 : caractères Unicode (`->`, `·`) remplacés dans les `print()` de `offre.py`.
-- Serveur actif, collecte du 20/09 en cours.
+- `git pull` OK. Réétiquetage Transilien déjà appliqué : 13 et 14/09 ignorés, 15 → 20/09 importés
+  (836, 1 427, 143 + 1 666, 2 347, 740, 600 incidents), métriques et bilans recalculés à chaque import.
+- `POLLING_INTERVAL_MINUTES=5` OK.
+- Serveur lancé sur le Mac (`nohup`, log `logs/uvicorn.out`, désormais ignoré par git) ; quota Estimated
+  Timetable à 993 au démarrage → PC Windows arrêté, pas de double collecte.
+- Export `transferts/incidents-2026-09-21.json` (883 incidents).
+- Aucun code modifié, tests non relancés (304 verts au 20/09 sur Windows).
 
 ### Blocages
 - Clé PRIM toujours à régénérer (commit `c591442`).
-- Validation des arrêts sautés nécessite des données terrain.
+- Historique du Mac pas encore recalculé avec les données statiques régénérées sur Windows le 20/09
+  (GTFS 17/09 → 19/10, fréquentation, horaires) : chiffres différents de Windows pour les jours anciens.
 
 ### Prochaine étape
-1. Déploiement VPS (Docker, accès mobile).
-2. Vérification croisée sur un trajet réel avant publication.
-3. Fenêtre de mesure 10 -> 5 min, Mon trajet aller-retour.
+1. Serveur arrêté → `./venv/bin/python -m backend.recalcul`, puis tests.
+2. Régénérer la clé PRIM (portail PRIM, puis `.env`).
+3. Plan de déploiement VPS (Docker, `.env`, base, `frontend/data/`, `logs/`).
+4. Fenêtre de mesure 10 → 5 min : analyse sur `logs/flux_brut/` avant tout changement.

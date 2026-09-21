@@ -176,3 +176,7 @@
   flux. L'upsert doit préserver la valeur existante (`Incident.is_cancelled`).
 - Comparer GTFS vs flux pour détecter des trains absents est faisable mais ne doit pas créer d'incidents
   automatiquement : l'absence peut être un trou PRIM (confirmé pour la ligne K).
+
+## Démarrage / double collecte (2026-09-21)
+- Le log de démarrage donne le quota Estimated Timetable restant : proche de 1 000 en journée → aucun autre PC ne
+  collecte. Vérification gratuite (pas de requête en plus) de la règle « un seul serveur à la fois ».
