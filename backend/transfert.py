@@ -8,8 +8,9 @@
     ./venv/bin/python -m backend.transfert import transferts/incidents-2026-09-14.json
 
 L'import fusionne sur navitia_id (même identifiant sur les deux PC) avec la règle du collecteur :
-pire retard observé, première heure vue, état du relevé le plus récent — sauf un train supprimé d'un seul côté,
-qui reste supprimé (jamais de retour de supprimé à non supprimé).
+pire retard observé, première heure vue, état du relevé le plus récent ; arrêts fusionnés arrêt par arrêt
+(collector.fusionner_arrets, le relevé le plus récent l'emporte). L'état supprimé est ensuite recalé sur les arrêts
+fusionnés, dans les deux sens (recalcul.reparer_suppressions / lever_suppressions, bug 46).
 Puis il recalcule les daily_metrics des journées touchées et les bilans.
 """
 import asyncio
@@ -22,9 +23,11 @@ from sqlalchemy import case, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 
 from backend.bilans import generer_bilans
+from backend.collector import fusionner_arrets
 from backend.database import AsyncSessionLocal
 from backend.metrics import PARIS_TZ, compute_daily_metrics, debut_journee, journee_de
 from backend.models import Incident
+from backend.recalcul import lever_suppressions, reparer_suppressions
 
 DOSSIER = Path(__file__).parent.parent / "transferts"
 
@@ -56,6 +59,16 @@ def _lire_json(chemin: Path) -> dict:
     return json.loads(texte)
 
 
+def arrets_fusionnes(en_base, maj_base: datetime, importes, maj_import: datetime):
+    """Arrêts d'un train vu sur les deux PC, fusionnés arrêt par arrêt : le relevé le plus récent l'emporte, un arrêt
+    mesuré d'un seul côté (supprimé vu par un seul PC) est gardé. Sans arrêts d'un côté, ceux de l'autre."""
+    if not isinstance(en_base, list) or not isinstance(importes, list):
+        return importes if isinstance(importes, list) else en_base
+    if maj_import >= maj_base:
+        return fusionner_arrets(en_base, importes)
+    return fusionner_arrets(importes, en_base)
+
+
 async def exporter(jour: date) -> Path:
     debut = debut_journee(jour)
     fin = debut + timedelta(days=1)
@@ -84,6 +97,11 @@ async def importer(chemin: Path) -> None:
         for brut in contenu["incidents"]:
             ligne = {c: (datetime.fromisoformat(v) if c in DATES and v is not None else v) for c, v in brut.items()}
             jours.add(_jour_service(ligne["heure_debut"]))
+            # Arrêts fusionnés arrêt par arrêt : un arrêt vu supprimé sur un seul PC n'est pas perdu
+            base = (await session.execute(select(Incident.arrets, Incident.updated_at)
+                                          .where(Incident.navitia_id == ligne["navitia_id"]))).first()
+            if base:
+                ligne["arrets"] = arrets_fusionnes(base.arrets, base.updated_at, ligne.get("arrets"), ligne["updated_at"])
 
             stmt = insert(Incident).values(**ligne)
             ex = stmt.excluded
@@ -109,14 +127,15 @@ async def importer(chemin: Path) -> None:
                        for c in ("duree_minutes", "cause", "heure_theorique", "gare", "direction", "mission")},
                     **{c: case((etat, getattr(ex, c)), else_=getattr(Incident, c))
                        for c in ("type_incident", "is_cancelled", "heure_fin", "source")},
-                    # Un export d'avant la bascule n'a pas d'arrêts : ne pas effacer ceux déjà en base
-                    "arrets": case((plus_recent, func.coalesce(ex.arrets, Incident.arrets)),
-                                   else_=func.coalesce(Incident.arrets, ex.arrets)),
+                    # Arrêts déjà fusionnés ci-dessus ; un export d'avant la bascule n'en a pas : garder ceux en base
+                    "arrets": func.coalesce(ex.arrets, Incident.arrets),
                 },
             )
             await session.execute(stmt)
         await session.commit()
     print(f"{len(contenu['incidents'])} incidents fusionnés depuis {chemin}")
+    print(f"{await reparer_suppressions()} trains remis « supprimé », {await lever_suppressions()} suppressions levées"
+          " d'après leurs arrêts")
 
     for jour in sorted(jours):
         await compute_daily_metrics(target_date=jour)

@@ -117,7 +117,9 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb reta
   une semaine en valant 19.2, majorant tous les chiffres de 6,7 %.
 - Flags d'arrêts (`s`, `k`) : hors fenêtre de mesure → `None` (pas `False`), pour que `fusionner_arrets`
   conserve la valeur précédente. Tout champ devant survivre à la fusion doit être dans la liste de
-  conservation. `is_cancelled` en base ne régresse jamais de `True` à `False` par upsert.
+  conservation. `is_cancelled` = au moins un arrêt fusionné `s=True` (`collector.train_supprime`) : un arrêt sorti
+  de la fenêtre garde son `True`, seul un `s=False` mesuré dans la fenêtre lève la suppression (bug 46, 2026-09-22) ;
+  même règle au recalcul et à l'import de transfert (arrêts fusionnés arrêt par arrêt).
 
 
 ### 🔄 En maintenance — voir `TODO.md`
@@ -155,7 +157,7 @@ Chaque PC a sa propre base PostgreSQL. Pour ne pas perdre les données collecté
 
 ## Prochaine étape à reprendre
 Voir `TODO.md` et les bugs ouverts de `.claude/DEBUG.md`. Priorités : **régénérer la clé PRIM** (en clair dans
-l'historique git), puis bug 46 (suppressions levées comptées, décision attendue) et la règle des arrêts sautés (B).
+l'historique git), puis la règle des arrêts sautés (B).
 
 ---
 

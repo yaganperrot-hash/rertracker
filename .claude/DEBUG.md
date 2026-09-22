@@ -679,8 +679,8 @@ test à égalité d'heure et test d'échec sans perte du relevé ; rejoué sur l
   et loggue les manquants. Confirmé côté PRIM (ligne K : 4/36 prévus). Pas de création d'incidents automatique.
   Commit `cb4013c`.
 - **E — Train partiellement supprimé** : ✅ Résolu. `is_cancelled` préservé dans l'upsert ; `s=None` hors fenêtre
-  (au lieu de `False`) conservé par `fusionner_arrets`. Commit `cb4013c`. Effet inverse constaté le 2026-09-22 :
-  suppressions levées comptées (voir Bug 46).
+  (au lieu de `False`) conservé par `fusionner_arrets`. Commit `cb4013c`. Effet inverse constaté et corrigé le
+  2026-09-22 : suppressions levées comptées (voir Bug 46).
 
 ### [2026-09-17] Bug 39 — Suivi trop espacé : relevé toutes les 20 min, 13 requêtes par relevé
 **Fichier(s)** : `backend/collector.py`, `backend/main.py`, `backend/config.py`, `backend/api.py`, `frontend/methode.html`
@@ -868,9 +868,14 @@ ont ensuite été relevés desservis, retards mesurés (ex. RER C `8456a566…` 
 sortaient de la fenêtre en `False`. Depuis `cb4013c` (`s=None` hors fenêtre), un `s=False` est une mesure réelle.
 **Effet** : compteur de suppressions surévalué ; coût de ces trains = retards mesurés (attente de suppression
 non comptée, aucun arrêt `s`).
-**Piste** : dériver `is_cancelled` des arrêts fusionnés (au moins un `s=True`) — contredit la règle de CLAUDE.md :
-décision utilisateur requise.
-**Status** : ❌ Ouvert — en attente de décision
+**Fix** (accord du 2026-09-22) : `is_cancelled` = au moins un arrêt fusionné `s=True` (`collector.train_supprime`).
+Collecteur : suppression gardée tant qu'un arrêt supprimé l'est encore (même sorti de la fenêtre), levée par un `s=False`
+mesuré, y compris dans la branche « suivi » (train sans retard) ; l'incident levé devient un retard (pire `r` de ses
+arrêts, `collector.suppression_levee`). `recalcul.lever_suppressions` applique la règle à l'historique ; l'import de
+transfert fusionne désormais les arrêts arrêt par arrêt (`transfert.arrets_fusionnes`) puis recale l'état.
+Règle de CLAUDE.md remplacée. Recalcul : 42 suppressions levées, 753 → 711 suppressions depuis le 16/09 ;
+minutes-voyageurs inchangées (26 510 227 : le coût de ces trains se calculait déjà sur leurs retards mesurés).
+**Status** : ✅ Résolu
 
 ### [2026-09-22] Fenêtre de mesure 10 min : gardée
 Archives du 21-22/09, 56 760 arrêts vus à moins de 30 min de leur passage. Part des arrêts ayant au moins une mesure :

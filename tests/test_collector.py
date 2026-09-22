@@ -863,7 +863,7 @@ class TestCollectRtDelays:
         t = _train(1, [_appel(2, 10, retard=6, terminus=True)])
         uid = "rt_vehicle_journey:IDFM:TN:SNCF:00000000-0000-0000-0000-000000000001_20260917"
         ancien = [{"g": "Gare Un", "p": T0.isoformat(), "r": 3, "s": False, "w": None}]
-        _, inserts = await self._executer(_flux(t), anciens=[(uid, ancien)])
+        _, inserts = await self._executer(_flux(t), anciens=[(uid, ancien, False)])
         params = inserts[-1].compile(dialect=postgresql.dialect()).params
         assert [a["g"] for a in params["arrets"]] == ["Gare Un", "Gare Deux"]
 
@@ -887,7 +887,7 @@ class TestCollectRtDelays:
         uid = "rt_vehicle_journey:IDFM:TN:SNCF:00000000-0000-0000-0000-000000000001_20260917"
         connus = [{"g": "Gare Un", "p": _iso(1).replace("Z", "+00:00"), "r": 3, "s": False, "w": None},
                   {"g": "Gare Deux", "p": _iso(4).replace("Z", "+00:00"), "r": 3, "s": False, "w": None}]
-        _, inserts = await self._executer(_flux(apres), anciens=[(uid, connus)])
+        _, inserts = await self._executer(_flux(apres), anciens=[(uid, connus, False)])
         params = inserts[-1].compile(dialect=postgresql.dialect()).params
         assert [(a["g"], a.get("k")) for a in params["arrets"]] == [("Gare Un", None), ("Gare Deux", True),
                                                                     ("Gare Trois", None)]
@@ -914,12 +914,59 @@ class TestCollectRtDelays:
         uid = "rt_vehicle_journey:IDFM:TN:SNCF:00000000-0000-0000-0000-000000000001_20260917"
         ancien = [{"g": "Gare Un", "p": T0.isoformat(), "r": 4, "s": False, "w": None}]
         executes = []
-        _, inserts = await self._executer(_flux(t), anciens=[(uid, ancien)], executes=executes)
+        _, inserts = await self._executer(_flux(t), anciens=[(uid, ancien, False)], executes=executes)
         assert inserts == []
         updates = [e for e in executes if isinstance(e, Update)]
         assert len(updates) == 1
         params = updates[0].compile(dialect=postgresql.dialect()).params
         assert [a["r"] for a in params["arrets"]] == [1, 0]
+
+    UID = "rt_vehicle_journey:IDFM:TN:SNCF:00000000-0000-0000-0000-000000000001_20260917"
+
+    @staticmethod
+    def _mis_a_jour(stmt) -> set[str]:
+        """Colonnes écrites par le ON CONFLICT DO UPDATE d'un upsert."""
+        return {getattr(c, "key", c) for c, _ in stmt._post_values_clause.update_values_to_set}
+
+    async def test_suppression_gardee_quand_l_arret_supprime_sort_de_la_fenetre(self):
+        """Bug 46 : arrêt supprimé sorti du flux (s=True gardé par la fusion) → le train reste supprimé."""
+        t = _train(1, [_appel(2, 10, retard=6, terminus=True)])
+        ancien = [{"g": "Gare Un", "p": T0.isoformat(), "r": None, "s": True, "w": 7}]
+        _, inserts = await self._executer(_flux(t), anciens=[(self.UID, ancien, True)])
+        ecrites = self._mis_a_jour(inserts[-1])
+        assert not ecrites & {"is_cancelled", "type_incident", "cause", "duree_minutes"}
+        assert "arrets" in ecrites
+
+    async def test_suppression_levee_par_un_arret_desservi(self):
+        """Bug 46 : l'arrêt supprimé est relevé desservi dans la fenêtre → simple retard."""
+        from sqlalchemy.dialects import postgresql
+
+        t = _train(1, [_appel(1, 0, retard=3), _appel(2, 10, retard=6, terminus=True)])
+        ancien = [{"g": "Gare Un", "p": _iso(0).replace("Z", "+00:00"), "r": None, "s": True, "w": 7}]
+        _, inserts = await self._executer(_flux(t), anciens=[(self.UID, ancien, True)])
+        valeurs = dict(inserts[-1]._post_values_clause.update_values_to_set)
+        valeurs = {getattr(c, "key", c): v for c, v in valeurs.items()}
+        assert valeurs["is_cancelled"] is False
+        assert valeurs["type_incident"] == "DELAY_REALTIME"
+        assert valeurs["duree_minutes"] == 6
+        params = inserts[-1].compile(dialect=postgresql.dialect()).params
+        assert [a["s"] for a in params["arrets"]] == [False, False]
+
+    async def test_suppression_levee_sur_un_train_sans_retard(self):
+        """Bug 46 : branche « suivi » (plus de retard dans la fenêtre) — la suppression est levée aussi."""
+        from sqlalchemy.sql.dml import Update
+        from sqlalchemy.dialects import postgresql
+
+        t = _train(1, [_appel(1, 0, retard=1), _appel(2, 10, terminus=True)])
+        ancien = [{"g": "Gare Un", "p": _iso(0).replace("Z", "+00:00"), "r": None, "s": True, "w": 7}]
+        executes = []
+        await self._executer(_flux(t), anciens=[(self.UID, ancien, True)], executes=executes)
+        updates = [e for e in executes if isinstance(e, Update)]
+        params = updates[0].compile(dialect=postgresql.dialect()).params
+        assert params["is_cancelled"] is False
+        assert params["type_incident"] == "DELAY_REALTIME"
+        assert params["duree_minutes"] == 1
+        assert params["cause"] == "Retard de 1 min à Gare Un"
 
     async def test_train_sans_retard_absent_de_la_base_non_ecrit(self):
         from sqlalchemy.sql.dml import Update

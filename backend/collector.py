@@ -502,6 +502,28 @@ def fusionner_arrets(anciens: list | None, nouveaux: list) -> list:
     return sorted(par_cle.values(), key=lambda a: a.get("p") or "")
 
 
+def train_supprime(arrets: list | None) -> bool:
+    """Un train est supprimé tant qu'un de ses arrêts fusionnés l'est : un arrêt sorti de la fenêtre garde son
+    `s=True` (fusionner_arrets), seul un `s=False` mesuré dans la fenêtre lève la suppression (bug 46)."""
+    return isinstance(arrets, list) and any(a.get("s") is True for a in arrets)
+
+
+def suppression_levee(arrets: list) -> dict:
+    """Colonnes d'un incident dont la suppression a été levée : simple retard, le pire relevé sur ses arrêts."""
+    pire = max((a for a in arrets if a.get("r") is not None and a.get("p")), key=lambda a: a["r"], default=None)
+    retard = max(pire["r"], 0) if pire else 0
+    gare = pire.get("g") if pire else None
+    colonnes = {
+        "is_cancelled": False,
+        "type_incident": "DELAY_REALTIME",
+        "duree_minutes": retard,
+        "cause": f"Retard de {retard} min à {gare}" if gare else f"Retard de {retard} min (temps réel)",
+    }
+    if pire:
+        colonnes.update(gare=gare, heure_theorique=datetime.fromisoformat(pire["p"]))
+    return colonnes
+
+
 # Relevé précédent de chaque ligne, en mémoire : line_id → (instant, {uid-ref: [(numéro, heure prévue, supprimé)]})
 _releves_precedents: dict[str, tuple[datetime, dict[str, list[tuple[str | None, datetime, bool]]]]] = {}
 ECART_MAX_RELEVES = timedelta(minutes=45)   # au-delà (nuit, serveur arrêté), pas de comparaison
@@ -782,20 +804,28 @@ async def collect_rt_delays() -> None:
     async with AsyncSessionLocal() as session:
         # Arrêts déjà en base, à fusionner avec ceux du relevé
         anciens: dict[str, list | None] = {}
+        anciens_supprimes: set[str] = set()
         if observations:
             rows = await session.execute(
-                select(Incident.navitia_id, Incident.arrets).where(Incident.navitia_id.in_(list(observations)))
+                select(Incident.navitia_id, Incident.arrets, Incident.is_cancelled)
+                .where(Incident.navitia_id.in_(list(observations)))
             )
-            anciens = {nid: arr for nid, arr in rows.all()}
+            for nid, arr, supprime in rows.all():
+                anciens[nid] = arr
+                if supprime:
+                    anciens_supprimes.add(nid)
 
         suivis = 0
         for uid, (line_id, o) in observations.items():
             arrets = marquer_sautes(fusionner_arrets(anciens.get(uid), o["arrets"]), o.get("sautes", []))
+            # Suppression levée : plus aucun arrêt fusionné supprimé (bug 46)
+            leve = uid in anciens_supprimes and not train_supprime(arrets)
             if not o["supprime"] and o["retard"] <= 0:
                 # Aucun retard dans la fenêtre : seulement la mise à jour des arrêts d'un train déjà en base
                 if uid in anciens:
-                    await session.execute(update(Incident).where(Incident.navitia_id == uid).values(
-                        arrets=arrets, direction=o["direction"], mission=o["mission"], updated_at=now))
+                    valeurs = {"arrets": arrets, "direction": o["direction"], "mission": o["mission"],
+                               "updated_at": now, **(suppression_levee(arrets) if leve else {})}
+                    await session.execute(update(Incident).where(Incident.navitia_id == uid).values(**valeurs))
                     suivis += 1
                 continue
             if o["supprime"]:
@@ -827,19 +857,27 @@ async def collect_rt_delays() -> None:
                 # La suppression l'emporte sur un retard observé plus tôt
                 set_ = {c: getattr(ex, c) for c in ("type_incident", "cause", "duree_minutes", "heure_fin",
                                                     "heure_theorique", "is_cancelled", "gare")}
+            elif uid in anciens_supprimes and not leve:
+                # Train encore supprimé sur un de ses arrêts (sorti de la fenêtre, s=True gardé par la fusion) :
+                # la suppression reste, seuls les arrêts sont mis à jour
+                set_ = {}
+            elif leve:
+                # Suppression levée : simple retard, le pire relevé sur ses arrêts ou celui de ce relevé
+                leve_ = suppression_levee(arrets)
+                set_ = {**leve_, "duree_minutes": max(leve_["duree_minutes"], o["retard"]),
+                        "cause": ex.cause, "heure_theorique": ex.heure_theorique, "gare": ex.gare,
+                        "heure_fin": ex.heure_fin}
+                if leve_["duree_minutes"] > o["retard"]:
+                    set_.update({c: leve_[c] for c in ("cause", "heure_theorique", "gare") if c in leve_})
             else:
-                # Pire retard observé du train sur l'ensemble des relevés. is_cancelled préservé :
-                # les arrêts supprimés sortent de la fenêtre de mesure avant la fin du relevé,
-                # l'absence de suppression visible ne signifie pas que la suppression n'a pas eu lieu.
-                remplace = (ex.duree_minutes >= Incident.duree_minutes) | Incident.is_cancelled.is_(True)
+                # Pire retard observé du train sur l'ensemble des relevés
+                remplace = ex.duree_minutes >= Incident.duree_minutes
                 set_ = {
-                    "duree_minutes": case((Incident.is_cancelled.is_(True), ex.duree_minutes),
-                                          else_=func.greatest(Incident.duree_minutes, ex.duree_minutes)),
+                    "duree_minutes": func.greatest(Incident.duree_minutes, ex.duree_minutes),
                     **{c: case((remplace, getattr(ex, c)), else_=getattr(Incident, c))
                        for c in ("cause", "heure_theorique", "gare")},
                     "heure_fin": ex.heure_fin,
                     "type_incident": "DELAY_REALTIME",
-                    "is_cancelled": Incident.is_cancelled,
                 }
             set_.update({"direction": ex.direction, "mission": ex.mission, "arrets": ex.arrets,
                          "source": "realtime", "updated_at": now})

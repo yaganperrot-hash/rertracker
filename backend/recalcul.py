@@ -4,9 +4,11 @@ recalcul.py — Reconstruit toutes les métriques journalières depuis les incid
 À lancer après tout changement de la logique de calcul (profils horaires, pondération,
 fréquentation) : `python -m backend.recalcul`.
 
-Seules les `daily_metrics`, qui dérivent des incidents, sont réécrites — plus une réparation des incidents :
-un train dont un arrêt relevé est supprimé redevient « supprimé » (règle du collecteur), état perdu avant le
-2026-09-18 par l'ancien collecteur et par l'import. L'opération est rejouable autant de fois que nécessaire.
+Seules les `daily_metrics`, qui dérivent des incidents, sont réécrites — plus une réparation des incidents, dans
+les deux sens (règle du collecteur, collector.train_supprime) : un train dont un arrêt relevé est supprimé redevient
+« supprimé » (état perdu avant le 2026-09-18 par l'ancien collecteur et par l'import) ; un train « supprimé » dont plus
+aucun arrêt ne l'est redevient un simple retard (suppression levée, bug 46 du 2026-09-22).
+L'opération est rejouable autant de fois que nécessaire.
 Le serveur doit être arrêté : sinon le scheduler écrit dans la même base en parallèle.
 """
 import asyncio
@@ -15,6 +17,7 @@ from datetime import date, datetime, timedelta
 from sqlalchemy import func, select, update
 
 from backend.bilans import generer_bilans
+from backend.collector import suppression_levee, train_supprime
 from backend.config import get_settings
 from backend.database import AsyncSessionLocal
 from backend.metrics import compute_daily_metrics, journee_de
@@ -77,9 +80,28 @@ async def reparer_suppressions() -> int:
     return repares
 
 
+async def lever_suppressions() -> int:
+    """Remet en simple retard les trains « supprimés » dont plus aucun arrêt relevé ne l'est : la suppression a été
+    levée (un arrêt supprimé relevé ensuite desservi dans la fenêtre). Renvoie le nombre de trains corrigés.
+    Les incidents sans arrêts (d'avant la bascule du 2026-09-16) ne sont pas touchés."""
+    async with AsyncSessionLocal() as db:
+        candidats = (await db.execute(select(Incident).where(
+            Incident.source == "realtime", Incident.is_cancelled.is_(True), Incident.arrets.isnot(None),
+        ))).scalars().all()
+        leves = 0
+        for inc in candidats:
+            if not isinstance(inc.arrets, list) or not inc.arrets or train_supprime(inc.arrets):
+                continue
+            await db.execute(update(Incident).where(Incident.id == inc.id).values(**suppression_levee(inc.arrets)))
+            leves += 1
+        await db.commit()
+    return leves
+
+
 async def recalculer() -> None:
     print(f"{await nettoyer_arrets_json_null()} incidents sans arrêts remis à NULL (JSON « null »)")
     print(f"{await reparer_suppressions()} trains remis « supprimé » d'après leurs arrêts")
+    print(f"{await lever_suppressions()} suppressions levées d'après les arrêts")
     plage = await _plage_des_incidents()
     if plage is None:
         print("Aucun incident en base — rien à recalculer.")

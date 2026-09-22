@@ -15,8 +15,8 @@
   - [ ] **D — trains absents du flux** (coupures) : diagnostic réparé le 2026-09-22 (bug 45 : horaires GTFS périmés,
     trains arrivés au terminus attendus à tort). Observer les logs « absents du flux » quelques jours avant d'en tirer
     des suppressions
-  - [ ] **E — suppression levée toujours comptée** (bug 46, 2026-09-22) : 40 trains / 654 depuis le 17/09.
-    Décision attendue : dériver `is_cancelled` des arrêts fusionnés (contredit la règle de CLAUDE.md)
+  - [x] **E — suppression levée toujours comptée** (bug 46, 2026-09-22) : `is_cancelled` dérivé des arrêts
+    fusionnés ; 42 suppressions levées au recalcul (753 → 711), minutes-voyageurs inchangées
   - [x] **Requêtes API et quotas** (17/09) : temps réel toutes les 5 min en 1 appel global (`LineRef=ALL`, 216 req/jour),
     perturbations toutes les 20 min (108), pas de relevé au redémarrage si le dernier date de moins d'un intervalle ;
     retard/suppression mesurés seulement à moins de 10 min du passage estimé
