@@ -754,6 +754,33 @@ class TestTrainsAttendus:
         # Ne doit pas lever d'exception
         diagnostiquer_trains_manquants("RER_A", [], T0)
 
+    def test_diagnostiquer_signale_horaires_perimes(self, monkeypatch, caplog):
+        """Aucun train du flux dans le GTFS : warning « horaires périmés », pas de liste de trains absents."""
+        connu, inconnu = "00309453-e015-449f-9f2c-4a14895b4372", "18f63cbd-4006-49f3-972d-901ff20985c7"
+        heure = T0.astimezone(collector.PARIS_TZ)
+        depart = heure.hour * 60 + heure.minute - 10
+        horaires = {
+            "debut": heure.date().isoformat(),
+            "services": [[0]],
+            "lignes": {"RER_A": {"gares": ["A", "B"], "trains": [
+                [f"IDFM:TN:SNCF:{connu}", "OBUT", 0, [0, depart, 1, depart + 10]],
+            ]}},
+        }
+        from backend import offre
+        monkeypatch.setattr(offre, "_cache_horaires", horaires)
+        flux = [{"DatedVehicleJourneyRef": {"value": f"SNCF_MAGENTA_PRD:VehicleJourney::{inconnu}:LOC"}}]
+        with caplog.at_level("INFO", logger="backend.collector"):
+            diagnostiquer_trains_manquants("RER_A", flux, T0)
+        assert "Horaires GTFS périmés pour RER_A" in caplog.text
+        assert "absents du flux" not in caplog.text
+
+        # Train du flux reconnu : diagnostic normal, sans warning
+        caplog.clear()
+        flux = [{"DatedVehicleJourneyRef": {"value": f"SNCF_MAGENTA_PRD:VehicleJourney::{connu}:LOC"}}]
+        with caplog.at_level("INFO", logger="backend.collector"):
+            diagnostiquer_trains_manquants("RER_A", flux, T0)
+        assert "périmés" not in caplog.text
+
     def test_diagnostiquer_ne_plante_pas_sans_horaires(self):
         """Sans horaires chargées, le diagnostic ne plante pas."""
         diagnostiquer_trains_manquants("RER_A", [], T0)

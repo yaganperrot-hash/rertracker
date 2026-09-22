@@ -612,10 +612,10 @@ def trains_par_ligne(trains: list[dict]) -> dict[str, list[dict]]:
     return par_ligne
 
 
-def trains_attendus(line_id: str, jour: date, heure_debut: int, heure_fin: int) -> list[tuple[str, str, int]]:
+def trains_attendus(line_id: str, jour: date, heure_debut: int, heure_fin: int) -> list[tuple[str, str, int, int]]:
     """Trains GTFS attendus pour une ligne un jour donné entre deux heures (minutes depuis minuit).
 
-    Retourne [(trip_uuid, mission, premier départ en min), …] pour les trains dont le premier
+    Retourne [(trip_uuid, mission, premier départ, dernier passage — en min), …] pour les trains dont le premier
     départ est entre heure_debut et heure_fin. Ne dépend que des données statiques.
     """
     from backend.offre import charger_horaires
@@ -635,7 +635,7 @@ def trains_attendus(line_id: str, jour: date, heure_debut: int, heure_fin: int) 
         premier = passages[1] if len(passages) >= 2 else None
         if premier is not None and heure_debut <= premier < heure_fin:
             uuid = trip_id.split(":")[-1] if ":" in trip_id else trip_id
-            attendus.append((uuid, mission, premier))
+            attendus.append((uuid, mission, premier, passages[-1]))
     return attendus
 
 
@@ -659,10 +659,21 @@ def diagnostiquer_trains_manquants(line_id: str, trains: list[dict], obs_dt: dat
         m = _UUID.search(ref)
         if m:
             vus.add(m.group(0))
-    manquants = [(uuid, mission, premier) for uuid, mission, premier in attendus if uuid not in vus]
+    # Aucun train du flux dans le GTFS : ce sont les horaires qui sont périmés (IDFM renouvelle les trip_id à chaque
+    # publication — 2026-09-22), pas des trains absents. « Mon trajet » ne relie alors plus aucun incident.
+    from backend.offre import charger_horaires
+    connus = {m.group(0) for t in charger_horaires()["lignes"][line_id]["trains"] if (m := _UUID.search(t[0]))}
+    if vus and not vus & connus:
+        logger.warning("Horaires GTFS périmés pour %s : aucun des %d trains du flux n'y figure — "
+                       "reconstruire avec « python -m backend.offre horaires »", line_id, len(vus))
+        return
+    # Un train arrivé au terminus quitte le flux quelques minutes après (bug C) : seuls ceux encore en
+    # circulation au relevé doivent y figurer
+    attendus = [a for a in attendus if a[3] >= heure_fin]
+    manquants = [(uuid, mission, premier) for uuid, mission, premier, _ in attendus if uuid not in vus]
     if manquants:
         h_m = lambda m: f"{m // 60}:{m % 60:02d}"
-        logger.info("Trains GTFS absents du flux %s (%d/%d dans la dernière heure) : %s",
+        logger.info("Trains GTFS absents du flux %s (%d/%d en circulation, partis dans l'heure) : %s",
                     line_id, len(manquants), len(attendus),
                     ", ".join(f"{mission} {h_m(premier)}" for _, mission, premier in manquants[:10])
                     + (f" … +{len(manquants) - 10}" if len(manquants) > 10 else ""))
