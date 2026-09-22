@@ -671,15 +671,16 @@ test à égalité d'heure et test d'échec sans perte du relevé ; rejoué sur l
 **Status** : ✅ Résolu
 
 ### [2026-09-17] Soupçons B / C / D / E — corrigés le 17/09 soir (Windows)
-- **B — Arrêts sautés** : ✅ Résolu. Le flag `k=True` est conservé par `fusionner_arrets` et traité comme un arrêt
-  supprimé dans `minutes_voyageurs_train`. Commit `36c7653`.
+- **B — Arrêts sautés** : 🔍 Requalifié le 2026-09-22 — détection non fiable, retirée du coût depuis le 18/09
+  (voir session du 2026-09-22). Le flag `k=True` reste conservé par `fusionner_arrets`. Commit `36c7653`.
 - **C — Passé visible** : ✅ Résolu. `attentes_mesurees` filtre les arrêts déjà passés au relevé (`obs_dt`).
-  Docstrings corrigés. Commit `36c7653`.
+  Docstrings corrigés. Commit `36c7653`. Durée mesurée et angle mort écarté le 2026-09-22.
 - **D — Trains disparus pendant une coupure** : 🔍 Diagnostic ajouté. `trains_attendus` compare GTFS vs flux
   et loggue les manquants. Confirmé côté PRIM (ligne K : 4/36 prévus). Pas de création d'incidents automatique.
   Commit `cb4013c`.
 - **E — Train partiellement supprimé** : ✅ Résolu. `is_cancelled` préservé dans l'upsert ; `s=None` hors fenêtre
-  (au lieu de `False`) conservé par `fusionner_arrets`. Commit `cb4013c`.
+  (au lieu de `False`) conservé par `fusionner_arrets`. Commit `cb4013c`. Effet inverse constaté le 2026-09-22 :
+  suppressions levées comptées (voir Bug 46).
 
 ### [2026-09-17] Bug 39 — Suivi trop espacé : relevé toutes les 20 min, 13 requêtes par relevé
 **Fichier(s)** : `backend/collector.py`, `backend/main.py`, `backend/config.py`, `backend/api.py`, `frontend/methode.html`
@@ -823,3 +824,57 @@ Le correctif jouera à partir des vacances de la Toussaint, le 17 octobre 2026.
 **Limite restante** : les dimanches et jours fériés n'ont qu'un seul profil — le jeu de données source
 ne les décline pas selon la période. Documenté sur la page Méthode.
 **Status** : ✅ Résolu
+
+## Session 2026-09-22 — Mac (bugs B / C / D / E, fenêtre de mesure)
+
+### [2026-09-22] Bug 45 — Horaires GTFS périmés : « Mon trajet » et diagnostic D aveugles
+**Fichier(s)** : `data/horaires.json.gz`, `backend/collector.py` (`diagnostiquer_trains_manquants`, `trains_attendus`)
+**Symptôme** : le diagnostic D annonçait 100 % de trains absents sur les 13 lignes à chaque relevé du 22/09
+(ligne U : 8/8) ; « Mon trajet » ne reliait plus aucun train du jour à son incident (tous « à l'heure »).
+**Cause** : IDFM a publié un nouveau GTFS dans la nuit du 21 au 22/09 avec de nouveaux `trip_id`. Le flux temps réel
+a basculé sur ces identifiants (RER B : 124/125 trains reconnus le 21/09, 0/124 le 22/09) ; `data/horaires.json.gz`
+datait du 20/09. Les métriques ne sont pas touchées (elles ne lisent pas ces identifiants).
+Second défaut du diagnostic : il attendait dans le flux tous les trains partis dans l'heure, y compris ceux arrivés
+au terminus, qui en sortent.
+**Fix** : `python -m backend.offre horaires` (fenêtre 19/09 → 21/10) : 279/280 incidents du 22/09 reliés.
+Warning « Horaires GTFS périmés » quand aucun train du flux n'est reconnu ; seuls les trains encore en circulation au
+relevé sont attendus (RER B 36/39, U 5/6, K 2/2 au relevé de 8 h 54). Test `test_diagnostiquer_signale_horaires_perimes`.
+Commit `828c8d0`.
+**Status** : ✅ Résolu — reconstruire les horaires à chaque publication GTFS (le warning le signale)
+
+### [2026-09-22] C — Durée du passé visible, mesurée
+Archives du 21-22/09 (142 relevés, flux global) : pour un train en circulation, un arrêt desservi reste visible
+1,2 min en médiane (p90 4,8 min, p95 15 min, p99 29 min) ; un train arrivé au terminus reste ~14 min (p95 30 min).
+Le « 30-60 min en flux global » de `lessons.md` était faux (trains terminés et arrêts supprimés datés à l'heure prévue).
+Angle mort de `attentes_mesurees` : inexistant — l'arrêt n'est mesuré que si son heure prévue est après le relevé,
+donc le train suivant (postérieur) n'est pas encore passé et figure dans le flux. Aucun code modifié.
+**Status** : ✅ Clos
+
+### [2026-09-22] B — Arrêts sautés : la règle de détection ne tient pas
+Rejeu de `arrets_sautes` sur les archives du 21-22/09 : 204 détections, dont 125 (61 %) dont le passage estimé était
+déjà dépassé au relevé — arrêt normalement passé et retiré du flux, pas sauté. La règle suppose que le flux retire les
+arrêts dans l'ordre du parcours ; faux (un arrêt ancien peut traîner jusqu'à 15-30 min). 4 arrêts réapparaissent plus
+tard. 64 détections restent plausibles (passage estimé ≥ 5 min après le relevé). Piste : ne retenir que les arrêts
+disparus alors que leur passage estimé est encore à venir de quelques minutes, et confirmés absents au relevé suivant.
+**Status** : 🔍 En observation — hors du coût (inchangé depuis le 18/09)
+
+### [2026-09-22] Bug 46 — Suppression levée toujours comptée (E)
+**Fichier(s)** : `backend/collector.py` (upsert temps réel), `backend/transfert.py` (fusion inter-PC)
+**Symptôme** : 40 trains depuis le 17/09 (sur 654 supprimés, 6 %) ont `is_cancelled = True` alors que tous leurs arrêts
+ont ensuite été relevés desservis, retards mesurés (ex. RER C `8456a566…` du 21/09 : vu supprimé par le PC Windows avant
+8 h 49, vu rouler 4-5 min de retard à chaque relevé du Mac ensuite). 22 portent encore `CANCELLED`, 18 sont repassés en
+`DELAY_REALTIME` (cause « Retard de … ») en gardant `is_cancelled`.
+**Cause** : règle « `is_cancelled` ne régresse jamais de `True` à `False` » (CLAUDE.md), posée quand les arrêts supprimés
+sortaient de la fenêtre en `False`. Depuis `cb4013c` (`s=None` hors fenêtre), un `s=False` est une mesure réelle.
+**Effet** : compteur de suppressions surévalué ; coût de ces trains = retards mesurés (attente de suppression
+non comptée, aucun arrêt `s`).
+**Piste** : dériver `is_cancelled` des arrêts fusionnés (au moins un `s=True`) — contredit la règle de CLAUDE.md :
+décision utilisateur requise.
+**Status** : ❌ Ouvert — en attente de décision
+
+### [2026-09-22] Fenêtre de mesure 10 min : gardée
+Archives du 21-22/09, 56 760 arrêts vus à moins de 30 min de leur passage. Part des arrêts ayant au moins une mesure :
+15 min 79,7 % · 10 min 67,7 % · 7 min 59,5 % · 5 min 53,3 %. Dernière mesure avant passage vs retard constaté après
+passage : +7,1 % (15 min), +8,5 % (10), +9,7 % (7), +7,9 % (5) — le biais ne dépend pas de la fenêtre.
+Passer à 5 min ferait perdre 14 points de couverture sans rien gagner. À étudier : 15 min (+12 points de couverture).
+**Status** : ✅ Tranché — rien de modifié

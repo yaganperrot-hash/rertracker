@@ -105,8 +105,9 @@
 - Un modèle « voyageurs par jour × part de l'heure » appliqué **par train** suppose sans le dire un train par minute :
   vérifier l'unité de chaque produit (voyageurs d'un train, pas d'une minute de ligne) en comparant à l'offre réelle.
 - Le flux SIRI Estimated Timetable de PRIM : arrêts **non triés** dans la réponse, passé visible court
-  (~3 min par ligne, 30-60 min en flux global `LineRef=ALL`, observé le 17/09),
-  statut `CANCELLED` par arrêt, `JourneyNote` = code mission, `DatedVehicleJourneyRef` contient l'uuid du trip GTFS,
+  (train en circulation : 1,2 min en médiane, p95 15 min ; train arrivé au terminus : ~14 min — mesuré le 22/09),
+  statut `CANCELLED` par arrêt, `JourneyNote` = code mission, `DatedVehicleJourneyRef` contient l'uuid du trip GTFS
+  **de la publication en cours** (les uuid changent à chaque publication GTFS : reconstruire les horaires),
   `STIF:StopArea:SP:<n>:` = `IDFM:monomodalStopPlace:<n>` du GTFS. Appel `LineRef=ALL` (tout le réseau, 1 requête, même compteur) : 4,5 Mo compressés sur le fil
   (gzip), 52 Mo de JSON, ~4 h 30 d'horizon contre ~2 h par ligne — mesuré le 17/09 ; le « 59 Mo » était la taille
   décompressée, pas le coût réseau.
@@ -161,8 +162,11 @@
   ligne et la suite du train dans les archives (reprise de marche = retard réel). Le SICA de 198 min était réel.
 - Rejouer une règle de détection sur les archives d'une journée avec incident avant de la coder : c'est ce qui a
   montré qu'une détection de glissement aurait effacé les plus gros retards réels.
-- Flux global (`LineRef=ALL`) : arrêts passés visibles 30 à 60 min et plus, contre ~3 min observés sur l'appel par
-  ligne — une mesure sur un flux ne vaut pas pour l'autre.
+- Passé visible (mesuré le 22/09 sur 142 relevés du flux global) : le « 30 à 60 min » du 17/09 mélangeait trains
+  terminés (qui restent ~14 min) et arrêts supprimés (datés à l'heure prévue). Le flux ne retire pas les arrêts dans
+  l'ordre du parcours : une règle qui le suppose (arrêts sautés) se trompe 6 fois sur 10.
+- Un diagnostic qui signale 100 % d'anomalies sur toutes les lignes mesure son propre défaut, pas le réseau : vérifier
+  d'abord la jointure (le 22/09, uuid GTFS périmés).
 - `RecordedAtTime` d'un train est ancien pour la plupart des trains (plus d'une heure) : inutilisable seul pour dire
   qu'une estimation est figée.
 

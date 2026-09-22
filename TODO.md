@@ -8,16 +8,20 @@
     Valider sur les archives (`logs/flux_brut/`) et sur des trajets réels notés (heure du quai, mission affichée,
     heure d'arrivée), puis compter les arrêts sautés dans `metrics.py` et dans « Mon trajet ».
     **2026-09-18 : retirés du coût** (comptés depuis `36c7653`, ~65 000 min-voy. les 17-18/09) jusqu'à validation.
-    Piste : garder l'heure du relevé de chaque mesure d'arrêt, pour savoir laquelle est périmée
-  - [ ] **C — passé visible** : ~3 min et non ~50 min (un seul flux observé) ; corriger `lessons.md` et
-    `arrets_du_train`, fermer l'angle mort de `attentes_mesurees` (train suivant déjà passé au relevé)
-  - [ ] **D — trains absents du flux** (coupures) : comparer aux horaires GTFS ; vérifier la ligne K, vide après 10 h le 17/09
-  - [ ] **E — train partiellement supprimé** redevenu « non supprimé » (compteur de suppressions)
+    **2026-09-22 : règle invalidée sur les archives** — 61 % des détections sont des arrêts déjà passés (DEBUG.md).
+    Revoir la règle (passage estimé encore à venir + absence confirmée au relevé suivant) avant tout retour au coût
+  - [x] **C — passé visible** (2026-09-22) : mesuré 1,2 min en médiane pour un train en circulation (p95 15 min),
+    ~14 min après le terminus ; `lessons.md` corrigé ; pas d'angle mort dans `attentes_mesurees`
+  - [ ] **D — trains absents du flux** (coupures) : diagnostic réparé le 2026-09-22 (bug 45 : horaires GTFS périmés,
+    trains arrivés au terminus attendus à tort). Observer les logs « absents du flux » quelques jours avant d'en tirer
+    des suppressions
+  - [ ] **E — suppression levée toujours comptée** (bug 46, 2026-09-22) : 40 trains / 654 depuis le 17/09.
+    Décision attendue : dériver `is_cancelled` des arrêts fusionnés (contredit la règle de CLAUDE.md)
   - [x] **Requêtes API et quotas** (17/09) : temps réel toutes les 5 min en 1 appel global (`LineRef=ALL`, 216 req/jour),
     perturbations toutes les 20 min (108), pas de relevé au redémarrage si le dernier date de moins d'un intervalle ;
     retard/suppression mesurés seulement à moins de 10 min du passage estimé
-  - [ ] **Ajuster la fenêtre de 10 min** sur les archives à 5 min : retard annoncé à 30 / 20 / 10 / 5 min du passage
-    comparé au retard final
+  - [x] **Fenêtre de 10 min** (2026-09-22) : gardée — 5 min ferait passer la couverture de 67,7 % à 53,3 % sans
+    réduire l'écart au retard constaté (~+8 % quelle que soit la fenêtre). Piste : 15 min (79,7 %)
   - [ ] Surveiller après la bascule : taille de `logs/flux_brut/` (~9 Mo de JSON par relevé avant gzip), durée de
     `compute_daily_metrics` toutes les 5 min, `ECART_MAX_RELEVES` (45 min) pour les arrêts sautés
 - [ ] **« Mon trajet » (bêta, aller simple, 2026-09-17)** — suite : aller-retour, correspondances entre lignes,
@@ -45,7 +49,9 @@
   couvre que 30 jours ; les jours de vacances y reprennent l'offre hors vacances tant qu'aucun n'est dans la fenêtre ;
   les comptages SNCF sont mis à jour par campagne) : `python -m backend.offre build`,
   `python -m backend.frequentation build`, puis `python -m backend.recalcul` sur chaque PC.
-  Avec eux, `python -m backend.offre horaires` (« Mon trajet », fenêtre GTFS actuelle : 14/09 → 16/10).
+  Avec eux, `python -m backend.offre horaires` (« Mon trajet », fenêtre GTFS actuelle : 19/09 → 21/10).
+  **Les horaires se reconstruisent à chaque publication GTFS** (nouveaux `trip_id`, bug 45) : le warning
+  « Horaires GTFS périmés » dans les logs le signale.
 - [ ] Surveiller `data/frequentation_gares.json` → `perdus` et `origine` « inconnue » après chaque build (gare renommée
   dans le GTFS ou les comptages).
 - [ ] Valider la maquette `frontend/carte.html`, puis reprendre le plan X/Instagram :

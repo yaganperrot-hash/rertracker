@@ -39,7 +39,8 @@ sur les lignes RER et Transilien d'Île-de-France.
   par gare, missions, noms d'arrêts) → `python -m backend.frequentation build` (comptages SNCF + validations IDFM :
   voyageurs montant dans un train par gare et heure), puis `python -m backend.recalcul`.
   `python -m backend.offre horaires` (indépendant, sans recalcul) : `data/horaires.json.gz`, passage de chaque train à
-  chaque gare, lu par « Mon trajet » (`backend/trajets.py`).
+  chaque gare, lu par « Mon trajet » (`backend/trajets.py`). À reconstruire à chaque publication du GTFS IDFM : les
+  `trip_id` changent et le flux temps réel suit (warning « Horaires GTFS périmés » dans les logs).
   `data/frequentation.json` n'est plus utilisé par le calcul.
 
 ---
@@ -154,7 +155,7 @@ Chaque PC a sa propre base PostgreSQL. Pour ne pas perdre les données collecté
 
 ## Prochaine étape à reprendre
 Voir `TODO.md` et les bugs ouverts de `.claude/DEBUG.md`. Priorités : **régénérer la clé PRIM** (en clair dans
-l'historique git), puis bugs 9 / 10 / 11 / 17.
+l'historique git), puis bug 46 (suppressions levées comptées, décision attendue) et la règle des arrêts sautés (B).
 
 ---
 
