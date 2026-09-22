@@ -1,17 +1,17 @@
 # SESSION — État courant
 
-## 2026-09-21 soir — PC Windows (historique : `.claude/archive/`)
+## 2026-09-22 — PC Windows
 
 ### Objectif
-Reprise sur Windows : importer les données Mac (21/09), relancer la collecte.
+Reprise sur Windows : importer les données Mac (21/09), relancer la collecte, avancer sur les bugs.
 
 ### Avancement
-- `git pull` OK (dc0a78c, déjà à jour). Réétiquetage Transilien déjà appliqué : 13 et 14/09 ignorés,
-  15 → 21/09 importés (836+1427+1666+143+2347+740+600+1339 = 9 098 incidents).
+- `git pull` OK (a9dd077, déjà à jour). Réétiquetage Transilien déjà appliqué : 13 et 14/09 ignorés,
+  15 → 21/09 importés (836+1427+1666+143+2347+740+600+1387 = 9 146 incidents fusionnés).
 - `POLLING_INTERVAL_MINUTES=5` OK.
-- Serveur relancé, scheduler opérationnel.
-- Export `transferts/incidents-2026-09-21.json` (1387 incidents, collecte Windows incluse).
-- Aucun code modifié.
+- Serveur relancé, scheduler opérationnel, premier relevé temps réel passé.
+- Export `transferts/incidents-2026-09-22.json` (163 incidents).
+- Aucun code modifié — session courte (démarrage + transfert uniquement).
 
 ### Blocages
 - Clé PRIM toujours à régénérer (commit `c591442`).
@@ -19,6 +19,7 @@ Reprise sur Windows : importer les données Mac (21/09), relancer la collecte.
 
 ### Prochaine étape
 1. Régénérer la clé PRIM (portail PRIM, puis `.env`).
-2. Bug B (arrêts sautés) : analyser les archives `logs/flux_brut/`.
-3. Bug C (passé visible ~3 min) : corriger `arrets_du_train`.
-4. Plan de déploiement VPS.
+2. Bug C (passé visible ~3 min) : corriger `arrets_du_train`.
+3. Bug B (arrêts sautés) : analyser les archives `logs/flux_brut/`.
+4. Bug E (suppression partielle régresse) : protéger l'upsert.
+5. Plan de déploiement VPS.
