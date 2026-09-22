@@ -671,8 +671,8 @@ test à égalité d'heure et test d'échec sans perte du relevé ; rejoué sur l
 **Status** : ✅ Résolu
 
 ### [2026-09-17] Soupçons B / C / D / E — corrigés le 17/09 soir (Windows)
-- **B — Arrêts sautés** : 🔍 Requalifié le 2026-09-22 — détection non fiable, retirée du coût depuis le 18/09
-  (voir session du 2026-09-22). Le flag `k=True` reste conservé par `fusionner_arrets`. Commit `36c7653`.
+- **B — Arrêts sautés** : 🔍 Requalifié le 2026-09-22 — détection non fiable, règle réécrite le même jour, toujours
+  hors du coût depuis le 18/09 (voir session du 2026-09-22). Le flag `k=True` reste conservé par `fusionner_arrets`. Commit `36c7653`.
 - **C — Passé visible** : ✅ Résolu. `attentes_mesurees` filtre les arrêts déjà passés au relevé (`obs_dt`).
   Docstrings corrigés. Commit `36c7653`. Durée mesurée et angle mort écarté le 2026-09-22.
 - **D — Trains disparus pendant une coupure** : 🔍 Diagnostic ajouté. `trains_attendus` compare GTFS vs flux
@@ -856,7 +856,12 @@ déjà dépassé au relevé — arrêt normalement passé et retiré du flux, pa
 arrêts dans l'ordre du parcours ; faux (un arrêt ancien peut traîner jusqu'à 15-30 min). 4 arrêts réapparaissent plus
 tard. 64 détections restent plausibles (passage estimé ≥ 5 min après le relevé). Piste : ne retenir que les arrêts
 disparus alors que leur passage estimé est encore à venir de quelques minutes, et confirmés absents au relevé suivant.
-**Status** : 🔍 En observation — hors du coût (inchangé depuis le 18/09)
+**Fix** (accord du 2026-09-22) : soupçon seulement si le passage estimé au relevé précédent était encore à venir de
+`MARGE_ARRET_SAUTE` = 2 min (un train passe plus de 2 min avant l'estimation faite ≤ 10 min plus tôt dans 2,1 % des cas) ;
+marque `k` posée au relevé suivant seulement si le train est toujours dans le flux et l'arrêt toujours absent
+(`confirmer_sautes`). Rejeu du code sur les archives du 21-22/09 : 204 détections → 49 confirmées, en séries d'arrêts
+consécutifs en bout de branche (ex. RER B Courcelle, Gif, La Hacquinière, Bures) : trains limités avant leur terminus.
+**Status** : 🔍 En observation — règle réécrite, toujours hors du coût (décision à part)
 
 ### [2026-09-22] Bug 46 — Suppression levée toujours comptée (E)
 **Fichier(s)** : `backend/collector.py` (upsert temps réel), `backend/transfert.py` (fusion inter-PC)

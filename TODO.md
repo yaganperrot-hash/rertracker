@@ -8,8 +8,9 @@
     Valider sur les archives (`logs/flux_brut/`) et sur des trajets réels notés (heure du quai, mission affichée,
     heure d'arrivée), puis compter les arrêts sautés dans `metrics.py` et dans « Mon trajet ».
     **2026-09-18 : retirés du coût** (comptés depuis `36c7653`, ~65 000 min-voy. les 17-18/09) jusqu'à validation.
-    **2026-09-22 : règle invalidée sur les archives** — 61 % des détections sont des arrêts déjà passés (DEBUG.md).
-    Revoir la règle (passage estimé encore à venir + absence confirmée au relevé suivant) avant tout retour au coût
+    **2026-09-22 : règle réécrite** — l'ancienne marquait 61 % d'arrêts déjà passés ; désormais passage estimé à venir
+    d'au moins 2 min + absence confirmée au relevé suivant (204 → 49 sur les archives du 21-22/09, surtout des trains
+    limités avant leur terminus). Observer quelques jours (logs « Arrêt sauté probable ») avant de décider du coût
   - [x] **C — passé visible** (2026-09-22) : mesuré 1,2 min en médiane pour un train en circulation (p95 15 min),
     ~14 min après le terminus ; `lessons.md` corrigé ; pas d'angle mort dans `attentes_mesurees`
   - [ ] **D — trains absents du flux** (coupures) : diagnostic réparé le 2026-09-22 (bug 45 : horaires GTFS périmés,

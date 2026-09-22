@@ -524,24 +524,31 @@ def suppression_levee(arrets: list) -> dict:
     return colonnes
 
 
-# Relevé précédent de chaque ligne, en mémoire : line_id → (instant, {uid-ref: [(numéro, heure prévue, supprimé)]})
-_releves_precedents: dict[str, tuple[datetime, dict[str, list[tuple[str | None, datetime, bool]]]]] = {}
+Resume = dict[str, list[tuple[str | None, datetime, bool, datetime]]]
+Soupcon = tuple[str, str, datetime]   # (uid-ref, numéro d'arrêt, heure prévue)
+
+# Relevé précédent de chaque ligne, en mémoire : line_id → (instant, résumé, soupçons d'arrêts sautés à confirmer)
+_releves_precedents: dict[str, tuple[datetime, Resume, list[Soupcon]]] = {}
 ECART_MAX_RELEVES = timedelta(minutes=45)   # au-delà (nuit, serveur arrêté), pas de comparaison
+# Un arrêt n'est soupçonné sauté que si son passage estimé était encore à venir d'au moins cette marge : un train passe
+# plus de 2 min avant l'estimation faite 10 min plus tôt dans 2 % des cas (archives du 21-22/09)
+MARGE_ARRET_SAUTE = timedelta(minutes=2)
 
 
-def resume_releve(trains: list[dict]) -> dict[str, list[tuple[str | None, datetime, bool]]]:
-    """Ce qu'il faut garder d'un relevé pour le comparer au suivant : arrêts de chaque train."""
-    return {ref: [(a["numero"], a["prevu"], a["supprime"]) for a in _appels(j)]
+def resume_releve(trains: list[dict]) -> Resume:
+    """Ce qu'il faut garder d'un relevé pour le comparer au suivant : arrêts de chaque train
+    (numéro, heure prévue, supprimé, passage estimé — l'heure prévue à défaut)."""
+    return {ref: [(a["numero"], a["prevu"], a["supprime"], a["estime"] or a["prevu"]) for a in _appels(j)]
             for j in trains if (ref := _valeur(j.get("DatedVehicleJourneyRef")))}
 
 
-def arrets_sautes(precedent: dict[str, list[tuple[str | None, datetime, bool]]],
-                  trains: list[dict]) -> list[tuple[str, str, datetime]]:
-    """Arrêts sautés probables (soupçon B, en observation) : (uid-ref, numéro d'arrêt, heure prévue).
+def arrets_sautes(precedent: Resume, trains: list[dict], obs_dt: datetime) -> list[Soupcon]:
+    """Arrêts sautés soupçonnés (B, en observation) : (uid-ref, numéro d'arrêt, heure prévue).
 
     Un arrêt desservi au relevé précédent qui disparaît du flux alors qu'un arrêt prévu AVANT lui sur le même train
-    est encore visible : le train n'y est pas encore passé (le flux retire les arrêts dans l'ordre du parcours),
-    l'arrêt a été retiré de sa desserte. Un train sorti du flux n'est pas comparé.
+    est encore visible, et dont le passage estimé était encore à venir de MARGE_ARRET_SAUTE au moins : un arrêt passé
+    peut sortir du flux avant un arrêt plus ancien (règle sans cette condition : 61 % d'arrêts simplement passés,
+    rejeu du 2026-09-22). Un train sorti du flux n'est pas comparé. À confirmer au relevé suivant (confirmer_sautes).
     """
     sautes = []
     for j in trains:
@@ -553,10 +560,20 @@ def arrets_sautes(precedent: dict[str, list[tuple[str | None, datetime, bool]]],
         if not appels:
             continue
         premier_visible = appels[0]["prevu"]
-        for numero, prevu, supprime in precedent[ref]:
-            if numero and not supprime and numero not in visibles and prevu > premier_visible:
+        for numero, prevu, supprime, estime in precedent[ref]:
+            if (numero and not supprime and numero not in visibles and prevu > premier_visible
+                    and estime > obs_dt + MARGE_ARRET_SAUTE):
                 sautes.append((ref, numero, prevu))
     return sautes
+
+
+def confirmer_sautes(soupcons: list[Soupcon], trains: list[dict]) -> list[Soupcon]:
+    """Soupçons du relevé précédent confirmés : le train est toujours dans le flux et l'arrêt toujours absent
+    (un arrêt qui réapparaît était un trou du flux)."""
+    visibles = {ref: {a["numero"] for a in _appels(j)}
+                for j in trains if (ref := _valeur(j.get("DatedVehicleJourneyRef")))}
+    return [(ref, numero, prevu) for ref, numero, prevu in soupcons
+            if ref in visibles and visibles[ref] and numero not in visibles[ref]]
 
 
 def marquer_sautes(arrets: list, sautes: list[tuple[str, str]]) -> list:
@@ -769,13 +786,16 @@ async def collect_rt_delays() -> None:
         sautes: dict[str, list[tuple[str, str]]] = defaultdict(list)   # uid-ref → [(gare, heure prévue ISO)]
         precedent = _releves_precedents.get(line_id)
         try:
+            soupcons: list[Soupcon] = []
             if precedent and obs_dt - precedent[0] <= ECART_MAX_RELEVES:
-                for ref, numero, prevu in arrets_sautes(precedent[1], trains):
+                # Soupçons du relevé d'avant confirmés maintenant, puis nouveaux soupçons pour le relevé suivant
+                for ref, numero, prevu in confirmer_sautes(precedent[2], trains):
                     gare = nom_arret(numero) or numero
                     sautes[ref].append((gare, prevu.isoformat()))
                     logger.info("Arrêt sauté probable : %s %s %s (prévu %s)", line_id, ref, gare,
                                 prevu.astimezone(PARIS_TZ).strftime("%H:%M"))
-            _releves_precedents[line_id] = (obs_dt, resume_releve(trains))
+                soupcons = arrets_sautes(precedent[1], trains, obs_dt)
+            _releves_precedents[line_id] = (obs_dt, resume_releve(trains), soupcons)
         except Exception:
             # Observation seulement : jamais au prix du relevé
             logger.exception("Détection des arrêts sautés impossible pour %s", line_id)

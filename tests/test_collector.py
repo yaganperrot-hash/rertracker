@@ -23,6 +23,7 @@ from backend.collector import (
     attentes_mesurees,
     archiver_flux,
     arrets_sautes,
+    confirmer_sautes,
     couverture_releve,
     diagnostiquer_trains_manquants,
     marquer_sautes,
@@ -662,19 +663,39 @@ class TestArretsSautes:
                            _appel(4, 9, retard=3, terminus=True)])
         apres = _train(1, [_appel(1, 1, retard=10), _appel(4, 9, retard=10, terminus=True)])
         ref = avant["DatedVehicleJourneyRef"]["value"]
-        sautes = arrets_sautes(resume_releve([avant]), [apres])
+        sautes = arrets_sautes(resume_releve([avant]), [apres], T0)
         assert [(r, n) for r, n, _ in sautes] == [(ref, "2"), (ref, "3")]
 
     def test_arrets_passes_sortis_du_flux_ne_sont_pas_sautes(self):
         avant = _train(1, [_appel(1, 1), _appel(2, 4), _appel(3, 6, terminus=True)])
         apres = _train(1, [_appel(3, 6, terminus=True)])
-        assert arrets_sautes(resume_releve([avant]), [apres]) == []
+        assert arrets_sautes(resume_releve([avant]), [apres], T0) == []
 
     def test_arret_deja_supprime_ou_train_sorti_du_flux(self):
         avant = _train(1, [_appel(1, 1), _appel(2, 4, statut="CANCELLED"), _appel(3, 6, terminus=True)])
         apres = _train(1, [_appel(1, 1), _appel(3, 6, terminus=True)])
-        assert arrets_sautes(resume_releve([avant]), [apres]) == []
-        assert arrets_sautes(resume_releve([avant]), []) == []
+        assert arrets_sautes(resume_releve([avant]), [apres], T0) == []
+        assert arrets_sautes(resume_releve([avant]), [], T0) == []
+
+    def test_arret_deja_passe_sorti_avant_un_arret_plus_ancien(self):
+        """Rejeu du 22/09 : un arrêt dont le passage estimé est dépassé (ou tout proche) sort du flux normalement,
+        même si un arrêt plus ancien y traîne encore — pas un arrêt sauté."""
+        avant = _train(1, [_appel(1, -5), _appel(2, 1), _appel(3, 9, terminus=True)])
+        apres = _train(1, [_appel(1, -5), _appel(3, 9, terminus=True)])
+        assert arrets_sautes(resume_releve([avant]), [apres], T0) == []   # Gare Deux estimée à T0 + 1 min
+        # Relevé 5 min plus tôt : le passage était encore à venir, soupçon
+        assert [n for _, n, _ in arrets_sautes(resume_releve([avant]), [apres], T0 - timedelta(minutes=5))] == ["2"]
+
+    def test_confirmation_au_releve_suivant(self):
+        train = _train(1, [_appel(1, 1), _appel(3, 9, terminus=True)])
+        ref = train["DatedVehicleJourneyRef"]["value"]
+        soupcons = [(ref, "2", T0)]
+        assert confirmer_sautes(soupcons, [train]) == soupcons
+        # L'arrêt réapparaît : trou du flux, écarté
+        revenu = _train(1, [_appel(1, 1), _appel(2, 4), _appel(3, 9, terminus=True)])
+        assert confirmer_sautes(soupcons, [revenu]) == []
+        # Train sorti du flux : rien à confirmer
+        assert confirmer_sautes(soupcons, []) == []
 
     def test_marquage_sur_les_arrets_connus(self):
         arrets = [{"g": "A", "p": "1", "r": 3}, {"g": "B", "p": "2", "r": 3}]
@@ -880,10 +901,18 @@ class TestCollectRtDelays:
     async def test_arret_saute_marque_au_releve_suivant(self, monkeypatch):
         from sqlalchemy.dialects import postgresql
 
+        class _Fige(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return T0 if tz else T0.replace(tzinfo=None)
+
         monkeypatch.setattr(collector, "_releves_precedents", {})
+        monkeypatch.setattr(collector, "datetime", _Fige)
         avant = _train(1, [_appel(1, 1, retard=3), _appel(2, 4, retard=3), _appel(3, 9, retard=3, terminus=True)])
         apres = _train(1, [_appel(1, 1, retard=5), _appel(3, 9, retard=5, terminus=True)])
         await self._executer(_flux(avant))
+        # Soupçon au relevé où l'arrêt disparaît, marque au relevé qui le confirme
+        await self._executer(_flux(apres))
         uid = "rt_vehicle_journey:IDFM:TN:SNCF:00000000-0000-0000-0000-000000000001_20260917"
         connus = [{"g": "Gare Un", "p": _iso(1).replace("Z", "+00:00"), "r": 3, "s": False, "w": None},
                   {"g": "Gare Deux", "p": _iso(4).replace("Z", "+00:00"), "r": 3, "s": False, "w": None}]

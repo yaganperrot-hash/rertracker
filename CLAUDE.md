@@ -157,7 +157,7 @@ Chaque PC a sa propre base PostgreSQL. Pour ne pas perdre les données collecté
 
 ## Prochaine étape à reprendre
 Voir `TODO.md` et les bugs ouverts de `.claude/DEBUG.md`. Priorités : **régénérer la clé PRIM** (en clair dans
-l'historique git), puis la règle des arrêts sautés (B).
+l'historique git), puis observer les arrêts sautés (B, règle réécrite le 2026-09-22) avant de décider s'ils entrent dans le coût.
 
 ---
 
