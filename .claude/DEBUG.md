@@ -840,7 +840,10 @@ au terminus, qui en sortent.
 Warning « Horaires GTFS périmés » quand aucun train du flux n'est reconnu ; seuls les trains encore en circulation au
 relevé sont attendus (RER B 36/39, U 5/6, K 2/2 au relevé de 8 h 54). Test `test_diagnostiquer_signale_horaires_perimes`.
 Commit `828c8d0`.
-**Status** : ✅ Résolu — reconstruire les horaires à chaque publication GTFS (le warning le signale)
+**Status** : ✅ Résolu — reconstruire les horaires à chaque publication GTFS (le warning le signale).
+**2026-09-24** : le cas s'est reproduit (1 615 warnings, 13 lignes, ~10 h avant d'être vu) ; horaires reconstruits,
+fenêtre 21/09 → 23/10, 1 361 / 1 394 incidents du jour reliés. IDFM republie donc plusieurs fois par semaine :
+tant que personne ne surveille les logs, « Mon trajet » reste faux entre la publication et la reconstruction.
 
 ### [2026-09-22] C — Durée du passé visible, mesurée
 Archives du 21-22/09 (142 relevés, flux global) : pour un train en circulation, un arrêt desservi reste visible
@@ -861,7 +864,9 @@ disparus alors que leur passage estimé est encore à venir de quelques minutes,
 marque `k` posée au relevé suivant seulement si le train est toujours dans le flux et l'arrêt toujours absent
 (`confirmer_sautes`). Rejeu du code sur les archives du 21-22/09 : 204 détections → 49 confirmées, en séries d'arrêts
 consécutifs en bout de branche (ex. RER B Courcelle, Gif, La Hacquinière, Bures) : trains limités avant leur terminus.
-**Status** : 🔍 En observation — règle réécrite, toujours hors du coût (décision à part)
+**Status** : 🔍 En observation — règle réécrite, toujours hors du coût (décision à part).
+En production depuis le 2026-09-22 12 h : 46 arrêts confirmés le 23/09, 108 le 24/09 (contre ~150/jour avec
+l'ancienne règle).
 
 ### [2026-09-22] Bug 46 — Suppression levée toujours comptée (E)
 **Fichier(s)** : `backend/collector.py` (upsert temps réel), `backend/transfert.py` (fusion inter-PC)

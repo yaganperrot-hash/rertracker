@@ -184,3 +184,15 @@
 ## Démarrage / double collecte (2026-09-21)
 - Le log de démarrage donne le quota Estimated Timetable restant : proche de 1 000 en journée → aucun autre PC ne
   collecte. Vérification gratuite (pas de requête en plus) de la règle « un seul serveur à la fois ».
+
+## Invariants et données de référence (2026-09-22 → 24)
+- Un invariant à sens unique (« cet état ne régresse jamais ») n'est vrai que tant que la mesure qui le motivait
+  reste imprécise : quand la mesure s'affine (arrêt hors fenêtre passé de `False` à `None`), il se met à compter des
+  cas faux — 42 suppressions levées comptées pendant une semaine. Relire les invariants après chaque gain de précision.
+- Une donnée de référence versionnée (GTFS, profils) doit porter un contrôle de jointure au moment de s'en servir :
+  le GTFS IDFM a été republié deux fois en trois jours, avec de nouveaux `trip_id` à chaque fois, et rien ne le
+  signalait — « Mon trajet » affichait simplement tous les trains à l'heure.
+- Un warning ne suffit pas si personne ne lit les logs : le 24/09, les horaires sont restés périmés ~10 h. Ce qui
+  doit être surveillé en continu appartient à une page ou à une alerte, pas à un fichier de log.
+- Avant de coder une règle de détection, la rejouer sur les archives ET compter ses faux positifs par une mesure
+  indépendante (ici : le passage estimé était-il déjà dépassé ?) — 61 % des « arrêts sautés » n'en étaient pas.
