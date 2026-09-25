@@ -865,8 +865,8 @@ marque `k` posée au relevé suivant seulement si le train est toujours dans le 
 (`confirmer_sautes`). Rejeu du code sur les archives du 21-22/09 : 204 détections → 49 confirmées, en séries d'arrêts
 consécutifs en bout de branche (ex. RER B Courcelle, Gif, La Hacquinière, Bures) : trains limités avant leur terminus.
 **Status** : 🔍 En observation — règle réécrite, toujours hors du coût (décision à part).
-En production depuis le 2026-09-22 12 h : 46 arrêts confirmés le 23/09, 108 le 24/09 (contre ~150/jour avec
-l'ancienne règle).
+En production depuis le 2026-09-22 12 h : 46 arrêts confirmés le 23/09, 108 le 24/09, 174 le 25/09 — le volume varie
+beaucoup d'un jour à l'autre, à regarder avant toute décision sur le coût.
 
 ### [2026-09-22] Bug 46 — Suppression levée toujours comptée (E)
 **Fichier(s)** : `backend/collector.py` (upsert temps réel), `backend/transfert.py` (fusion inter-PC)
