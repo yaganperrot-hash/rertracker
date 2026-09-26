@@ -74,6 +74,18 @@
 - Un ancien fichier encore versionné dans un autre encodage (le 13/09 en cp1252) : lecture UTF-8 avec repli annoncé
   plutôt que conversion du fichier.
 
+## Audit méthodologique (2026-09-26)
+- La méthode officielle IDFM/Transilien est binaire (< 5 min = à l'heure), basée sur une matrice OD construite par
+  enquêtes terrain tous les 4 ans + comptages. Notre méthode mesure l'ampleur (minutes-voyageurs continues, seuil 2 min),
+  utilise les montées open data comme proxy OD (hypothèse : descentes ∝ montées), et valorise au SMIC (12,31 €/h).
+- Écart estimé : ±20 % sur les minutes-voyageurs (proxy OD = ±15 %, montées ±10 %, couverture ±7 %).
+- Sur le coût € : −25 à −35 % vs référence DGITM (valeur du temps IdF ~15-16 €/h, Quinet 2013 + IGEDD −15 %).
+  Le SMIC est dans la fourchette basse → conservateur.
+- Avantages de notre méthode vs officielle : granularité arrêt par arrêt (vs terminus), temps réel 5 min (vs journalier),
+  gain à quai modélisé, pas de neutralisation (grèves comptées).
+- Faiblesse principale : pas de matrice OD réelle (non publique). Les grandes gares-hubs (Châtelet, GdN) sont surestimées
+  en destination car elles ont aussi de fortes montées.
+
 ## Exploitation
 - Jamais de `git stash` (ni de checkout) pendant qu'un serveur démarre en parallèle : il peut importer l'ancien code.
 - Une page qui décrit le calcul (Méthode) dérive du code : servir chaque paramètre par `/api/reference` et tester
