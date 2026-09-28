@@ -893,3 +893,17 @@ Archives du 21-22/09, 56 760 arrêts vus à moins de 30 min de leur passage. Par
 passage : +7,1 % (15 min), +8,5 % (10), +9,7 % (7), +7,9 % (5) — le biais ne dépend pas de la fenêtre.
 Passer à 5 min ferait perdre 14 points de couverture sans rien gagner. À étudier : 15 min (+12 points de couverture).
 **Status** : ✅ Tranché — rien de modifié
+
+---
+
+## Session 2026-09-28 — Mac
+
+### [2026-09-28] Double collecte Mac + Windows du 26 au 28/09
+**Fichier(s)** : — (exploitation)
+**Symptôme** : `git pull` refusé (`publications/2026-09-26.txt` et `-27.txt` présents des deux côtés, contenus
+différents) ; bases divergentes (26/09 : 541 incidents sur Mac, 375 sur Windows).
+**Cause** : serveur Mac lancé le 24/09 à 20 h 01 et jamais arrêté ; serveur Windows relancé le 26/09. `/start` ne
+vérifie que le PC local.
+**Fix** : serveur Mac arrêté, base Mac exportée (`*-mac.json`), transferts Windows importés. Fusion par `navitia_id` :
+union des trains (858 le 26/09, 338 communs), pas de double comptage. Reste à importer les `*-mac.json` sur Windows.
+**Status** : 🔄 En cours — serveur unique à choisir, récaps 25-27/09 à trancher

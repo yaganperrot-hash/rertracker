@@ -208,3 +208,13 @@
   doit être surveillé en continu appartient à une page ou à une alerte, pas à un fichier de log.
 - Avant de coder une règle de détection, la rejouer sur les archives ET compter ses faux positifs par une mesure
   indépendante (ici : le passage estimé était-il déjà dépassé ?) — 61 % des « arrêts sautés » n'en étaient pas.
+
+## Double collecte (2026-09-28)
+- Le quota restant au démarrage ne prouve « aucun autre serveur » qu'à cet instant : un serveur resté allumé des jours
+  sur l'autre PC n'apparaît pas au `/start` local. Avant de relancer un serveur, demander explicitement si l'autre PC
+  en fait tourner un ; à `/wrap`, noter dans SESSION.md si un serveur reste allumé et sur quel PC.
+- Deux collectes parallèles se fusionnent sans double comptage (clé `navitia_id`, union des trains) et se complètent
+  (chaque PC a ses trous : veille, lancement tardif). Une fusion proche de la somme des deux n'est pas un doublon :
+  vérifier les clés communes avant de conclure.
+- Exporter la base locale **avant** le `git pull` : l'export écrit `transferts/incidents-<date>.json`, le même nom
+  que les fichiers de l'autre PC — renommer en `-mac.json` pour ne rien écraser.
