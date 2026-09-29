@@ -32,6 +32,16 @@ Dans l'ordre, sans sauter d'étape :
    s'il n'y en a pas.
 5. `POLLING_INTERVAL_MINUTES` dans `.env` : lire **uniquement cette ligne** (le reste contient des secrets). Si elle
    ne vaut pas 5, le signaler.
+6. **Collecte en cours ?** `/start` ne lance jamais le serveur, et un serveur lancé en tâche de fond par Claude Code
+   est tué : la collecte ne reprend que si l'utilisateur le lance dans son propre terminal.
+   - Dernier incident de la base ou du dernier `transferts/incidents-<aujourd'hui>.json` : heure de Paris.
+   - Si aucun serveur ne tourne sur ce PC, **commencer la restitution** par, en gras :
+     « ⚠️ Aucune collecte sur ce PC depuis <heure>. L'autre PC tourne-t-il ? Sinon, chaque relevé manqué est perdu
+     (PRIM n'expose pas l'historique). » — ne jamais supposer que l'autre PC collecte parce que sa session le dit.
+   - Terminer la restitution par la commande de lancement, prête à copier :
+     Mac : `cd ~/Desktop/Projets/rertracker && caffeinate -i ./venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000`
+     Windows : `venv\Scripts\python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000` (veille désactivée).
+     Rappeler : un seul serveur à la fois — couper l'autre PC avant de lancer celui-ci.
 
 Restitue en 3 lignes max : objectif courant, où on en est, prochaine étape.
 Propose ensuite un plan priorisé pour cette session.
