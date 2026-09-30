@@ -906,4 +906,22 @@ différents) ; bases divergentes (26/09 : 541 incidents sur Mac, 375 sur Windows
 vérifie que le PC local.
 **Fix** : serveur Mac arrêté, base Mac exportée (`*-mac.json`), transferts Windows importés. Fusion par `navitia_id` :
 union des trains (858 le 26/09, 338 communs), pas de double comptage. Reste à importer les `*-mac.json` sur Windows.
-**Status** : 🔄 En cours — serveur unique à choisir, récaps 25-27/09 à trancher
+**Status** : ✅ Résolu 2026-09-29 — `*-mac.json` importés sur Windows, récaps 25-27/09 réécrits (fusionnés)
+
+### [2026-09-29] Aucune collecte du 29/09 7 h 51 au 30/09 10 h 34
+**Fichier(s)** : `.claude/commands/start.md` (exploitation)
+**Symptôme** : base Mac arrêtée au 29/09 7 h 51 ; au 30/09 10 h 34, quota Estimated Timetable intact (999).
+**Cause** : SESSION.md (Windows) disait « serveur Windows lancé » ; le `/start` Mac l'a cru sans le vérifier et ne
+signalait pas qu'aucun serveur ne tournait localement. Le serveur Windows s'est arrêté (ou n'a pas tenu) sans trace.
+**Fix** : étape 6 de `/start` (`963d00a`) — heure du dernier incident + alerte en tête si rien ne tourne ici ;
+serveur Mac lancé détaché le 30/09 (`nohup … & disown`). Le quota au premier relevé indique si l'autre PC collecte.
+**Status** : 🔄 En cours — vérifier sur Windows si la journée du 29/09 y a été collectée ; corriger l'affirmation
+« un serveur lancé par Claude Code est tué » dans `/start`
+
+### [2026-09-30] Relevé temps réel en erreur vide vers 14 h 10
+**Fichier(s)** : `backend/collector.py`
+**Symptôme** : `ERROR:backend.collector:PRIM RT error (flux global) : ` (message vide) + cycle suivant sauté
+(« maximum number of running instances reached »).
+**Cause** : probable timeout (exception sans message) sur le flux de ~50 Mo — non confirmé.
+**Fix** : aucun ; un seul relevé perdu sur la journée. Piste : logguer `repr(exc)` pour avoir le type d'exception.
+**Status** : 🔄 À surveiller

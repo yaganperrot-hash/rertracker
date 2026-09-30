@@ -82,7 +82,7 @@ cp .env.example .env
 brew install postgresql@16 && brew services start postgresql@16 && createdb retards_idf
 /opt/homebrew/bin/python3.12 -m venv venv && ./venv/bin/pip install -r requirements.txt
 
-# 3. Lancer dans son propre terminal (en tâche de fond Claude Code, le process est tué)
+# 3. Lancer dans son propre terminal, ou détaché (`nohup … & disown`) — `run_in_background` seul est tué
 ./venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 
 # 4. Accès

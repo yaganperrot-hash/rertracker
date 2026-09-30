@@ -218,3 +218,9 @@
   vérifier les clés communes avant de conclure.
 - Exporter la base locale **avant** le `git pull` : l'export écrit `transferts/incidents-<date>.json`, le même nom
   que les fichiers de l'autre PC — renommer en `-mac.json` pour ne rien écraser.
+
+## Collecte interrompue (2026-09-29 → 30)
+- Ce qu'une SESSION.md de l'autre PC affirme (« serveur lancé ») n'est pas un état vérifié : un serveur s'arrête sans
+  prévenir. Seules preuves : heure du dernier incident en base et quota restant au premier relevé.
+- Claude Code peut lancer le serveur de façon durable : `nohup caffeinate -i ./venv/bin/python -m uvicorn … >>
+  logs/uvicorn.out 2>&1 < /dev/null & disown` survit à la commande (un simple `run_in_background` est tué).
