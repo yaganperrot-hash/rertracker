@@ -219,6 +219,14 @@
 - Exporter la base locale **avant** le `git pull` : l'export écrit `transferts/incidents-<date>.json`, le même nom
   que les fichiers de l'autre PC — renommer en `-mac.json` pour ne rien écraser.
 
+## Validation des arrêts sautés (2026-10-04)
+- Pour valider une détection : compter les occurrences par position dans le trajet (début/milieu/fin).
+  64/65 en milieu → vrais sauts ; une majorité en fin → trains limités (faux positifs).
+- Un arrêt sauté (`k=True`) sans `w` mesuré tombe sur `offre.intervalle_min()`, pas sur `trains_gare` :
+  `_attente()` utilise le repli global de la ligne, pas l'intervalle par gare.
+- L'impact d'un changement de calcul se mesure avant le commit : simuler `k` traité comme `s` sur les
+  vrais incidents en base, comparer avec et sans, en passant par `arrets_du_train()` (qui ajoute `quand`).
+
 ## Collecte interrompue (2026-09-29 → 30)
 - Ce qu'une SESSION.md de l'autre PC affirme (« serveur lancé ») n'est pas un état vérifié : un serveur s'arrête sans
   prévenir. Seules preuves : heure du dernier incident en base et quota restant au premier relevé.

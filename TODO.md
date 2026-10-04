@@ -4,13 +4,9 @@
 - [ ] **Fiabilité du calcul (2026-09-17)** — voir `.claude/DEBUG.md`, session du 17/09 :
   - [x] Plafond remplacé par l'écart mesuré avec le train suivant, par destination (bug 35) ; historique recalculé sur le Mac
   - [x] Réponses brutes du flux archivées dans `logs/flux_brut/` (3 jours)
-  - [ ] **B — arrêts sautés** : détection en observation depuis le 17/09 (`"k": true`, logs « Arrêt sauté probable »).
-    Valider sur les archives (`logs/flux_brut/`) et sur des trajets réels notés (heure du quai, mission affichée,
-    heure d'arrivée), puis compter les arrêts sautés dans `metrics.py` et dans « Mon trajet ».
-    **2026-09-18 : retirés du coût** (comptés depuis `36c7653`, ~65 000 min-voy. les 17-18/09) jusqu'à validation.
-    **2026-09-22 : règle réécrite** — l'ancienne marquait 61 % d'arrêts déjà passés ; désormais passage estimé à venir
-    d'au moins 2 min + absence confirmée au relevé suivant (204 → 49 sur les archives du 21-22/09, surtout des trains
-    limités avant leur terminus). Observer quelques jours (logs « Arrêt sauté probable ») avant de décider du coût
+  - [x] **B — arrêts sautés** : détection validée le 2026-10-04 — 65 trains, 236 arrêts sautés depuis le 22/09
+    (nouvelle règle), 64/65 en milieu de trajet (vrais sauts, pas des trains limités). Réintégrés dans le coût :
+    `metrics.py:195` traite `k=True` comme `s=True`. Impact : +81 874 min-voy sur la période. Recalcul historique fait
   - [x] **C — passé visible** (2026-09-22) : mesuré 1,2 min en médiane pour un train en circulation (p95 15 min),
     ~14 min après le terminus ; `lessons.md` corrigé ; pas d'angle mort dans `attentes_mesurees`
   - [ ] **D — trains absents du flux** (coupures) : diagnostic réparé le 2026-09-22 (bug 45 : horaires GTFS périmés,

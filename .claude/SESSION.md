@@ -1,25 +1,19 @@
 # SESSION — État courant
 
-## 2026-10-03 — Windows (historique : `.claude/archive/`)
+## 2026-10-04 — Windows (historique : `.claude/archive/`)
 
 ### Objectif
-Serveur unique sur Windows, collecte continue, audit des données inexploitées.
+Améliorer la précision du calcul en réintégrant les données sous-exploitées.
 
 ### Avancement
-- **Serveur Windows relancé** : `git pull` OK (fichiers Mac du 30/09 récupérés), import de
-  `incidents-2026-09-30.json` (1 605 incidents fusionnés, 11 jours recalculés).
-- **Horaires GTFS reconstruits** : `python -m backend.offre horaires` — fenêtre 30/09 → 01/11,
-  33 740 trains, 510 gares. Warning « Horaires GTFS périmés » résolu.
-- **Recalcul historique complet** : 164 jours (23/04 → 03/10), bilans régénérés.
-- **Audit données inexploitées** : inventaire complet réalisé — 6 axes identifiés
-  (ventilation retards/suppressions, taux d'incidents, arrêts sautés, top gares, profil horaire,
-  vacances vs hors-vacances). En attente de choix utilisateur.
-- Export du jour : `transferts/incidents-2026-10-03.json` (721 incidents).
+- **Arrêts sautés (B) validés et réintégrés dans le coût** : 65 trains, 236 arrêts sautés
+  depuis le 22/09 (nouvelle règle), 64/65 en milieu de trajet → vrais sauts. `metrics.py:195`
+  traite `k=True` comme `s=True`. Impact : +81 874 min-voy. Recalcul historique fait (165 jours).
+  Test mis à jour (`test_arret_saute_compte_comme_supprime`), 317 tests au vert.
 
 ### Blocages
 - **Clé PRIM toujours à régénérer** (en clair dans l'historique git, commit `c591442`).
 
 ### Prochaine étape
-1. Choisir quels axes de données inexploitées implémenter en premier.
+1. Autres axes d'amélioration du calcul (trains absents D, attente de repli, distribution OD).
 2. Régénérer la clé PRIM.
-3. Observer les logs arrêts sautés (B) et trains absents (D).
