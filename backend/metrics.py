@@ -191,9 +191,8 @@ def minutes_voyageurs_train(line_id: str, arrets: list[dict]) -> int:
     poids = [p if p > 0 else repli for p in poids]
 
     retards = [a["r"] if a.get("r") is not None and a["r"] >= MIN_DELAY_MINUTES else 0 for a in arrets]
-    # Un arrêt supprimé (s) : le voyageur attend le train suivant. Un arrêt sauté probable (k) n'est pas compté
-    # tant que sa détection n'est pas validée (soupçon B, décision du 2026-09-18) : il reste signalé, pas facturé
-    attentes = [_attente(line_id, a) if a.get("s") else None for a in arrets]
+    # Un arrêt supprimé (s) ou sauté (k) : le voyageur attend le train suivant.
+    attentes = [_attente(line_id, a) if a.get("s") or a.get("k") else None for a in arrets]
 
     total = 0.0
     for i in range(n - 1):

@@ -214,11 +214,16 @@ class TestMinutesVoyageursTrain:
         arrets = _arrets("ABC", supprimes=(0, 1, 2), attentes={0: 20, 1: 20})
         assert minutes_voyageurs_train("RER_A", arrets) == 100 * 20 + 100 * 20
 
-    def test_arret_saute_non_compte(self, ligne_fictive):
-        """Un arrêt sauté probable (k=True) n'est pas compté tant que la détection n'est pas validée (soupçon B)."""
-        sans = minutes_voyageurs_train("RER_A", _arrets("ABC", [0, 5, 5]))
-        for sautes, attentes in (((2,), {2: 15}), ((2,), None), ((1,), {1: 10})):
-            assert minutes_voyageurs_train("RER_A", _arrets("ABC", [0, 5, 5], sautes=sautes, attentes=attentes)) == sans
+    def test_arret_saute_compte_comme_supprime(self, ligne_fictive):
+        """Un arrêt sauté (k=True) est compté comme un arrêt supprimé : le voyageur attend le train suivant."""
+        # B sauté avec attente mesurée de 15 min :
+        # A→B : 100 × 0.5 × 15, A→C : 100 × 0.5 × 15, B→C : 100 × 15 → 3000
+        assert minutes_voyageurs_train("RER_A", _arrets("ABC", [0, 0, 0], sautes=(1,), attentes={1: 15})) == 3000
+        # B sauté sans attente mesurée → repli sur intervalle_min (6 min) :
+        # A→B : 100 × 0.5 × 6, A→C : 100 × 0.5 × 6, B→C : 100 × 6 → 1200
+        assert minutes_voyageurs_train("RER_A", _arrets("ABC", [0, 0, 0], sautes=(1,))) == 1200
+        # Sans k, aucun coût
+        assert minutes_voyageurs_train("RER_A", _arrets("ABC", [0, 0, 0])) == 0
 
 
 class TestArretsDuTrain:
