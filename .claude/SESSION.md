@@ -1,19 +1,26 @@
 # SESSION — État courant
 
-## 2026-10-04 — Windows (historique : `.claude/archive/`)
+## 2026-10-05 — Windows (historique : `.claude/archive/`)
 
 ### Objectif
-Améliorer la précision du calcul en réintégrant les données sous-exploitées.
+Améliorer la précision du calcul et reconstruire les données GTFS périmées.
 
 ### Avancement
-- **Arrêts sautés (B) validés et réintégrés dans le coût** : 65 trains, 236 arrêts sautés
-  depuis le 22/09 (nouvelle règle), 64/65 en milieu de trajet → vrais sauts. `metrics.py:195`
-  traite `k=True` comme `s=True`. Impact : +81 874 min-voy. Recalcul historique fait (165 jours).
-  Test mis à jour (`test_arret_saute_compte_comme_supprime`), 317 tests au vert.
+- Session courte : /start + /wrap, pas de code écrit.
+- Serveur lancé sur ce PC, collecte active (quota PRIM 998/1 000 Estimated Timetable).
+- Dernier incident en base : 2026-10-05 07:09 (Paris), 27 443 incidents au total.
+- **Horaires GTFS périmés sur les 13 lignes** : warning à chaque relevé, « Mon trajet » cassé.
 
 ### Blocages
+- **Horaires GTFS périmés** : `python -m backend.offre horaires` à relancer (les `trip_id` ont changé).
 - **Clé PRIM toujours à régénérer** (en clair dans l'historique git, commit `c591442`).
+- **Recalcul historique Windows** pas encore fait (anciens poids horaires).
 
 ### Prochaine étape
-1. Autres axes d'amélioration du calcul (trains absents D, attente de repli, distribution OD).
-2. Régénérer la clé PRIM.
+1. Reconstruire les horaires GTFS (`python -m backend.offre horaires`).
+2. Recalculer l'historique Windows (`python -m backend.recalcul`).
+3. Observer les trains absents du flux (D).
+4. Régénérer la clé PRIM.
+
+### Serveur
+- Un serveur tourne **sur ce PC (Windows)** — lancé dans cette session Claude Code (tâche de fond, sera tué à la fermeture de la session). À relancer manuellement si besoin.
