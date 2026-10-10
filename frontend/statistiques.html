@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RETARDS IDF — Hall of Shame</title>
-<meta name="description" content="Classement des pires lignes RER et Transilien d'Île-de-France par coût estimé.">
+<title>RETARDS IDF — Statistiques</title>
+<meta name="description" content="Bilan chiffré du réseau RER et Transilien d'Île-de-France : retards, suppressions, perturbations et coûts.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -88,61 +88,70 @@ a { color: var(--muted); }
   text-transform: uppercase; color: var(--sub); margin-top: 8px;
 }
 
-/* ── Cumul ── */
-.cumul {
-  text-align: center; padding: 0 32px 18px;
+/* ── KPI Bar ── */
+.kpi-bar {
+  display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+  margin-bottom: 24px;
 }
-.cumul-inner {
-  display: inline-block; border-top: 1px solid var(--border);
-  padding-top: 11px; min-width: min(420px, 100%);
+.kpi-card {
+  background: var(--blanc); border-radius: 10px; padding: 14px 18px;
+  text-align: center; min-width: 110px; flex: 1; max-width: 170px;
+  cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s;
+  border: 2px solid transparent;
 }
-.cumul-kicker {
-  font-weight: 500; font-size: 10px; letter-spacing: 2px;
-  text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+.kpi-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.kpi-card.active { border-color: var(--ink); }
+.kpi-value {
+  font-size: clamp(22px, 4vw, 32px); font-weight: 900;
+  font-variant-numeric: tabular-nums; line-height: 1.1; color: var(--ink);
 }
-.cumul-value {
-  font-weight: 700; font-size: clamp(24px, 4vw, 35px);
-  line-height: 1.05; color: var(--red);
-}
-.cumul-label {
-  font-weight: 500; font-size: 12px; color: var(--ink); margin-top: 5px;
-}
-.cumul-note {
-  font-weight: 400; font-size: 10px; color: var(--sub); margin-top: 5px;
+.kpi-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
+  color: var(--muted); margin-top: 4px;
 }
 
-/* ── Bulles Hall of Shame ── */
-.shame-separator {
-  border: none; border-top: 1px solid var(--border);
-  margin: 20px calc(-50vw + 50%) 0;
+/* ── Classement ── */
+.classement { text-align: left; margin-bottom: 32px; }
+.classement-title {
+  font-size: 16px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--ink); margin-bottom: 14px;
+  text-align: center;
 }
-.shame-section { margin-top: 20px; margin-bottom: 48px; }
-.bubbles-wrap {
-  display: flex; align-items: flex-end; justify-content: center;
-  gap: 24px; padding: 28px 0 20px; flex-wrap: wrap;
+.ligne-card {
+  display: grid;
+  grid-template-columns: 28px 62px 170px 1fr 90px 20px;
+  align-items: center; gap: 10px;
+  background: var(--blanc); border-radius: 10px; padding: 12px 16px;
+  margin-bottom: 8px; cursor: pointer; transition: box-shadow 0.15s;
 }
-.bubble {
-  display: flex; flex-direction: column; align-items: center;
-  cursor: pointer; transition: transform 0.15s;
-  border: none; background: none; font: inherit; color: inherit;
-  padding: 0;
+.ligne-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.ligne-card[aria-expanded="true"] { outline: 2px solid var(--ink); }
+.ligne-rank { font-size: 14px; font-weight: 700; color: var(--muted); text-align: center; }
+.ligne-badge {
+  display: inline-block; color: #fff; font-weight: 700; font-size: 14px;
+  padding: 4px 10px; border-radius: 6px; justify-self: start;
 }
-.bubble:hover { transform: scale(1.06); }
-.bubble[aria-selected="true"] { transform: scale(1.08); }
-.bubble-circle {
-  border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  font-weight: 700; color: #fff; transition: box-shadow 0.15s;
-  flex-shrink: 0;
+.ligne-counters { display: flex; gap: 10px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.ligne-bar-wrap { height: 8px; background: var(--bg2); border-radius: 4px; overflow: hidden; }
+.ligne-bar { height: 100%; border-radius: 4px; transition: width 0.3s; }
+.ligne-cost {
+  font-size: 15px; font-weight: 700; text-align: right; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
-.bubble[aria-selected="true"] .bubble-circle {
-  box-shadow: 0 0 0 4px var(--encre);
+.ligne-chevron {
+  font-size: 16px; color: var(--muted); transition: transform 0.2s;
+  text-align: center;
 }
-.bubble-rank {
-  font-size: 13px; font-weight: 700; color: var(--gris); margin-top: 8px;
-  letter-spacing: 1px;
+.ligne-card[aria-expanded="true"] .ligne-chevron { transform: rotate(90deg); }
+
+/* ── Panel deltas ── */
+.panel-deltas { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.delta-badge {
+  font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 6px;
 }
-.bubble-label { font-size: 15px; font-weight: 500; margin-top: 3px; }
-.bubble-cost { font-size: 13px; color: var(--gris); margin-top: 2px; }
+.delta-badge.hausse { background: var(--rouge-pale); color: var(--rouge-fonce); }
+.delta-badge.baisse { background: #E8F8EE; color: #1B7A3D; }
+.delta-badge.nd { background: var(--bg2); color: var(--muted); }
 
 /* ── Panneau détails ── */
 .detail-panel {
@@ -239,11 +248,13 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
 
 @media (max-width: 768px) {
   .hero { padding: 22px 16px 16px; }
-  .cumul { padding: 0 16px 18px; }
-  .cumul-value { font-size: 22px; }
+  .ligne-counters { display: none; }
+  .ligne-card { grid-template-columns: 28px 62px 1fr 80px 20px; }
 }
 @media (max-width: 480px) {
-  .bubbles-wrap { gap: 14px; }
+  .kpi-bar { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .kpi-card { max-width: none; }
+  .ligne-card { grid-template-columns: 24px 50px 1fr 70px 16px; gap: 6px; padding: 10px 12px; }
   .heatmap {
     grid-template-columns: 34px repeat(31, 16px);
     grid-template-rows: repeat(12, 16px);
@@ -312,21 +323,13 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
       <div class="hero-unit">au SMIC horaire brut · réseau IDF complet</div>
     </section>
 
-    <section class="cumul">
-      <div class="cumul-inner">
-        <div class="cumul-kicker" id="h-cumul-kicker">Cumul de la période</div>
-        <div class="cumul-value" id="h-min">—</div>
-        <div class="cumul-label" id="h-min-suffixe">de vie perdus collectivement</div>
-        <div class="cumul-note" id="h-note">base SMIC — €/h · <a href="/methode.html#bilans">Méthode →</a></div>
-      </div>
-    </section>
+    <section class="kpi-bar" id="kpi-bar" aria-label="Indicateurs clés"></section>
 
-    <hr class="shame-separator">
+    <div id="kpi-detail"></div>
 
-    <section class="shame-section" aria-label="Hall of Shame">
-      <div class="eyebrow" style="margin-bottom:4px;font-size:22px;font-weight:700;color:var(--encre)">Hall of Shame — Top 5</div>
-      <div class="bubbles-wrap" id="bubbles" role="listbox" aria-label="Classement des pires lignes">
-      </div>
+    <section class="classement" id="classement" aria-label="Classement des lignes">
+      <div class="classement-title">Classement des 13 lignes</div>
+      <div id="classement-list"></div>
     </section>
 
     <div id="detail-panel-container"></div>
@@ -343,26 +346,27 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
 <script src="bilan.js?v=2"></script>
 <script>
 (function () {
-  const B = window.Bilan;
-  const $ = id => document.getElementById(id);
-  const NBSP = '\u00a0';
+  var B = window.Bilan;
+  var $ = function(id) { return document.getElementById(id); };
+  var NBSP = '\u00a0';
 
-  // Gravité → couleur heatmap
-  const GRAVITE_COULEURS = ['#EAE3D3', '#E4BBA2', '#D68A63', '#BE4E2E', '#8A2817'];
+  var GRAVITE_COULEURS = ['#EAE3D3', '#E4BBA2', '#D68A63', '#BE4E2E', '#8A2817'];
 
-  const PERIODES = {
-    // Périodes calendaires (bornes dans hall-of-shame.json → meta.periodes), comme le panneau de ligne
-    semaine: { label: 'Semaine en cours', cle: 'semaine', subtitle: 'Cette semaine, les retards des RER et Transiliens ont coûté', cumul_kicker: 'Cumul de la semaine' },
-    mois:    { label: 'Mois en cours', cle: 'mois', subtitle: 'Ce mois-ci, les retards des RER et Transiliens ont coûté', cumul_kicker: 'Cumul du mois' },
-    annee:   { label: 'Année en cours', cle: 'annee', subtitle: 'Cette année, les retards des RER et Transiliens ont coûté', cumul_kicker: 'Cumul de l\'année' },
+  var PERIODES = {
+    semaine: { label: 'Semaine en cours', cle: 'semaine', subtitle: 'Cette semaine, les retards des RER et Transiliens ont coûté' },
+    mois:    { label: 'Mois en cours', cle: 'mois', subtitle: 'Ce mois-ci, les retards des RER et Transiliens ont coûté' },
+    annee:   { label: 'Année en cours', cle: 'annee', subtitle: 'Cette année, les retards des RER et Transiliens ont coûté' },
   };
 
-  let donnees = null;      // hall-of-shame.json chargé
-  let periodeActuelle = 'mois';
-  let ligneSelectionnee = null;
-  let majHeure = null;     // timestamp MÀJ
-  let smicHoraire = null;  // SMIC depuis le JSON
-  let meta = null;         // meta de hall-of-shame.json (bornes des périodes, début des données)
+  var donnees = null;
+  var _totaux = null;
+  var _tranchesRetard = null;
+  var periodeActuelle = 'mois';
+  var kpiOuvert = null;     // clé du KPI dont le détail est ouvert
+  var ligneSelectionnee = null;
+  var majHeure = null;
+  var smicHoraire = null;
+  var meta = null;
 
   // ── Formats ────────────────────────────────────────────────
 
@@ -371,19 +375,13 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
   function fmtEurosCompact(n) {
     n = n || 0;
     if (n >= 1e6) return (n / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + NBSP + 'M€';
-    if (n >= 1e4) return fmtNombre(Math.round(n / 1e3)) + NBSP + 'k€';
+    if (n >= 1e5) return fmtNombre(Math.round(n / 1e3)) + NBSP + 'k€';
     return fmtEuros(n);
   }
-  function fmtMinutes(n) {
-    n = n || 0;
-    if (n >= 1e7) return { valeur: (n / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + NBSP + 'M', suffixe: 'de minutes perdues' };
-    var v = n >= 1e5 ? Math.round(n / 1e3) * 1e3 : n;
-    return { valeur: fmtNombre(v), suffixe: n <= 1 ? 'minute perdue' : 'minutes perdues' };
-  }
 
-  const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin',
-                'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
-  const MOIS_COURT = ['jan.', 'fév.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+  var MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+              'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+  var MOIS_COURT = ['jan.', 'fév.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 
   function fmtDateCourte(d) {
     return d.getDate() + ' ' + MOIS_COURT[d.getMonth()];
@@ -394,7 +392,6 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
     return new Date(t[0], t[1] - 1, t[2]);
   }
 
-  // Bornes écrites par le backend : le navigateur ne recalcule aucune période
   function labelPeriode() {
     if (!meta || !meta.periodes) return '';
     var au = dateIso(meta.au);
@@ -414,75 +411,264 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
     });
   }
 
+  function fmtCompact(n) {
+    n = n || 0;
+    if (n >= 1e6) return (n / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + NBSP + 'M';
+    if (n >= 1e4) return fmtNombre(Math.round(n / 1e3)) + NBSP + 'k';
+    return fmtNombre(n);
+  }
+
+  function fmtDelta(pct) {
+    if (pct === null || pct === undefined) return null;
+    if (Math.abs(pct) < 0.5) return { texte: '=' + NBSP + '0' + NBSP + '%', classe: 'nd' };
+    var v = fmtNombre(Math.round(Math.abs(pct))) + NBSP + '%';
+    return pct > 0 ? { texte: '▲' + NBSP + v, classe: 'hausse' } : { texte: '▼' + NBSP + v, classe: 'baisse' };
+  }
+
   // ── Hero ──────────────────────────────────────────────────
 
   function renderHero(lignes) {
     var p = PERIODES[periodeActuelle];
-    var totalEur = 0, totalMin = 0;
-    lignes.forEach(function(l) {
-      var c = l.cout[p.cle];
-      totalEur += c.euros;
-      totalMin += c.minutes;
-    });
+    var t = _totaux ? _totaux[p.cle] : null;
+    var totalEur = t ? t.euros : 0;
 
     $('h-date').textContent = labelPeriode();
     $('h-subtitle').textContent = p.subtitle;
     $('h-cout').textContent = fmtNombre(totalEur) + ' €';
-    $('h-cumul-kicker').textContent = p.cumul_kicker;
-    $('h-min').textContent = formatDuree(totalMin);
-    $('h-min-suffixe').textContent = 'de vie ' + accordPerdu(totalMin) + ' collectivement';
-
-    // Note SMIC
-    if (smicHoraire) {
-      var salairesJour = Math.floor(totalEur / (smicHoraire * 7));   // arrondi inférieur, comme l'accueil
-      $('h-note').innerHTML = 'base SMIC ' + smicHoraire.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + NBSP + '€/h · ≈ ' + fmtNombre(salairesJour) + ' salaires journaliers · <a href="/methode.html#bilans">Méthode →</a>';
-    }
   }
 
-  // ── Bulles ────────────────────────────────────────────────
+  // ── KPI Bar ───────────────────────────────────────────────
 
-  function renderBulles(lignes) {
-    var p = PERIODES[periodeActuelle].cle;
-    // Trier par coût décroissant, prendre top 5
+  var KPIS = [
+    { cle: 'nb_rt_delays', label: 'retards', titre: 'Retards mesurés' },
+    { cle: 'nb_cancelled', label: 'supprimés', titre: 'Trains supprimés' },
+    { cle: 'nb_disruptions', label: 'perturbations', titre: 'Perturbations déclarées' },
+    { cle: null, label: 'lignes touchées' },
+    { cle: 'minutes', label: 'minutes perdues', titre: 'Minutes-voyageurs perdues' },
+  ];
+
+  function renderKpiBar() {
+    var p = periodeActuelle;
+    var t = _totaux ? _totaux[p] : null;
+    if (!t) { $('kpi-bar').innerHTML = ''; return; }
+
+    var valeurs = [
+      fmtCompact(t.nb_rt_delays),
+      fmtCompact(t.nb_cancelled),
+      fmtCompact(t.nb_disruptions),
+      (donnees ? donnees.filter(function(l) { return l.cout[p].euros > 0; }).length : 0) + '/13',
+      fmtCompact(t.minutes),
+    ];
+
+    var container = $('kpi-bar');
+    container.innerHTML = '';
+
+    KPIS.forEach(function(kpi, i) {
+      var card = document.createElement('div');
+      card.className = 'kpi-card' + (kpiOuvert === kpi.cle ? ' active' : '');
+      card.innerHTML =
+        '<div class="kpi-value">' + esc(valeurs[i]) + '</div>' +
+        '<div class="kpi-label">' + esc(kpi.label) + '</div>';
+
+      if (kpi.cle) {
+        card.title = 'Voir le détail';
+        card.addEventListener('click', function() { toggleKpiDetail(kpi.cle); });
+      } else {
+        card.style.cursor = 'default';
+      }
+
+      container.appendChild(card);
+    });
+  }
+
+  // ── Détail KPI (panneau réseau) ───────────────────────────
+
+  function toggleKpiDetail(cle) {
+    if (kpiOuvert === cle) {
+      kpiOuvert = null;
+      $('kpi-detail').innerHTML = '';
+      renderKpiBar();
+      return;
+    }
+    kpiOuvert = cle;
+    renderKpiBar();
+    renderKpiDetail(cle);
+  }
+
+  function renderKpiDetail(cle) {
+    var p = periodeActuelle;
+    var kpi = KPIS.find(function(k) { return k.cle === cle; });
+    if (!kpi || !donnees) return;
+
+    var t = _totaux ? _totaux[p] : null;
+    var totalVal = t ? t[cle] : 0;
+
+    // Répartition par ligne, triée par valeur décroissante
+    var parLigne = donnees.map(function(l) {
+      var info = B.LIGNES[l.id];
+      return {
+        id: l.id,
+        nom: info ? info.nom : l.id,
+        lbl: info ? info.lbl : l.id,
+        fond: info ? info.fond : '#999',
+        texte: info ? info.texte : '#fff',
+        valeur: l.cout[p][cle] || 0,
+        euros: l.cout[p].euros || 0,
+        minutes: l.cout[p].minutes || 0,
+      };
+    }).filter(function(l) { return l.valeur > 0; })
+      .sort(function(a, b) { return b.valeur - a.valeur; });
+
+    var maxVal = parLigne.length ? parLigne[0].valeur : 1;
+
+    var html = '<div class="detail-panel" style="margin-bottom:20px">';
+
+    // Header
+    html += '<div class="panel-header">' +
+      '<span class="panel-title">' + esc(kpi.titre) + ' — ' + esc(PERIODES[p].label.toLowerCase()) + '</span>' +
+      '<button class="panel-close" aria-label="Fermer" id="kpi-panel-close">&times;</button>' +
+    '</div>';
+
+    // Chiffre total
+    html += '<div style="text-align:center;margin-bottom:18px">' +
+      '<div style="font-size:clamp(28px,5vw,42px);font-weight:900;color:var(--ink);font-variant-numeric:tabular-nums">' + fmtNombre(totalVal) + '</div>' +
+      '<div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:4px">' + esc(kpi.label) + ' sur ' + (parLigne.length) + ' ligne' + (parLigne.length > 1 ? 's' : '') + '</div>' +
+    '</div>';
+
+    // Barres par ligne
+    html += '<div style="margin-bottom:16px">';
+    parLigne.forEach(function(l) {
+      var w = maxVal > 0 ? (l.valeur / maxVal * 100) : 0;
+      var detail = cle === 'minutes'
+        ? formatDuree(l.valeur, true) + ' · ' + fmtEurosCompact(l.euros)
+        : fmtNombre(l.valeur) + ' ' + kpi.label + ' · ' + fmtEurosCompact(l.euros) + ' · ' + formatDuree(l.minutes, true);
+      html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">' +
+        '<span class="ligne-badge" style="background:' + l.fond + ';color:' + l.texte + ';font-size:12px;padding:3px 8px;min-width:48px;text-align:center">' + esc(l.lbl) + '</span>' +
+        '<div style="flex:1;height:8px;background:var(--bg2);border-radius:4px;overflow:hidden">' +
+          '<div style="height:100%;width:' + w.toFixed(1) + '%;background:' + l.fond + ';border-radius:4px"></div>' +
+        '</div>' +
+        '<span style="font-size:13px;font-weight:700;min-width:50px;text-align:right;white-space:nowrap">' + fmtNombre(l.valeur) + '</span>' +
+      '</div>' +
+      '<div style="font-size:11px;color:var(--muted);margin:-2px 0 8px 58px">' + esc(detail) + '</div>';
+    });
+    if (!parLigne.length) {
+      html += '<p style="font-size:14px;color:var(--muted);text-align:center">Aucune donnée sur cette période.</p>';
+    }
+    html += '</div>';
+
+    // Pour les retards : répartition par tranche de durée
+    if (cle === 'nb_rt_delays') {
+      html += renderTranchesRetard();
+    }
+
+    // Pour les perturbations : causes agrégées du réseau
+    if (cle === 'nb_disruptions') {
+      html += renderCausesReseau();
+    }
+
+    html += '</div>';
+
+    $('kpi-detail').innerHTML = html;
+
+    document.getElementById('kpi-panel-close').addEventListener('click', function() {
+      toggleKpiDetail(cle);
+    });
+
+    $('kpi-detail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function renderTranchesRetard() {
+    var tranches = _tranchesRetard || [];
+    if (!tranches.length) return '';
+
+    var maxN = Math.max.apply(null, tranches.map(function(t) { return t.n; }));
+    var total = tranches.reduce(function(s, t) { return s + t.n; }, 0);
+
+    var html = '<div style="margin-top:8px"><div class="eyebrow" style="margin-bottom:10px">Répartition par durée de retard</div>';
+    tranches.forEach(function(t) {
+      var w = maxN > 0 ? (t.n / maxN * 100) : 0;
+      html += '<div class="cause-row">' +
+        '<span class="cause-label">' + esc(t.tranche) + '</span>' +
+        '<div class="cause-bar-wrap"><div class="cause-bar" style="width:' + w.toFixed(1) + '%;background:var(--rouge)"></div></div>' +
+        '<span class="cause-pct">' + t.pct + NBSP + '%</span></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function renderCausesReseau() {
+    if (!donnees) return '';
+    var toutes = {};
+    var total = 0;
+    donnees.forEach(function(l) {
+      (l.causes || []).forEach(function(c) {
+        toutes[c.libelle] = (toutes[c.libelle] || 0) + c.n;
+        total += c.n;
+      });
+    });
+    if (!total) return '';
+
+    var items = Object.keys(toutes).map(function(k) { return { libelle: k, n: toutes[k] }; })
+      .sort(function(a, b) { return b.n - a.n; });
+    var maxN = items[0].n;
+
+    var html = '<div style="margin-top:8px"><div class="eyebrow" style="margin-bottom:10px">Causes — réseau entier</div>';
+    items.forEach(function(c) {
+      var pct = Math.round(c.n / total * 100);
+      var w = maxN > 0 ? (c.n / maxN * 100) : 0;
+      html += '<div class="cause-row">' +
+        '<span class="cause-label">' + esc(c.libelle) + '</span>' +
+        '<div class="cause-bar-wrap"><div class="cause-bar" style="width:' + w.toFixed(1) + '%;background:var(--brun)"></div></div>' +
+        '<span class="cause-pct">' + pct + NBSP + '%</span></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  // ── Classement ────────────────────────────────────────────
+
+  function renderClassement(lignes) {
+    var p = periodeActuelle;
     var sorted = lignes.slice().sort(function(a, b) {
       return (b.cout[p].euros || 0) - (a.cout[p].euros || 0);
     });
-    var top5 = sorted.slice(0, 5);
 
-    // Rayon proportionnel à √coût
-    var maxCout = Math.max.apply(null, top5.map(function(l) { return l.cout[p].euros || 1; }));
-    var MAX_R = 88, MIN_R = 32;
-
-    var container = $('bubbles');
+    var totalEur = _totaux ? _totaux[p].euros : 0;
+    var container = $('classement-list');
     container.innerHTML = '';
 
-    top5.forEach(function(ligne, i) {
+    sorted.forEach(function(ligne, i) {
       var info = B.LIGNES[ligne.id];
       if (!info) return;
-      var cout = ligne.cout[p].euros || 0;
-      var r = cout > 0 ? Math.max(MIN_R, Math.round(Math.sqrt(cout / maxCout) * MAX_R)) : MIN_R;
-      var diam = r * 2;
+      var c = ligne.cout[p];
+      var pct = totalEur > 0 ? (c.euros / totalEur * 100) : 0;
 
-      var btn = document.createElement('button');
-      btn.className = 'bubble';
-      btn.setAttribute('role', 'option');
-      btn.setAttribute('aria-label', info.nom + ' — ' + fmtEurosCompact(cout));
-      btn.setAttribute('aria-selected', ligne.id === ligneSelectionnee ? 'true' : 'false');
-      btn.dataset.id = ligne.id;
+      var card = document.createElement('div');
+      card.className = 'ligne-card';
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
+      card.setAttribute('aria-expanded', ligne.id === ligneSelectionnee ? 'true' : 'false');
+      card.setAttribute('aria-label', info.nom + ' — ' + fmtEurosCompact(c.euros));
+      card.dataset.id = ligne.id;
 
-      btn.innerHTML =
-        '<span class="bubble-rank">#' + (i + 1) + '</span>' +
-        '<span class="bubble-circle" style="width:' + diam + 'px;height:' + diam + 'px;background:' + info.fond + ';color:' + info.texte + ';font-size:' + Math.max(18, Math.round(r * 0.38)) + 'px">' +
-          esc(info.lbl) +
+      card.innerHTML =
+        '<span class="ligne-rank">#' + (i + 1) + '</span>' +
+        '<span class="ligne-badge" style="background:' + info.fond + ';color:' + info.texte + '">' + esc(info.lbl) + '</span>' +
+        '<span class="ligne-counters">' +
+          '<span>' + fmtNombre(c.nb_rt_delays) + ' ret.</span>' +
+          '<span>' + fmtNombre(c.nb_cancelled) + ' sup.</span>' +
+          '<span>' + fmtNombre(c.nb_disruptions) + ' pert.</span>' +
         '</span>' +
-        '<span class="bubble-label">' + esc(info.nom) + '</span>' +
-        '<span class="bubble-cost">' + esc(fmtEurosCompact(cout)) + '</span>';
+        '<div class="ligne-bar-wrap"><div class="ligne-bar" style="width:' + pct.toFixed(1) + '%;background:' + info.fond + '"></div></div>' +
+        '<span class="ligne-cost">' + esc(fmtEurosCompact(c.euros)) + '</span>' +
+        '<span class="ligne-chevron">&#x203A;</span>';
 
-      btn.addEventListener('click', function() {
-        selectLigne(ligne.id);
+      card.addEventListener('click', function() { selectLigne(ligne.id); });
+      card.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectLigne(ligne.id); }
       });
 
-      container.appendChild(btn);
+      container.appendChild(card);
     });
   }
 
@@ -492,15 +678,15 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
     if (ligneSelectionnee === id) {
       ligneSelectionnee = null;
       $('detail-panel-container').innerHTML = '';
-      document.querySelectorAll('.bubble').forEach(function(b) {
-        b.setAttribute('aria-selected', 'false');
+      document.querySelectorAll('.ligne-card').forEach(function(c) {
+        c.setAttribute('aria-expanded', 'false');
       });
       return;
     }
     ligneSelectionnee = id;
 
-    document.querySelectorAll('.bubble').forEach(function(b) {
-      b.setAttribute('aria-selected', b.dataset.id === id ? 'true' : 'false');
+    document.querySelectorAll('.ligne-card').forEach(function(c) {
+      c.setAttribute('aria-expanded', c.dataset.id === id ? 'true' : 'false');
     });
 
     var ligne = donnees.find(function(l) { return l.id === id; });
@@ -511,10 +697,34 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
 
   // ── Panneau détails ───────────────────────────────────────
 
+  function renderDeltas(ligne) {
+    var d = ligne.delta;
+    if (!d) return '';
+    var p = periodeActuelle;
+    var dp = d[p];
+    if (!dp) return '';
+
+    var items = [
+      { label: 'Coût', pct: dp.euros },
+      { label: 'Retards', pct: dp.nb_rt_delays },
+      { label: 'Supprimés', pct: dp.nb_cancelled },
+      { label: 'Perturbations', pct: dp.nb_disruptions },
+    ];
+
+    var html = '<div class="panel-deltas">';
+    items.forEach(function(item) {
+      var fd = fmtDelta(item.pct);
+      if (!fd) return;
+      html += '<span class="delta-badge ' + fd.classe + '">' + esc(item.label) + ' ' + fd.texte + '</span>';
+    });
+    html += '</div>';
+    return html;
+  }
+
   function renderDetailPanel(ligne) {
     var info = B.LIGNES[ligne.id];
     if (!info) return;
-    var p = PERIODES[periodeActuelle].cle;
+    var p = periodeActuelle;
 
     var html = '<div class="detail-panel">';
 
@@ -523,6 +733,18 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
       '<span class="badge" style="background:' + info.fond + ';color:' + info.texte + '">' + esc(info.lbl) + '</span>' +
       '<span class="panel-title">' + esc(info.nom) + ' — ' + esc(fmtEurosCompact(ligne.cout[p].euros)) + '</span>' +
       '<button class="panel-close" aria-label="Fermer" id="panel-close">&times;</button>' +
+    '</div>';
+
+    // Deltas vs période précédente
+    html += renderDeltas(ligne);
+
+    // Compteurs détaillés (visibles en mobile car masqués sur les cartes)
+    var c = ligne.cout[p];
+    html += '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;font-size:14px;color:var(--muted)">' +
+      '<span>' + fmtNombre(c.nb_rt_delays) + ' retards</span>' +
+      '<span>' + fmtNombre(c.nb_cancelled) + ' supprimés</span>' +
+      '<span>' + fmtNombre(c.nb_disruptions) + ' perturbations</span>' +
+      '<span>' + formatDuree(c.minutes, true) + '</span>' +
     '</div>';
 
     // Pire / Meilleur mois
@@ -559,10 +781,9 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
     $('detail-panel-container').innerHTML = html;
 
     document.getElementById('panel-close').addEventListener('click', function() {
-      selectLigne(ligne.id); // toggle off
+      selectLigne(ligne.id);
     });
 
-    // Scroll le panneau en vue
     $('detail-panel-container').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
@@ -570,11 +791,8 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
 
   function renderHeatmap(ligne) {
     var gravite = ligne.gravite_quotidienne || [];
-    // Construire un dictionnaire date → {niveau, cout_eur}
     var parDate = {};
-    gravite.forEach(function(g) {
-      parDate[g.date] = g;
-    });
+    gravite.forEach(function(g) { parDate[g.date] = g; });
 
     var aujourdhui = new Date();
     var annee = aujourdhui.getFullYear();
@@ -587,14 +805,10 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
       html += '<div class="hm-month">' + MOIS_COURT[m] + '</div>';
       var nbJours = new Date(annee, m + 1, 0).getDate();
       for (var j = 1; j <= 31; j++) {
-        if (j > nbJours) {
-          html += '<div class="hm-cell hm-null"></div>';
-          continue;
-        }
+        if (j > nbJours) { html += '<div class="hm-cell hm-null"></div>'; continue; }
         var dateStr = annee + '-' + String(m + 1).padStart(2, '0') + '-' + String(j).padStart(2, '0');
         var dateObj = new Date(annee, m, j);
         var g = parDate[dateStr];
-
         if (!g || g.niveau === null || dateObj > aujourdhui) {
           html += '<div class="hm-cell hm-empty" title="' + esc(dateStr) + '"></div>';
         } else {
@@ -614,21 +828,15 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
   function renderCauses(ligne) {
     var causes = ligne.causes || [];
     if (!causes.length) return '';
-
     var maxPct = Math.max.apply(null, causes.map(function(c) { return c.pourcentage; }));
-
-    var html = '<div class="causes-section">' +
-      '<div class="eyebrow">Causes des perturbations</div>';
-
+    var html = '<div class="causes-section"><div class="eyebrow">Causes des perturbations</div>';
     causes.forEach(function(c) {
       var w = maxPct > 0 ? (c.pourcentage / maxPct * 100) : 0;
       html += '<div class="cause-row">' +
         '<span class="cause-label">' + esc(c.libelle) + '</span>' +
         '<div class="cause-bar-wrap"><div class="cause-bar" style="width:' + w.toFixed(1) + '%;background:var(--brun)"></div></div>' +
-        '<span class="cause-pct">' + c.pourcentage + NBSP + '%</span>' +
-      '</div>';
+        '<span class="cause-pct">' + c.pourcentage + NBSP + '%</span></div>';
     });
-
     html += '</div>';
     return html;
   }
@@ -638,20 +846,15 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
   function renderDirections(ligne) {
     var dirs = ligne.directions || [];
     if (!dirs.length) return '';
-
-    var html = '<div class="directions-section">' +
-      '<div class="eyebrow">Directions les plus touchées</div>';
-
+    var html = '<div class="directions-section"><div class="eyebrow">Directions les plus touchées</div>';
     dirs.forEach(function(d) {
       var niv = Math.min(4, Math.max(0, d.niveau || 0));
       var couleur = GRAVITE_COULEURS[niv];
       html += '<div class="dir-row">' +
         '<span class="dir-dot" style="background:' + couleur + '" title="Niveau ' + niv + '"></span>' +
         '<span class="dir-label">' + esc(d.libelle) + '</span>' +
-        '<span class="dir-count">' + d.incidents + ' incident' + (d.incidents > 1 ? 's' : '') + '</span>' +
-      '</div>';
+        '<span class="dir-count">' + d.incidents + ' incident' + (d.incidents > 1 ? 's' : '') + '</span></div>';
     });
-
     html += '</div>';
     return html;
   }
@@ -675,9 +878,9 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
     $('contenu').removeAttribute('aria-busy');
 
     renderHero(donnees);
-    renderBulles(donnees);
+    renderKpiBar();
+    renderClassement(donnees);
 
-    // Re-render le panneau si une ligne est sélectionnée
     if (ligneSelectionnee) {
       var ligne = donnees.find(function(l) { return l.id === ligneSelectionnee; });
       if (ligne) renderDetailPanel(ligne);
@@ -696,6 +899,8 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
       } else {
         var json = await resp.json();
         donnees = json.lignes || [];
+        _totaux = json.totaux || null;
+        _tranchesRetard = json.tranches_retard || [];
         if (json.meta) {
           majHeure = new Date(json.meta.genere_a).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }).replace(':', 'H');
           smicHoraire = json.meta.smic_horaire || 0;
@@ -723,7 +928,9 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
       b.setAttribute('aria-pressed', b.dataset.p === p ? 'true' : 'false');
     });
     ligneSelectionnee = null;
+    kpiOuvert = null;
     $('detail-panel-container').innerHTML = '';
+    $('kpi-detail').innerHTML = '';
     render();
   }
 

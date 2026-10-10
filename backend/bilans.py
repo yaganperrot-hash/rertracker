@@ -72,13 +72,17 @@ def journee_paris(dt: datetime) -> date:
 
 
 def _vide() -> dict:
-    return {"cout_eur": 0, "minutes": 0, "incidents": 0}
+    return {"cout_eur": 0, "minutes": 0, "incidents": 0,
+            "nb_rt_delays": 0, "nb_cancelled": 0, "nb_disruptions": 0}
 
 
 def _ajouter(agg: dict, row, smic_horaire: float) -> None:
     agg["cout_eur"] += cout_eur(row.minutes_voyageurs, smic_horaire)
     agg["minutes"] += row.minutes_voyageurs
     agg["incidents"] += row.nb_incidents
+    agg["nb_rt_delays"] += row.nb_rt_delays or 0
+    agg["nb_cancelled"] += row.nb_cancelled or 0
+    agg["nb_disruptions"] += row.nb_disruptions or 0
 
 
 def _par_ligne(rows, du: date, au: date, smic_horaire: float) -> dict[str, dict]:
@@ -308,6 +312,23 @@ def _niveau_gravite(cout: int, seuils: tuple[float, float, float, float]) -> int
     return 4
 
 
+_TRANCHES_RETARD = [
+    (3, "1–3 min"),
+    (5, "4–5 min"),
+    (10, "6–10 min"),
+    (20, "11–20 min"),
+    (30, "21–30 min"),
+]
+_TRANCHE_SUP = "30+ min"
+
+
+def _tranche_retard(duree: int) -> str:
+    for seuil, label in _TRANCHES_RETARD:
+        if duree <= seuil:
+            return label
+    return _TRANCHE_SUP
+
+
 def construire_hall_of_shame(
     aujourdhui: date,
     lignes_metriques,
@@ -316,6 +337,7 @@ def construire_hall_of_shame(
     smic_horaire: float,
     genere_a: datetime,
     debut_donnees: date | None = None,
+    retards_par_ligne: dict[str, list[int]] | None = None,
 ) -> dict:
     """Construit le JSON hall-of-shame avec coûts, gravité quotidienne, causes et directions.
     Périodes calendaires, comme le panneau de ligne : semaine depuis lundi, mois depuis le 1er, année depuis le
@@ -344,18 +366,30 @@ def construire_hall_of_shame(
             par_ligne_jour[r.line_id] = {}
 
         agg = par_ligne[r.line_id]
+        rt = r.nb_rt_delays or 0
+        canc = r.nb_cancelled or 0
+        disr = r.nb_disruptions or 0
         if du_semaine <= r.date <= aujourdhui:
             agg["semaine"]["cout_eur"] += c
             agg["semaine"]["minutes"] += r.minutes_voyageurs
             agg["semaine"]["incidents"] += r.nb_incidents
+            agg["semaine"]["nb_rt_delays"] += rt
+            agg["semaine"]["nb_cancelled"] += canc
+            agg["semaine"]["nb_disruptions"] += disr
         if du_mois <= r.date <= aujourdhui:
             agg["mois"]["cout_eur"] += c
             agg["mois"]["minutes"] += r.minutes_voyageurs
             agg["mois"]["incidents"] += r.nb_incidents
+            agg["mois"]["nb_rt_delays"] += rt
+            agg["mois"]["nb_cancelled"] += canc
+            agg["mois"]["nb_disruptions"] += disr
         if debut_annee <= r.date <= aujourdhui:
             agg["annee"]["cout_eur"] += c
             agg["annee"]["minutes"] += r.minutes_voyageurs
             agg["annee"]["incidents"] += r.nb_incidents
+            agg["annee"]["nb_rt_delays"] += rt
+            agg["annee"]["nb_cancelled"] += canc
+            agg["annee"]["nb_disruptions"] += disr
 
         if debut_annee <= r.date <= aujourdhui:
             par_ligne_jour.setdefault(r.line_id, {})[r.date] = c
@@ -370,11 +404,14 @@ def construire_hall_of_shame(
         jours = par_ligne_jour.get(lid, {})
 
         # Coûts par période
-        cout = {
-            "semaine": {"euros": agg["semaine"]["cout_eur"], "minutes": agg["semaine"]["minutes"]},
-            "mois": {"euros": agg["mois"]["cout_eur"], "minutes": agg["mois"]["minutes"]},
-            "annee": {"euros": agg["annee"]["cout_eur"], "minutes": agg["annee"]["minutes"]},
-        }
+        cout = {}
+        for per in ("semaine", "mois", "annee"):
+            a = agg[per]
+            cout[per] = {
+                "euros": a["cout_eur"], "minutes": a["minutes"],
+                "nb_rt_delays": a["nb_rt_delays"], "nb_cancelled": a["nb_cancelled"],
+                "nb_disruptions": a["nb_disruptions"],
+            }
 
         # Seuils de gravité par percentile sur les coûts quotidiens de l'année
         couts_annee = [v for v in jours.values() if v > 0]
@@ -444,6 +481,20 @@ def construire_hall_of_shame(
                     niv = 0
                 directions.append({"libelle": nom, "incidents": n, "niveau": niv})
 
+        # Répartition des retards par tranche de durée
+        durees = retards_par_ligne.get(lid, []) if retards_par_ligne else []
+        tranches_compte = Counter(_tranche_retard(d) for d in durees)
+        total_ret = sum(tranches_compte.values())
+        tranches_list = []
+        if total_ret:
+            for _, lbl in _TRANCHES_RETARD:
+                n = tranches_compte.get(lbl, 0)
+                if n:
+                    tranches_list.append({"tranche": lbl, "n": n, "pct": round(n / total_ret * 100)})
+            n_sup = tranches_compte.get(_TRANCHE_SUP, 0)
+            if n_sup:
+                tranches_list.append({"tranche": _TRANCHE_SUP, "n": n_sup, "pct": round(n_sup / total_ret * 100)})
+
         resultats.append({
             "id": lid,
             "cout": cout,
@@ -452,7 +503,91 @@ def construire_hall_of_shame(
             "meilleur_mois": meilleur_mois,
             "causes": causes,
             "directions": directions,
+            "tranches_retard": tranches_list,
         })
+
+    # ── Totaux réseau par période ──
+    _champs = ("euros", "minutes", "nb_rt_delays", "nb_cancelled", "nb_disruptions")
+    totaux: dict[str, dict] = {}
+    for per in ("semaine", "mois", "annee"):
+        t: dict[str, int] = {k: 0 for k in _champs}
+        for r in resultats:
+            for k in _champs:
+                t[k] += r["cout"][per][k]
+        totaux[per] = t
+
+    # ── Delta vs période précédente ──
+    # Semaine précédente : du_semaine - 7 → du_semaine - 1
+    du_sem_prec = du_semaine - timedelta(days=7)
+    au_sem_prec = du_semaine - timedelta(days=1)
+    # Mois précédent : 1er au dernier jour
+    if du_mois.month == 1:
+        du_mois_prec = date(du_mois.year - 1, 12, 1)
+    else:
+        du_mois_prec = date(du_mois.year, du_mois.month - 1, 1)
+    au_mois_prec = du_mois - timedelta(days=1)
+    # Année précédente : 1er janv. au même jour l'an dernier
+    du_annee_prec = date(annee - 1, 1, 1)
+    au_annee_prec = _moins_un_an(aujourdhui)
+
+    bornes_prec = {
+        "semaine": (du_sem_prec, au_sem_prec),
+        "mois": (du_mois_prec, au_mois_prec),
+        "annee": (du_annee_prec, au_annee_prec),
+    }
+
+    # Agréger la période précédente par ligne
+    prec_par_ligne: dict[str, dict[str, dict]] = {}
+    for r in lignes_metriques:
+        if r.line_id not in _RANG_LIGNE or r.date > aujourdhui:
+            continue
+        c = cout_eur(r.minutes_voyageurs, smic_horaire)
+        rt = r.nb_rt_delays or 0
+        canc = r.nb_cancelled or 0
+        disr = r.nb_disruptions or 0
+        for per, (du_p, au_p) in bornes_prec.items():
+            if du_p <= r.date <= au_p:
+                prec_par_ligne.setdefault(r.line_id, {}).setdefault(per, {k: 0 for k in _champs})
+                prec_par_ligne[r.line_id][per]["euros"] += c
+                prec_par_ligne[r.line_id][per]["minutes"] += r.minutes_voyageurs
+                prec_par_ligne[r.line_id][per]["nb_rt_delays"] += rt
+                prec_par_ligne[r.line_id][per]["nb_cancelled"] += canc
+                prec_par_ligne[r.line_id][per]["nb_disruptions"] += disr
+
+    # Injecter delta dans chaque résultat
+    for res in resultats:
+        lid = res["id"]
+        delta: dict[str, dict | None] = {}
+        for per, (du_p, _) in bornes_prec.items():
+            if debut_donnees is not None and debut_donnees <= du_p:
+                prec = prec_par_ligne.get(lid, {}).get(per)
+                if prec:
+                    delta[per] = {
+                        k: delta_pct(res["cout"][per][k], prec[k])
+                        for k in _champs
+                    }
+                else:
+                    delta[per] = {k: None for k in _champs}
+            else:
+                delta[per] = None
+        res["delta"] = delta
+
+    # Tranches de retard agrégées réseau
+    toutes_durees = []
+    if retards_par_ligne:
+        for durees in retards_par_ligne.values():
+            toutes_durees.extend(durees)
+    tranches_reseau_compte = Counter(_tranche_retard(d) for d in toutes_durees)
+    total_ret_reseau = sum(tranches_reseau_compte.values())
+    tranches_reseau = []
+    if total_ret_reseau:
+        for _, lbl in _TRANCHES_RETARD:
+            n = tranches_reseau_compte.get(lbl, 0)
+            if n:
+                tranches_reseau.append({"tranche": lbl, "n": n, "pct": round(n / total_ret_reseau * 100)})
+        n_sup = tranches_reseau_compte.get(_TRANCHE_SUP, 0)
+        if n_sup:
+            tranches_reseau.append({"tranche": _TRANCHE_SUP, "n": n_sup, "pct": round(n_sup / total_ret_reseau * 100)})
 
     return {
         "meta": {
@@ -463,6 +598,8 @@ def construire_hall_of_shame(
             "periodes": {"semaine": du_semaine.isoformat(), "mois": du_mois.isoformat(), "annee": debut_annee.isoformat()},
             "debut_donnees": _iso(debut_donnees),
         },
+        "totaux": totaux,
+        "tranches_retard": tranches_reseau,
         "lignes": resultats,
     }
 
@@ -535,9 +672,23 @@ async def generer_bilans(db: AsyncSession | None = None, dossier: Path = DOSSIER
         for line_id, direction in directions_data:
             directions_par_ligne[line_id].append(direction)
 
+        # Durées des retards realtime (pour répartition par tranche)
+        retards_data = (await session.execute(
+            select(Incident.line_id, Incident.duree_minutes).where(
+                Incident.source == "realtime",
+                Incident.type_incident == "DELAY_REALTIME",
+                Incident.duree_minutes.isnot(None),
+                Incident.heure_debut >= debut_journee(premier_jour_affiche(date(aujourdhui.year, 1, 1))),
+            )
+        )).all()
+        retards_par_ligne: dict[str, list[int]] = defaultdict(list)
+        for line_id, duree in retards_data:
+            retards_par_ligne[line_id].append(duree)
+
         ecrire("hall-of-shame.json", construire_hall_of_shame(
             aujourdhui, rows, dict(perturbations_par_ligne),
             dict(directions_par_ligne), smic, genere_a, debut_donnees,
+            dict(retards_par_ligne),
         ))
 
         for p in PERIODES:

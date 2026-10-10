@@ -18,8 +18,9 @@ GENERE_A = datetime(2026, 9, 11, 14, 10, tzinfo=ZoneInfo("Europe/Paris"))
 AUJ = date(2026, 9, 11)
 
 
-def row(d: date, line: str, mv: int, inc: int = 1):
-    return SimpleNamespace(date=d, line_id=line, minutes_voyageurs=mv, nb_incidents=inc)
+def row(d: date, line: str, mv: int, inc: int = 1, rt=0, canc=0, disr=0):
+    return SimpleNamespace(date=d, line_id=line, minutes_voyageurs=mv, nb_incidents=inc,
+                           nb_rt_delays=rt, nb_cancelled=canc, nb_disruptions=disr)
 
 
 def stats(periode, rows, debut, cats=None):
@@ -109,7 +110,8 @@ class TestStatistiques:
 
     def test_table_vide(self):
         s = stats(30, [], None)
-        assert s["total"] == {"cout_eur": 0, "minutes": 0, "incidents": 0}
+        assert s["total"] == {"cout_eur": 0, "minutes": 0, "incidents": 0,
+                              "nb_rt_delays": 0, "nb_cancelled": 0, "nb_disruptions": 0}
         assert s["pire_ligne"] is None
         assert s["total_prec"] is None and s["delta_pct"] is None
         assert len(s["lignes"]) == len(LIGNES)
@@ -208,7 +210,8 @@ class TestAnnee:
 
     def test_table_vide(self):
         a = annee([], None)
-        assert a["total"] == {"cout_eur": 0, "minutes": 0, "incidents": 0}
+        assert a["total"] == {"cout_eur": 0, "minutes": 0, "incidents": 0,
+                              "nb_rt_delays": 0, "nb_cancelled": 0, "nb_disruptions": 0}
         assert a["pire_mois"] is None and a["meilleure_progression"] is None
         assert all(m["cout_eur"] is None for m in a["mois"])
 
@@ -227,3 +230,38 @@ class TestHallOfShame:
         assert cout["mois"]["minutes"] == 111             # 1er → 18 septembre
         assert h["meta"]["periodes"] == {"semaine": "2026-09-14", "mois": "2026-09-01", "annee": "2026-01-01"}
         assert h["meta"]["debut_donnees"] == "2026-09-16"
+
+    def test_totaux_et_compteurs(self):
+        from backend.bilans import construire_hall_of_shame
+        vendredi = date(2026, 9, 18)
+        rows = [
+            row(date(2026, 9, 15), "RER_A", 500, 2, rt=5, canc=1, disr=3),
+            row(date(2026, 9, 16), "RER_B", 300, 1, rt=2, canc=0, disr=1),
+        ]
+        h = construire_hall_of_shame(vendredi, rows, {}, {}, SMIC, GENERE_A, date(2026, 9, 1))
+
+        # Compteurs dans cout par ligne
+        ca = ligne(h, "RER_A")["cout"]
+        assert ca["semaine"]["nb_rt_delays"] == 5
+        assert ca["semaine"]["nb_cancelled"] == 1
+        assert ca["semaine"]["nb_disruptions"] == 3
+
+        # Totaux réseau
+        assert "totaux" in h
+        assert h["totaux"]["semaine"]["nb_rt_delays"] == 7
+        assert h["totaux"]["semaine"]["nb_cancelled"] == 1
+        assert h["totaux"]["semaine"]["nb_disruptions"] == 4
+        assert h["totaux"]["semaine"]["minutes"] == 800
+
+    def test_delta_present(self):
+        from backend.bilans import construire_hall_of_shame
+        # Vendredi 18/09, données depuis le 1er sept
+        vendredi = date(2026, 9, 18)
+        rows = [
+            row(date(2026, 9, 8), "RER_A", 1000, 5, rt=10, canc=2, disr=4),  # semaine précédente
+            row(date(2026, 9, 15), "RER_A", 500, 2, rt=5, canc=1, disr=3),    # semaine courante
+        ]
+        h = construire_hall_of_shame(vendredi, rows, {}, {}, SMIC, GENERE_A, date(2026, 9, 1))
+        d = ligne(h, "RER_A")["delta"]
+        assert d["semaine"] is not None
+        assert d["semaine"]["nb_rt_delays"] == -50.0
