@@ -34,7 +34,7 @@ DOSSIER = Path(__file__).parent.parent / "transferts"
 COLONNES = [
     "navitia_id", "line_id", "type_incident", "cause", "heure_debut", "heure_fin", "duree_minutes",
     "created_at", "source", "heure_theorique", "is_cancelled", "gare", "direction", "mission", "updated_at",
-    "arrets",
+    "arrets", "lignes_impactees",
 ]
 DATES = {"heure_debut", "heure_fin", "created_at", "heure_theorique", "updated_at"}
 
@@ -129,6 +129,7 @@ async def importer(chemin: Path) -> None:
                        for c in ("type_incident", "is_cancelled", "heure_fin", "source")},
                     # Arrêts déjà fusionnés ci-dessus ; un export d'avant la bascule n'en a pas : garder ceux en base
                     "arrets": func.coalesce(ex.arrets, Incident.arrets),
+                    "lignes_impactees": func.coalesce(ex.lignes_impactees, Incident.lignes_impactees),
                 },
             )
             await session.execute(stmt)

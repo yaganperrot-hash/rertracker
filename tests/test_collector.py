@@ -16,6 +16,7 @@ from backend.collector import (
     PRIM_BASE_URL,
     _parse_dt,
     _extract_line_id,
+    _extract_line_ids,
     LIGNES_CIBLES,
     collect_disruptions,
     collect_rt_delays,
@@ -130,6 +131,49 @@ class TestExtractLineId:
         for navitia_id, expected in LIGNES_CIBLES.items():
             result = _extract_line_id(self._make_impacted(navitia_id))
             assert result == expected, f"{navitia_id} should map to {expected}"
+
+
+class TestExtractLineIds:
+    """_extract_line_ids retourne toutes les lignes cibles impactées."""
+
+    def _make_impacted(self, *navitia_ids: str) -> list:
+        return [
+            {"pt_object": {"embedded_type": "line", "id": nid}}
+            for nid in navitia_ids
+        ]
+
+    def test_single_line(self):
+        result = _extract_line_ids(self._make_impacted("line:IDFM:C01742"))
+        assert result == ["RER_A"]
+
+    def test_multiple_lines(self):
+        result = _extract_line_ids(self._make_impacted(
+            "line:IDFM:C01742", "line:IDFM:C01743", "line:IDFM:C01728"
+        ))
+        assert result == ["RER_A", "RER_B", "RER_D"]
+
+    def test_deduplication(self):
+        result = _extract_line_ids(self._make_impacted(
+            "line:IDFM:C01742", "line:IDFM:C01742"
+        ))
+        assert result == ["RER_A"]
+
+    def test_mixed_known_unknown(self):
+        result = _extract_line_ids(self._make_impacted(
+            "line:IDFM:UNKNOWN", "line:IDFM:C01743", "line:IDFM:C01728"
+        ))
+        assert result == ["RER_B", "RER_D"]
+
+    def test_empty_returns_empty_list(self):
+        assert _extract_line_ids([]) == []
+
+    def test_all_unknown_returns_empty_list(self):
+        assert _extract_line_ids(self._make_impacted("line:IDFM:UNKNOWN")) == []
+
+    def test_compat_with_extract_line_id(self):
+        """_extract_line_id retourne le premier élément de _extract_line_ids."""
+        impacted = self._make_impacted("line:IDFM:C01743", "line:IDFM:C01742")
+        assert _extract_line_id(impacted) == _extract_line_ids(impacted)[0]
 
 
 class TestQuotaEtPauseNocturne:

@@ -98,14 +98,25 @@ def _parse_dt(value: str | None) -> datetime | None:
             return None
 
 
-def _extract_line_id(impacted_objects: list) -> str | None:
+def _extract_line_ids(impacted_objects: list) -> list[str]:
+    """Toutes les lignes cibles impactées par une perturbation (dédupliquées, dans l'ordre)."""
+    seen: set[str] = set()
+    result: list[str] = []
     for obj in impacted_objects:
         pt = obj.get("pt_object", {})
         if pt.get("embedded_type") == "line":
             line_id = pt.get("id", "")
-            if line_id in LIGNES_CIBLES:
-                return LIGNES_CIBLES[line_id]
-    return None
+            lid = LIGNES_CIBLES.get(line_id)
+            if lid and lid not in seen:
+                seen.add(lid)
+                result.append(lid)
+    return result
+
+
+def _extract_line_id(impacted_objects: list) -> str | None:
+    """Rétrocompat : première ligne cible trouvée."""
+    ids = _extract_line_ids(impacted_objects)
+    return ids[0] if ids else None
 
 
 # Perturbations par mode physique : 1 appel pour les 5 RER, 1 pour les 8 Transilien.
@@ -155,11 +166,11 @@ async def collect_disruptions() -> None:
                     did = d.get("id")
                     if did and did in vues:
                         continue
-                    line_id = _extract_line_id(d.get("impacted_objects", []))
-                    if line_id:
+                    line_ids = _extract_line_ids(d.get("impacted_objects", []))
+                    if line_ids:
                         if did:
                             vues.add(did)
-                        all_disruptions.append((line_id, d))
+                        all_disruptions.append((line_ids, d))
 
                 # Pagination : s'arrêter si moins de résultats que demandé
                 if len(line_reports) < 250:
@@ -171,14 +182,16 @@ async def collect_disruptions() -> None:
     logger.info("Fetched %d disruptions from PRIM (%d calls)", len(all_disruptions), nb_appels)
 
     # Diagnostic : lignes sans aucune disruption
-    lines_with = {lid for lid, _ in all_disruptions}
+    lines_with: set[str] = set()
+    for lids, _ in all_disruptions:
+        lines_with.update(lids)
     for lid in LIGNES_CIBLES.values():
         if lid not in lines_with:
             logger.debug("0 disruption pour %s — vérifier le payload PRIM si persistant", lid)
 
     inserted = 0
     async with AsyncSessionLocal() as session:
-        for line_id, d in all_disruptions:
+        for line_ids, d in all_disruptions:
 
             periods = d.get("application_periods", [])
             heure_debut = _parse_dt(periods[0].get("begin") if periods else None)
@@ -210,11 +223,13 @@ async def collect_disruptions() -> None:
                 duree_minutes = int((heure_fin - heure_debut).total_seconds() / 60)
                 if duree_minutes > 720:  # > 12h = modification de service planifiée, pas un retard
                     continue
+            line_id = line_ids[0]
             stmt = (
                 insert(Incident)
                 .values(
                     navitia_id=navitia_id,
                     line_id=line_id,
+                    lignes_impactees=line_ids,
                     type_incident=type_incident,
                     cause=cause,
                     heure_debut=heure_debut,
@@ -229,6 +244,7 @@ async def collect_disruptions() -> None:
                     set_={
                         "heure_fin": heure_fin,
                         "duree_minutes": duree_minutes,
+                        "lignes_impactees": line_ids,
                         "source": "disruption",
                         "updated_at": now,
                     },
@@ -857,6 +873,7 @@ async def collect_rt_delays() -> None:
             stmt = insert(Incident).values(
                 navitia_id=uid,
                 line_id=line_id,
+                lignes_impactees=[line_id],
                 type_incident=type_incident,
                 cause=cause,
                 heure_debut=now,

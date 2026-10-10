@@ -314,7 +314,9 @@ async def compute_daily_metrics(target_date: date | None = None, db: AsyncSessio
             elif source == "realtime":
                 line_data[inc.line_id]["rt_incidents"].append(inc)
             else:
-                line_data[inc.line_id]["disruptions"].append(inc)
+                # Disruptions multi-lignes : compter la perturbation pour chaque ligne impactée
+                for lid in (inc.lignes_impactees or [inc.line_id]):
+                    line_data[lid]["disruptions"].append(inc)
 
         now = datetime.now(timezone.utc)
 

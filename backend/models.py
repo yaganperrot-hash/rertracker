@@ -28,6 +28,10 @@ class Incident(Base):
     gare: Mapped[str | None] = mapped_column(String(120), nullable=True)
     direction: Mapped[str | None] = mapped_column(String(120), nullable=True)
     mission: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # Lignes impactées par la perturbation (disruptions multi-lignes) :
+    # ["RER_A", "RER_B", "RER_D"]. Pour les incidents RT (retards/suppressions), [line_id].
+    # Null pour les anciens incidents d'avant la bascule (fallback sur [line_id] dans le code).
+    lignes_impactees: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     # Arrêts du train relevés dans le flux SIRI Estimated Timetable, dans l'ordre du parcours :
     # [{"g": gare, "p": heure prévue ISO UTC, "r": retard à l'arrivée (min) ou null,
     #   "s": arrêt supprimé, "w": attente mesurée du train suivant (min) ou null}]. Null avant la bascule.

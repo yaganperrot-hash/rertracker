@@ -511,15 +511,17 @@ async def generer_bilans(db: AsyncSession | None = None, dossier: Path = DOSSIER
 
         # Hall of Shame : perturbations par ligne + directions (realtime)
         perturbations_par_ligne_data = (await session.execute(
-            select(Incident.line_id, Incident.cause, Incident.heure_debut).where(
+            select(Incident.line_id, Incident.lignes_impactees, Incident.cause, Incident.heure_debut).where(
                 Incident.source == "disruption", Incident.heure_debut >= debut_utc,
             )
         )).all()
         perturbations_par_ligne: dict[str, list[str]] = defaultdict(list)
-        for line_id, cause, heure in perturbations_par_ligne_data:
+        for line_id, lignes_imp, cause, heure in perturbations_par_ligne_data:
             j = journee_paris(heure)
             if date(aujourdhui.year, 1, 1) <= j <= aujourdhui:
-                perturbations_par_ligne[line_id].append(categoriser_cause(cause))
+                cat = categoriser_cause(cause)
+                for lid in (lignes_imp or [line_id]):
+                    perturbations_par_ligne[lid].append(cat)
 
         directions_data = (await session.execute(
             select(Incident.line_id, Incident.direction).where(
