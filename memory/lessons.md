@@ -146,6 +146,17 @@
 - `recalcul.py` boucle sur toute la plage premier → dernier incident : sur 148 jours, seuls 19 avaient
   des incidents. Pas de dégât, mais inutilement lent.
 
+## Page Statistiques — refonte (2026-10-10)
+- Les données PRIM n'ont **pas de cause pour les retards et suppressions** (source `realtime`) : seul le flux
+  perturbations (source `disruption`, Navitia) contient un motif catégorisable. Pour les retards, la durée
+  (`duree_minutes`) est la seule dimension exploitable pour une répartition.
+- CSS Grid > Flexbox pour des cartes avec colonnes alignées : `grid-template-columns` fixe garantit que rang,
+  badge, compteurs, barre et coût restent alignés quelle que soit la largeur du contenu.
+- `fmtEurosCompact` avec un seuil trop bas (10k) mélange "32 k€" et "4 500 €" dans le même classement.
+  Seuil à 100k : en vue Semaine tout est en euros pleins, en vue Année tout bascule en compact — homogène par période.
+- Ne pas coder avant d'avoir compris ce que l'utilisateur veut : "qui des détails ?" n'était pas "trier par",
+  c'était "panneau détaillé avec répartitions et causes".
+
 ## Exploitation
 - **Ne jamais tuber un script long dans `head`** : la fermeture du tube envoie un SIGPIPE et tue le
   script avant qu'il écrive son fichier de sortie. Rediriger vers un log puis `tail`, et vérifier le

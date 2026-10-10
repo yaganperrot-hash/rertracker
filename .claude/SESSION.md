@@ -1,26 +1,40 @@
 # SESSION — État courant
 
-## 2026-10-05 — Windows (historique : `.claude/archive/`)
+## 2026-10-10 — Windows (historique : `.claude/archive/`)
 
 ### Objectif
-Améliorer la précision du calcul et reconstruire les données GTFS périmées.
+Refonte complète de la page Statistiques : bilan chiffré du réseau (KPIs, classement 13 lignes, panneaux détail cliquables).
 
 ### Avancement
-- Session courte : /start + /wrap, pas de code écrit.
-- Serveur lancé sur ce PC, collecte active (quota PRIM 998/1 000 Estimated Timetable).
-- Dernier incident en base : 2026-10-05 07:09 (Paris), 27 443 incidents au total.
-- **Horaires GTFS périmés sur les 13 lignes** : warning à chaque relevé, « Mon trajet » cassé.
+- **Backend `bilans.py`** : `_vide()` et `_ajouter()` incluent `nb_rt_delays`, `nb_cancelled`, `nb_disruptions`.
+  `construire_hall_of_shame()` enrichi : compteurs par période dans `cout`, `totaux` réseau, `delta` vs période
+  précédente, `tranches_retard` (répartition par durée 1–3 min / 4–5 / 6–10 / 11–20 / 21–30 / 30+).
+  Requête Incident ajoutée pour les durées realtime. Nouveau paramètre `retards_par_ligne`.
+- **Frontend `statistiques.html`** : refonte complète.
+  - Cumul et bulles (Hall of Shame top 5) supprimés.
+  - 5 KPIs cliquables (retards, supprimés, perturbations, lignes touchées, minutes perdues).
+  - Classement des 13 lignes en cartes grid alignées, tri par coût, chevron d'expansion.
+  - Panneau détail par ligne (heatmap, causes, directions, deltas ▲/▼, compteurs).
+  - Panneau détail KPI réseau : clic sur un KPI → répartition par ligne + barres.
+    Retards → tranches de durée. Perturbations → causes réseau agrégées.
+  - Format euros homogène (seuil compact relevé à 100k).
+  - Responsive : grid 768px et 480px.
+- **Tests** : 27/27 OK (2 nouveaux : `test_totaux_et_compteurs`, `test_delta_present`).
+- **Transfert** : export du 2026-10-10 (285 incidents).
+
+### Limites connues
+- Les **causes** ne sont disponibles que pour les perturbations (flux Navitia). Les retards et suppressions
+  (flux SIRI realtime) n'ont pas de motif dans PRIM — seule la durée est exploitable.
+- Les tranches de retard et causes perturbations sont sur l'année entière, pas filtrées par période.
 
 ### Blocages
-- **Horaires GTFS périmés** : `python -m backend.offre horaires` à relancer (les `trip_id` ont changé).
-- **Clé PRIM toujours à régénérer** (en clair dans l'historique git, commit `c591442`).
-- **Recalcul historique Windows** pas encore fait (anciens poids horaires).
+- **Horaires GTFS périmés** (inchangé).
+- **Clé PRIM à régénérer** (inchangé).
 
 ### Prochaine étape
-1. Reconstruire les horaires GTFS (`python -m backend.offre horaires`).
-2. Recalculer l'historique Windows (`python -m backend.recalcul`).
-3. Observer les trains absents du flux (D).
-4. Régénérer la clé PRIM.
+1. Reconstruire les horaires GTFS.
+2. Filtrer tranches de retard et causes par période (semaine/mois/année) si pertinent.
+3. Régénérer la clé PRIM.
 
 ### Serveur
-- Un serveur tourne **sur ce PC (Windows)** — lancé dans cette session Claude Code (tâche de fond, sera tué à la fermeture de la session). À relancer manuellement si besoin.
+- Un serveur tourne **sur ce PC (Windows)** — lancé en tâche de fond, sera tué à la fermeture de la session.
