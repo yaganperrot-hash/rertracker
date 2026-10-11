@@ -81,7 +81,21 @@
   max-height: 700px;
   opacity: 1;
 }
-.pick-panel-inner { padding: 22px; }
+.pick-panel-inner { padding: 22px; position: relative; }
+
+.pp-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.pp-close:hover { color: var(--ink); }
 
 /* En-tête : pastille + nom + statut */
 .pp-head {

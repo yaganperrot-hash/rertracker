@@ -57,12 +57,11 @@
   function periodCaption(period, data) {
     let txt;
     if (period === 'semaine') txt = 'Cette semaine \u00B7 depuis le lundi ' + fmtJourMois(data.from);
-    else if (period === 'annee') txt = 'En ' + data.from.slice(0, 4) + ' \u00B7 depuis le 1er janvier';
-    else txt = 'Aujourd\u2019hui \u00B7 depuis ' + data.heure_debut_journee + ' h';
-    // Jours d'avant les données fiables : exclus par le backend, on le dit
-    if (period !== 'jour' && data.debut_donnees > data.from) {
-      txt += ' \u2014 avant le ' + fmtJourMois(data.debut_donnees) + ' non compt\u00E9 : collecte incompl\u00E8te';
+    else if (period === 'annee') {
+      var debut = (data.debut_donnees && data.debut_donnees > data.from) ? data.debut_donnees : data.from;
+      txt = 'En ' + debut.slice(0, 4) + ' \u00B7 depuis le ' + fmtJourMois(debut);
     }
+    else txt = 'Aujourd\u2019hui \u00B7 depuis ' + data.heure_debut_journee + ' h';
     return txt;
   }
 
@@ -173,6 +172,7 @@
     // Panneau
     html += '<div class="pick-panel" id="pick-panel">';
     html += '<div class="pick-panel-inner">';
+    html += '  <button class="pp-close" id="pp-close" aria-label="Fermer">\u00D7</button>';
     html += '  <div class="pp-head">';
     html += '    <div class="pp-round" id="pp-round"></div>';
     html += '    <div class="pp-name" id="pp-name"></div>';
@@ -298,6 +298,13 @@
         }
       }
     }
+
+    // ── Fermer le panneau ──
+    container.querySelector('#pp-close').addEventListener('click', function() {
+      panel.classList.remove('open');
+      container.querySelectorAll('.pick-dot').forEach(d => d.classList.remove('sel'));
+      currentLine = null;
+    });
 
     // ── Clic sur les pastilles ──
     container.querySelectorAll('.pick-dot').forEach(dot => {
