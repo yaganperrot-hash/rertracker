@@ -29,7 +29,7 @@
   const NET_LABEL = { rer: 'RER', transilien: 'Transilien', metro: 'M\u00E9tro' };
 
   // ── Périodes calendaires, date de Paris : journée en cours, semaine depuis lundi, année depuis le 1er janvier ──
-  const PERIOD_LABEL = { jour: "aujourd'hui", semaine: 'cette semaine', annee: 'cette année' };
+  const PERIOD_LABEL = { jour: "aujourd'hui", semaine: 'cette semaine', annee: 'cette ann\u00E9e' };
 
   // Journée comptée en cours : elle commence à l'heure de reprise des relevés (collecte_heure_debut, /api/reference)
   let heureDebutJournee = 6;
@@ -181,9 +181,9 @@
     html += '  <div class="pp-line-stats">';
     // Mêmes voyageurs, même période : le coût est le temps perdu valorisé au SMIC
     html += '    <div class="pp-period" id="pp-period"></div>';
-    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-duree">—</span><span class="pp-stat-label">Temps perdu par les voyageurs</span></div>';
-    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-cout">—</span><span class="pp-stat-label">Co\u00FBt pour les voyageurs (SMIC)</span></div>';
-    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-incidents">—</span><span class="pp-stat-label">Trains en retard ou supprim\u00E9s</span></div>';
+    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-duree">\u2014</span><span class="pp-stat-label">Temps perdu par les voyageurs</span></div>';
+    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-cout">\u2014</span><span class="pp-stat-label">Co\u00FBt pour les voyageurs (SMIC)</span></div>';
+    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-incidents">\u2014</span><span class="pp-stat-label">Trains en retard ou supprim\u00E9s</span></div>';
     html += '  </div>';
     html += '  <div class="pp-toggle">';
     html += '    <button type="button" data-p="jour"' + (currentPeriod === 'jour' ? ' class="on"' : '') + '>Aujourd\u2019hui</button>';
@@ -277,15 +277,15 @@
 
       // Stats réseau de la ligne
       ppPeriod.textContent = data ? periodCaption(currentPeriod, data) : '';
-      ppStatDuree.textContent = data ? formatDuree(data.total_minutes_voyageurs || 0, true) : '—';
-      ppStatCout.textContent = data ? (data.total_cout_eur || 0).toLocaleString('fr-FR') + ' \u20AC' : '—';
-      ppStatIncidents.textContent = data ? (data.total_incidents || 0).toLocaleString('fr-FR') : '—';
+      ppStatDuree.textContent = data ? formatDuree(data.total_minutes_voyageurs || 0, true) : '\u2014';
+      ppStatCout.textContent = data ? (data.total_cout_eur || 0).toLocaleString('fr-FR') + ' \u20AC' : '\u2014';
+      ppStatIncidents.textContent = data ? (data.total_incidents || 0).toLocaleString('fr-FR') : '\u2014';
 
       // Statut : perturbé si incidents aujourd'hui
       const todayData = await loadLineStats(currentLine, 1);
       const hasIncidents = todayData && (todayData.total_incidents || 0) > 0;
-      ppStatus.textContent = hasIncidents ? 'Perturbé' : 'OK';
-      ppStatus.className = 'pp-status ' + (hasIncidents ? 'perturbé' : 'ok');
+      ppStatus.textContent = hasIncidents ? 'Perturb\u00E9' : 'OK';
+      ppStatus.className = 'pp-status ' + (hasIncidents ? 'perturb\u00E9' : 'ok');
 
       // Classement
       if (ppRank && opts.showRank) {
@@ -324,24 +324,16 @@
       updatePanel();
     });
 
-    // ── Partage (canvas 1080×1080) ──
-    ppShare.addEventListener('click', async () => {
-      if (!currentLine) return;
-      const meta = LINE_META[currentLine];
-      const days = periodDays(currentPeriod);
-      await loadReference();
-      const data = await loadLineStats(currentLine, days);
-
+    // ── Génération du canvas 1080×1080 ──
+    function buildShareCanvas(meta, data) {
       const W = 1080, H = 1080;
       const canvas = document.createElement('canvas');
       canvas.width = W; canvas.height = H;
       const ctx = canvas.getContext('2d');
 
-      // Fond crème
       ctx.fillStyle = '#F7F4EF';
       ctx.fillRect(0, 0, W, H);
 
-      // Pastille
       const cx = W / 2, cy = 280;
       ctx.beginPath();
       ctx.arc(cx, cy, 90, 0, Math.PI * 2);
@@ -353,12 +345,10 @@
       ctx.textBaseline = 'middle';
       ctx.fillText(meta.short, cx, cy);
 
-      // Nom
       ctx.fillStyle = '#000';
       ctx.font = '700 36px Roboto, sans-serif';
       ctx.fillText(meta.name, cx, cy + 140);
 
-      // Temps perdu
       ctx.fillStyle = '#000';
       ctx.font = '900 72px Roboto, sans-serif';
       ctx.fillText(data ? formatDuree(data.total_minutes_voyageurs || 0, true) : '\u2014', cx, cy + 260);
@@ -367,54 +357,119 @@
       ctx.font = '400 28px Roboto, sans-serif';
       ctx.fillText('de temps perdu par les voyageurs', cx, cy + 310);
 
-      // Coût SMIC + incidents
       ctx.fillStyle = '#000';
       ctx.font = '700 36px Roboto, sans-serif';
       ctx.fillText((data ? (data.total_cout_eur || 0).toLocaleString('fr-FR') : '\u2014') + ' \u20AC au SMIC', cx, cy + 390);
       ctx.fillText((data ? (data.total_incidents || 0).toLocaleString('fr-FR') : '\u2014') + ' trains en retard ou supprim\u00E9s', cx, cy + 440);
 
-      // Période
       ctx.fillStyle = '#555';
       ctx.font = '500 26px Roboto, sans-serif';
       ctx.fillText(PERIOD_LABEL[currentPeriod], cx, cy + 500);
 
-      // URL filigrane
       ctx.fillStyle = 'rgba(0,0,0,0.12)';
       ctx.font = '500 22px Roboto, sans-serif';
       ctx.fillText('retards-idf.fr/' + SLUGS[currentLine], cx, H - 60);
 
-      // Logo
       ctx.fillStyle = 'rgba(0,0,0,0.15)';
       ctx.font = '900 20px Roboto, sans-serif';
       ctx.fillText('RETARDS IDF', cx, H - 100);
 
-      canvas.toBlob(blob => {
+      return canvas;
+    }
+
+    function shareText(meta, data) {
+      var duree = data ? formatDuree(data.total_minutes_voyageurs || 0, true) : '\u2014';
+      var cout = data ? (data.total_cout_eur || 0).toLocaleString('fr-FR') : '\u2014';
+      return meta.name + ' ' + PERIOD_LABEL[currentPeriod] + ' : ' + duree + ' de temps perdu, ' + cout + ' \u20AC';
+    }
+
+    function downloadPng(canvas) {
+      canvas.toBlob(function (blob) {
         if (!blob) return;
-        const file = new File([blob], 'retards-' + SLUGS[currentLine] + '.png', { type: 'image/png' });
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-          navigator.share({
-            title: meta.name + ' \u2014 RETARDS IDF',
-            text: meta.name + ' ' + PERIOD_LABEL[currentPeriod] + ' : ' + (data ? formatDuree(data.total_minutes_voyageurs || 0, true) : '\u2014') + ' de temps perdu, ' + (data ? (data.total_cout_eur || 0).toLocaleString('fr-FR') : '\u2014') + ' \u20AC',
-            files: [file],
-          }).catch(() => {});
-        } else {
-          const a = document.createElement('a');
-          a.href = URL.createObjectURL(blob);
-          a.download = file.name;
-          a.click();
-          URL.revokeObjectURL(a.href);
-        }
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'retards-' + SLUGS[currentLine] + '.png';
+        a.click();
+        URL.revokeObjectURL(a.href);
       }, 'image/png');
+    }
+
+    // ── Menu de partage ──
+    var shareMenu = null;
+
+    function closeShareMenu() {
+      if (shareMenu) { shareMenu.remove(); shareMenu = null; }
+      document.removeEventListener('click', onDocClickShare, true);
+    }
+    function onDocClickShare(e) {
+      if (shareMenu && !shareMenu.contains(e.target) && e.target !== ppShare) closeShareMenu();
+    }
+
+    ppShare.addEventListener('click', async function (e) {
+      e.stopPropagation();
+      if (!currentLine) return;
+
+      var meta = LINE_META[currentLine];
+      var days = periodDays(currentPeriod);
+      await loadReference();
+      var data = await loadLineStats(currentLine, days);
+
+      // Mobile : Web Share API natif
+      if (navigator.share && navigator.canShare) {
+        var canvas = buildShareCanvas(meta, data);
+        var shared = await new Promise(function (resolve) {
+          canvas.toBlob(function (blob) {
+            if (!blob) { resolve(false); return; }
+            var file = new File([blob], 'retards-' + SLUGS[currentLine] + '.png', { type: 'image/png' });
+            if (navigator.canShare({ files: [file] })) {
+              navigator.share({
+                title: meta.name + ' \u2014 RETARDS IDF',
+                text: shareText(meta, data),
+                files: [file],
+              }).then(function () { resolve(true); }).catch(function () { resolve(true); });
+            } else {
+              resolve(false);
+            }
+          }, 'image/png');
+        });
+        if (shared) return;
+      }
+
+      // Desktop : menu popup
+      if (shareMenu) { closeShareMenu(); return; }
+
+      shareMenu = document.createElement('div');
+      shareMenu.className = 'pp-share-menu';
+      shareMenu.innerHTML =
+        '<button type="button" class="pp-share-item" data-action="x">' +
+        '<svg viewBox="0 0 24 24" width="18" height="18"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>' +
+        'Partager sur X</button>' +
+        '<button type="button" class="pp-share-item" data-action="download">' +
+        '<svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 16l-6-6h4V4h4v6h4l-6 6z" fill="currentColor"/><path d="M20 18H4v2h16v-2z" fill="currentColor"/></svg>' +
+        'T\u00E9l\u00E9charger l\u2019image</button>';
+
+      ppShare.parentElement.style.position = 'relative';
+      ppShare.parentElement.appendChild(shareMenu);
+
+      shareMenu.addEventListener('click', function (ev) {
+        var btn = ev.target.closest('[data-action]');
+        if (!btn) return;
+
+        if (btn.dataset.action === 'x') {
+          var text = shareText(meta, data) + '\n\nretards-idf.fr/' + SLUGS[currentLine];
+          window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text), '_blank');
+        } else if (btn.dataset.action === 'download') {
+          downloadPng(buildShareCanvas(meta, data));
+        }
+        closeShareMenu();
+      });
+
+      setTimeout(function () { document.addEventListener('click', onDocClickShare, true); }, 0);
     });
 
     // ── Pré-sélection ──
     if (opts.preselect) {
       select(opts.preselect, false);
-    } else {
-      try {
-        const saved = localStorage.getItem('pick_line');
-        if (saved && LINE_META[saved]) select(saved, false);
-      } catch (_) {}
     }
 
     return {
