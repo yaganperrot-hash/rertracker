@@ -81,14 +81,12 @@
   max-height: 700px;
   opacity: 1;
 }
-.pick-panel-inner { padding: 22px; position: relative; }
+.pick-panel-inner { padding: 22px; }
 
 .pp-close {
-  position: absolute;
-  top: 14px;
-  right: 16px;
-  width: 28px;
-  height: 28px;
+  float: right;
+  width: 26px;
+  height: 26px;
   background: var(--bg2, #EDEAE4);
   border: none;
   border-radius: 50%;
@@ -97,11 +95,12 @@
   align-items: center;
   justify-content: center;
   transition: background .15s;
+  margin: -4px -4px 0 8px;
 }
 .pp-close:hover { background: var(--bg3, #E2DED7); }
 .pp-close svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   stroke: var(--sub);
   stroke-width: 2;
   stroke-linecap: round;
