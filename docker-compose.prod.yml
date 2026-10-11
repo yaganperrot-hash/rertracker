@@ -1,0 +1,25 @@
+services:
+  db:
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  backend:
+    restart: unless-stopped
+    ports:
+      - "80:8000"
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./frontend/data:/app/frontend/data
+      - ./transferts:/app/transferts
+      - ./publications:/app/publications
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 2
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
