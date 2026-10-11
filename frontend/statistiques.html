@@ -578,7 +578,7 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
   }
 
   function renderTranchesRetard() {
-    var tranches = _tranchesRetard || [];
+    var tranches = (_tranchesRetard && _tranchesRetard[periodeActuelle]) || [];
     if (!tranches.length) return '';
 
     var maxN = Math.max.apply(null, tranches.map(function(t) { return t.n; }));
@@ -601,7 +601,9 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
     var toutes = {};
     var total = 0;
     donnees.forEach(function(l) {
-      (l.causes || []).forEach(function(c) {
+      var causesObj = l.causes || {};
+      var causes = causesObj[periodeActuelle] || [];
+      causes.forEach(function(c) {
         toutes[c.libelle] = (toutes[c.libelle] || 0) + c.n;
         total += c.n;
       });
@@ -826,7 +828,8 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
   // ── Causes ────────────────────────────────────────────────
 
   function renderCauses(ligne) {
-    var causes = ligne.causes || [];
+    var causesObj = ligne.causes || {};
+    var causes = causesObj[periodeActuelle] || [];
     if (!causes.length) return '';
     var maxPct = Math.max.apply(null, causes.map(function(c) { return c.pourcentage; }));
     var html = '<div class="causes-section"><div class="eyebrow">Causes des perturbations</div>';
@@ -900,7 +903,7 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
         var json = await resp.json();
         donnees = json.lignes || [];
         _totaux = json.totaux || null;
-        _tranchesRetard = json.tranches_retard || [];
+        _tranchesRetard = json.tranches_retard || {};
         if (json.meta) {
           majHeure = new Date(json.meta.genere_a).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }).replace(':', 'H');
           smicHoraire = json.meta.smic_horaire || 0;

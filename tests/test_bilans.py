@@ -265,3 +265,37 @@ class TestHallOfShame:
         d = ligne(h, "RER_A")["delta"]
         assert d["semaine"] is not None
         assert d["semaine"]["nb_rt_delays"] == -50.0
+
+    def test_tranches_et_causes_filtrees_par_periode(self):
+        from backend.bilans import construire_hall_of_shame
+        # Vendredi 18/09/2026 — lundi = 14, 1er du mois = 1er sept, année = 1er janv
+        vendredi = date(2026, 9, 18)
+        # Retards : un en janvier (hors semaine/mois), un cette semaine
+        retards = {
+            "RER_A": [(date(2026, 1, 10), 2), (date(2026, 9, 15), 7)],
+        }
+        # Perturbations : une en février, une cette semaine
+        perturbations = {
+            "RER_A": [(date(2026, 2, 5), "Travaux"), (date(2026, 9, 16), "Météo")],
+        }
+        h = construire_hall_of_shame(vendredi, [], perturbations, {}, SMIC, GENERE_A,
+                                     date(2026, 1, 1), retards)
+        la = ligne(h, "RER_A")
+
+        # Année : les deux retards / perturbations
+        assert len(la["tranches_retard"]["annee"]) == 2  # 1–3 min et 6–10 min
+        assert len(la["causes"]["annee"]) == 2           # Travaux et Météo
+
+        # Semaine : seulement ceux de la semaine courante
+        assert len(la["tranches_retard"]["semaine"]) == 1
+        assert la["tranches_retard"]["semaine"][0]["tranche"] == "6–10 min"
+        assert len(la["causes"]["semaine"]) == 1
+        assert la["causes"]["semaine"][0]["libelle"] == "Météo"
+
+        # Mois (sept) : seulement ceux de septembre
+        assert len(la["tranches_retard"]["mois"]) == 1
+        assert len(la["causes"]["mois"]) == 1
+
+        # Réseau
+        assert len(h["tranches_retard"]["annee"]) == 2
+        assert len(h["tranches_retard"]["semaine"]) == 1

@@ -329,15 +329,32 @@ def _tranche_retard(duree: int) -> str:
     return _TRANCHE_SUP
 
 
+def _tranches_from_durees(durees: list[int]) -> list[dict]:
+    """Construit la répartition par tranche de durée à partir d'une liste de durées (minutes)."""
+    if not durees:
+        return []
+    compte = Counter(_tranche_retard(d) for d in durees)
+    total = sum(compte.values())
+    result = []
+    for _, lbl in _TRANCHES_RETARD:
+        n = compte.get(lbl, 0)
+        if n:
+            result.append({"tranche": lbl, "n": n, "pct": round(n / total * 100)})
+    n_sup = compte.get(_TRANCHE_SUP, 0)
+    if n_sup:
+        result.append({"tranche": _TRANCHE_SUP, "n": n_sup, "pct": round(n_sup / total * 100)})
+    return result
+
+
 def construire_hall_of_shame(
     aujourdhui: date,
     lignes_metriques,
-    perturbations_par_ligne: dict[str, list[str]],
+    perturbations_par_ligne: dict[str, list[tuple[date, str]]],
     directions_par_ligne: dict[str, list[str]],
     smic_horaire: float,
     genere_a: datetime,
     debut_donnees: date | None = None,
-    retards_par_ligne: dict[str, list[int]] | None = None,
+    retards_par_ligne: dict[str, list[tuple[date, int]]] | None = None,
 ) -> dict:
     """Construit le JSON hall-of-shame avec coûts, gravité quotidienne, causes et directions.
     Périodes calendaires, comme le panneau de ligne : semaine depuis lundi, mois depuis le 1er, année depuis le
@@ -457,13 +474,17 @@ def construire_hall_of_shame(
                 if bm[0] != pm[0]:
                     meilleur_mois = {"mois": bm[0], "cout_eur": bm[1], "minutes": par_mois_min.get(bm[0], 0)}
 
-        # Causes (disruptions)
-        cats = perturbations_par_ligne.get(lid, [])
-        causes_rep = repartition_causes(cats)
-        causes = [
-            {"libelle": r["categorie"], "pourcentage": r["pct"], "n": r["n"]}
-            for r in causes_rep["repartition"]
-        ]
+        # Causes (disruptions) — par période
+        cats_avec_date = perturbations_par_ligne.get(lid, [])
+        causes: dict[str, list] = {}
+        bornes_periodes = {"semaine": du_semaine, "mois": du_mois, "annee": debut_annee}
+        for per, du_per in bornes_periodes.items():
+            cats_per = [cat for j, cat in cats_avec_date if du_per <= j <= aujourdhui]
+            rep = repartition_causes(cats_per)
+            causes[per] = [
+                {"libelle": r["categorie"], "pourcentage": r["pct"], "n": r["n"]}
+                for r in rep["repartition"]
+            ]
 
         # Top 3 directions (realtime)
         dirs_list = directions_par_ligne.get(lid, [])
@@ -481,19 +502,12 @@ def construire_hall_of_shame(
                     niv = 0
                 directions.append({"libelle": nom, "incidents": n, "niveau": niv})
 
-        # Répartition des retards par tranche de durée
-        durees = retards_par_ligne.get(lid, []) if retards_par_ligne else []
-        tranches_compte = Counter(_tranche_retard(d) for d in durees)
-        total_ret = sum(tranches_compte.values())
-        tranches_list = []
-        if total_ret:
-            for _, lbl in _TRANCHES_RETARD:
-                n = tranches_compte.get(lbl, 0)
-                if n:
-                    tranches_list.append({"tranche": lbl, "n": n, "pct": round(n / total_ret * 100)})
-            n_sup = tranches_compte.get(_TRANCHE_SUP, 0)
-            if n_sup:
-                tranches_list.append({"tranche": _TRANCHE_SUP, "n": n_sup, "pct": round(n_sup / total_ret * 100)})
+        # Répartition des retards par tranche de durée — par période
+        durees_avec_date = retards_par_ligne.get(lid, []) if retards_par_ligne else []
+        tranches_par_per: dict[str, list] = {}
+        for per, du_per in bornes_periodes.items():
+            durees_per = [d for j, d in durees_avec_date if du_per <= j <= aujourdhui]
+            tranches_par_per[per] = _tranches_from_durees(durees_per)
 
         resultats.append({
             "id": lid,
@@ -503,7 +517,7 @@ def construire_hall_of_shame(
             "meilleur_mois": meilleur_mois,
             "causes": causes,
             "directions": directions,
-            "tranches_retard": tranches_list,
+            "tranches_retard": tranches_par_per,
         })
 
     # ── Totaux réseau par période ──
@@ -572,22 +586,15 @@ def construire_hall_of_shame(
                 delta[per] = None
         res["delta"] = delta
 
-    # Tranches de retard agrégées réseau
-    toutes_durees = []
-    if retards_par_ligne:
-        for durees in retards_par_ligne.values():
-            toutes_durees.extend(durees)
-    tranches_reseau_compte = Counter(_tranche_retard(d) for d in toutes_durees)
-    total_ret_reseau = sum(tranches_reseau_compte.values())
-    tranches_reseau = []
-    if total_ret_reseau:
-        for _, lbl in _TRANCHES_RETARD:
-            n = tranches_reseau_compte.get(lbl, 0)
-            if n:
-                tranches_reseau.append({"tranche": lbl, "n": n, "pct": round(n / total_ret_reseau * 100)})
-        n_sup = tranches_reseau_compte.get(_TRANCHE_SUP, 0)
-        if n_sup:
-            tranches_reseau.append({"tranche": _TRANCHE_SUP, "n": n_sup, "pct": round(n_sup / total_ret_reseau * 100)})
+    # Tranches de retard agrégées réseau — par période
+    bornes_periodes_reseau = {"semaine": du_semaine, "mois": du_mois, "annee": debut_annee}
+    tranches_reseau: dict[str, list] = {}
+    for per, du_per in bornes_periodes_reseau.items():
+        toutes_durees = []
+        if retards_par_ligne:
+            for items in retards_par_ligne.values():
+                toutes_durees.extend(d for j, d in items if du_per <= j <= aujourdhui)
+        tranches_reseau[per] = _tranches_from_durees(toutes_durees)
 
     return {
         "meta": {
@@ -652,13 +659,13 @@ async def generer_bilans(db: AsyncSession | None = None, dossier: Path = DOSSIER
                 Incident.source == "disruption", Incident.heure_debut >= debut_utc,
             )
         )).all()
-        perturbations_par_ligne: dict[str, list[str]] = defaultdict(list)
+        perturbations_par_ligne: dict[str, list[tuple[date, str]]] = defaultdict(list)
         for line_id, lignes_imp, cause, heure in perturbations_par_ligne_data:
             j = journee_paris(heure)
             if date(aujourdhui.year, 1, 1) <= j <= aujourdhui:
                 cat = categoriser_cause(cause)
                 for lid in (lignes_imp or [line_id]):
-                    perturbations_par_ligne[lid].append(cat)
+                    perturbations_par_ligne[lid].append((j, cat))
 
         directions_data = (await session.execute(
             select(Incident.line_id, Incident.direction).where(
@@ -674,16 +681,16 @@ async def generer_bilans(db: AsyncSession | None = None, dossier: Path = DOSSIER
 
         # Durées des retards realtime (pour répartition par tranche)
         retards_data = (await session.execute(
-            select(Incident.line_id, Incident.duree_minutes).where(
+            select(Incident.line_id, Incident.duree_minutes, Incident.heure_debut).where(
                 Incident.source == "realtime",
                 Incident.type_incident == "DELAY_REALTIME",
                 Incident.duree_minutes.isnot(None),
                 Incident.heure_debut >= debut_journee(premier_jour_affiche(date(aujourdhui.year, 1, 1))),
             )
         )).all()
-        retards_par_ligne: dict[str, list[int]] = defaultdict(list)
-        for line_id, duree in retards_data:
-            retards_par_ligne[line_id].append(duree)
+        retards_par_ligne: dict[str, list[tuple[date, int]]] = defaultdict(list)
+        for line_id, duree, heure in retards_data:
+            retards_par_ligne[line_id].append((journee_paris(heure), duree))
 
         ecrire("hall-of-shame.json", construire_hall_of_shame(
             aujourdhui, rows, dict(perturbations_par_ligne),
