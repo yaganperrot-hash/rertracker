@@ -55,7 +55,7 @@ def _fmt_duree(minutes: int) -> str:
         return f"{h} h {r} min" if r else f"{h} h"
     if m < 2 * _A:
         j, h = m // _J, (m % _J) // _H
-        return f"{j} jours {h} h" if h else f"{j} jours"
+        return f"{j} jours {h} h" if h and j < 7 else f"{j} jours"
     a, j = m // _A, (m % _A) // _J
     reste = f" {j} jour{'s' if j >= 2 else ''}" if j else ""
     return f"{_fmt(a)} ans{reste}"
@@ -131,6 +131,42 @@ async def generer_carte_png(jour: date, dossier: Path = DOSSIER_PUBLICATIONS) ->
         return None
 
 
+DOSSIER_CAROUSEL = Path(__file__).parent.parent / "output"
+
+
+async def generer_carousel_png(jour: date, dossier: Path = DOSSIER_CAROUSEL) -> list[Path]:
+    """Ouvre carousel.html, screenshot chaque .slide → output/AAAA-MM-JJ/slide-N.png."""
+    from playwright.async_api import async_playwright
+
+    dossier_jour = dossier / jour.isoformat()
+    dossier_jour.mkdir(parents=True, exist_ok=True)
+    chemins: list[Path] = []
+
+    try:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch()
+            # Hauteur large pour contenir les 5 slides empilées
+            page = await browser.new_page(viewport={"width": 1080, "height": 5400})
+            await page.goto("http://localhost:8000/carousel.html", wait_until="networkidle")
+            await page.wait_for_function(
+                "document.body.dataset.pret === '1'",
+                timeout=15_000,
+            )
+
+            slides = await page.query_selector_all(".slide")
+            for i, slide in enumerate(slides, 1):
+                chemin = dossier_jour / f"slide-{i}.png"
+                await slide.screenshot(path=str(chemin), type="png")
+                chemins.append(chemin)
+                logger.info("Slide %d générée : %s", i, chemin)
+
+            await browser.close()
+    except Exception:
+        logger.exception("Erreur lors de la génération du carrousel PNG")
+
+    return chemins
+
+
 async def post_daily_recap(dossier: Path = DOSSIER_PUBLICATIONS) -> None:
     """Récap quotidien, planifié à 19h30 par le scheduler dans main.py.
 
@@ -167,6 +203,11 @@ async def post_daily_recap(dossier: Path = DOSSIER_PUBLICATIONS) -> None:
     chemin_png = await generer_carte_png(aujourdhui, dossier)
     if chemin_png:
         logger.info("Carte PNG du jour : %s", chemin_png)
+
+    # Générer le carrousel Instagram (5 slides PNG)
+    slides = await generer_carousel_png(aujourdhui)
+    if slides:
+        logger.info("Carrousel Instagram : %d slides dans %s", len(slides), slides[0].parent)
 
     if not all([
         settings.twitter_api_key,

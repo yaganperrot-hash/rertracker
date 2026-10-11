@@ -21,7 +21,7 @@
     if (min < 2 * A) {
       const j = Math.floor(min / J), h = Math.floor((min % J) / H);
       const tete = court ? `${j} j` : `${j} jours`;
-      return h ? `${tete} ${h} h` : tete;
+      return (h && j < 7) ? `${tete} ${h} h` : tete;
     }
     const a = Math.floor(min / A), j = Math.floor((min % A) / J);
     const reste = j ? (court ? ` ${j} j` : ` ${j} ${pl(j, 'jour', 'jours')}`) : '';

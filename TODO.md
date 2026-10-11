@@ -35,6 +35,9 @@
   lus par aucune page (à supprimer ou à brancher)
 - [ ] Lot 5 (valeur du temps) : décidé le 2026-09-16 de garder le SMIC seul — TASK-29/30 abandonnées.
 
+## Bugs
+- [ ] **Bug : la fonction partager** (bouton Share dans le pick panel) ne fonctionne pas — à investiguer.
+
 ## À faire
 - [ ] **PC Windows — recalculer l'historique** après `git pull` : `python -m backend.recalcul`.
   Sa base est encore calculée avec les anciens poids horaires ; sans ça les deux PC afficheront des

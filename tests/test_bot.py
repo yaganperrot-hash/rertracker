@@ -18,7 +18,8 @@ from backend.bot import (
     (120, "2 h"),
     (872, "14 h 32 min"),
     (2880, "2 jours"),
-    (267_000, "185 jours 10 h"),
+    (8_760, "6 jours 2 h"),
+    (267_000, "185 jours"),
     (1_051_200, "2 ans"),
     (2_847_340, "5 ans 152 jours"),
     (525_600 * 3 + 1440, "3 ans 1 jour"),
@@ -79,7 +80,9 @@ async def test_sans_cles_x_publication_enregistree_sans_tweet(tmp_path):
                                twitter_access_token="", twitter_access_secret="")
     with patch("backend.bot.AsyncSessionLocal", return_value=_Session(rows)), \
          patch("backend.bot.get_settings", return_value=settings), \
-         patch("backend.bot.tweepy.Client") as client:
+         patch("backend.bot.tweepy.Client") as client, \
+         patch("backend.bot.generer_carte_png", return_value=None), \
+         patch("backend.bot.generer_carousel_png", return_value=[]):
         await post_daily_recap(dossier=tmp_path)
 
     fichiers = list(tmp_path.iterdir())
@@ -95,7 +98,9 @@ async def test_aucun_incident_aucune_publication(tmp_path):
     settings = SimpleNamespace(smic_horaire=12.31, twitter_api_key="", twitter_api_secret="",
                                twitter_access_token="", twitter_access_secret="")
     with patch("backend.bot.AsyncSessionLocal", return_value=_Session([])), \
-         patch("backend.bot.get_settings", return_value=settings):
+         patch("backend.bot.get_settings", return_value=settings), \
+         patch("backend.bot.generer_carte_png", return_value=None), \
+         patch("backend.bot.generer_carousel_png", return_value=[]):
         await post_daily_recap(dossier=tmp_path)
     assert list(tmp_path.iterdir()) == []
 

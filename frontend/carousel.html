@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Carrousel Instagram — Compteur de retards IDF</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F7F4EF; --bg2:#EDEAE4; --border:#D4CFC7;
+    --ink:#000; --sub:#333; --muted:#555; --red:#C0392B;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:#888; color:var(--ink);
+    font-family:'Roboto',sans-serif; -webkit-font-smoothing:antialiased;
+  }
+  .slide{
+    width:1080px;height:1080px;background:var(--bg);
+    display:flex;flex-direction:column;position:relative;overflow:hidden;
+    page-break-after:always;
+  }
+
+  /* ── Header pleine largeur ── */
+  .slide-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:52px 60px 0;
+  }
+  .marque{display:flex;align-items:center;gap:18px}
+  .badge{border:3px solid var(--red);color:var(--red);font-weight:900;
+         font-size:24px;letter-spacing:.14em;padding:7px 14px}
+  .titre-h{font-size:32px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+  .date-h{font-size:26px;font-weight:500;color:var(--sub)}
+  .sep{margin:20px 60px 0;border:none;border-top:3px solid var(--ink)}
+  .date-h::first-letter{text-transform:uppercase}
+
+  /* ── Zone centrale ── */
+  .body{flex:1;display:flex;flex-direction:column;justify-content:center;
+        align-items:center;text-align:center;padding:0 70px}
+
+  /* ── Footer ── */
+  .foot{border-top:3px solid var(--ink);margin:0 60px;
+        padding:18px 0 40px;text-align:center}
+  .foot-url{font-size:32px;font-weight:900;color:var(--ink)}
+  .foot-src{font-size:19px;color:var(--muted)}
+
+  /* ═══ Slide 1 ═══ */
+  .s1-subtitle{font-size:42px;font-weight:500;color:var(--ink);line-height:1.3;
+               margin-bottom:28px}
+  .s1-euros{font-size:220px;font-weight:900;line-height:.85;color:var(--ink);
+            letter-spacing:-.04em}
+  .s1-soit{font-size:34px;font-weight:500;color:var(--ink);margin-top:40px}
+  .s1-duree{font-size:88px;font-weight:900;color:var(--red);margin-top:10px;line-height:1}
+  .s1-label{font-size:34px;font-weight:500;color:var(--ink);margin-top:10px}
+
+  /* ═══ Slide 2 ═══ */
+  .s2-euros{font-size:200px;font-weight:900;line-height:.85;color:var(--ink);
+            letter-spacing:-.04em}
+  .s2-label{font-size:42px;font-weight:400;color:var(--sub);margin-top:20px}
+  .s2-sep{width:140px;border:none;border-top:3px solid var(--ink);margin:40px auto}
+  .s2-soit{font-size:42px;font-weight:500;color:var(--ink);margin-bottom:20px}
+  .s2-equiv{font-size:120px;font-weight:900;color:var(--red);line-height:1}
+  .s2-who{font-size:42px;font-weight:500;color:var(--ink);margin-top:12px}
+
+  /* ═══ Slides 3 & 4 ═══ */
+  .s34-kicker{font-size:38px;font-weight:900;letter-spacing:.14em;
+              text-transform:uppercase;color:var(--muted);margin-bottom:36px}
+  .pastille{display:inline-flex;align-items:center;justify-content:center;
+            width:240px;height:110px;border-radius:16px;
+            font-size:50px;font-weight:900;color:#fff;margin-bottom:32px}
+  .s34-detail{font-size:48px;font-weight:500;color:var(--ink);line-height:1.4}
+  .s34-prevus{font-size:40px;font-weight:400;color:var(--sub);margin-top:4px}
+  .s34-ratio{font-size:86px;font-weight:900;color:var(--red);margin-top:36px;line-height:1.05}
+  .s34-band{display:none}
+
+  /* ═══ Slide 5 ═══ */
+  .s5-count{font-size:90px;font-weight:900;color:var(--ink);margin-bottom:48px}
+  .s5-q{font-size:60px;font-weight:400;color:var(--sub);margin-bottom:56px;line-height:1.25}
+  .s5-url{font-size:80px;font-weight:900;color:var(--red)}
+  .s5-bio{font-size:34px;font-weight:400;color:var(--muted);margin-top:16px}
+  .s5-band{display:none}
+</style>
+</head>
+<body>
+
+<!-- ═══ Slide 1 ═══ -->
+<div class="slide" id="slide-1">
+  <div class="slide-header">
+    <div class="marque"><span class="badge">IDF</span><span class="titre-h">Compteur de retards</span></div>
+    <div class="date-h date-auto"></div>
+  </div>
+  <hr class="sep">
+  <div class="body">
+    <div class="s1-subtitle">Aujourd'hui, les retards des RER<br>et Transiliens ont co&#251;t&#233;</div>
+    <div class="s1-euros" id="cout1">&mdash;</div>
+    <div class="s1-soit">soit</div>
+    <div class="s1-duree" id="s1-duree">&mdash;</div>
+    <div class="s1-label" id="s1-label">de vie perdus collectivement</div>
+  </div>
+  <div class="foot"><span class="foot-url">retards-idf.fr</span></div>
+</div>
+
+<!-- ═══ Slide 2 ═══ -->
+<div class="slide" id="slide-2">
+  <div class="slide-header">
+    <div class="marque"><span class="badge">IDF</span><span class="titre-h">Compteur de retards</span></div>
+    <div class="date-h date-auto"></div>
+  </div>
+  <hr class="sep">
+  <div class="body">
+    <div class="s2-euros" id="cout2">&mdash;</div>
+    <hr class="s2-sep">
+    <div class="s2-soit" id="s2-soit"></div>
+    <div class="s2-equiv" id="equiv-sal">&mdash;</div>
+  </div>
+  <div class="foot"><span class="foot-src">Salaire m&#233;dian infirmier : 2 863 &#8364;/mois brut &#183; talent.com</span></div>
+</div>
+
+<!-- ═══ Slide 3 ═══ -->
+<div class="slide" id="slide-3">
+  <div class="slide-header">
+    <div class="marque"><span class="badge">IDF</span><span class="titre-h">Compteur de retards</span></div>
+    <div class="date-h date-auto"></div>
+  </div>
+  <hr class="sep">
+  <div class="body">
+    <div class="s34-kicker">La ligne la plus touch&#233;e</div>
+    <div id="pastille-pire"></div>
+    <div class="s34-detail" id="detail-pire">&mdash;</div>
+    <div class="s34-prevus" id="prevus-pire"></div>
+    <div class="s34-ratio" id="ratio-pire"></div>
+  </div>
+  <div class="s34-band" id="band-pire"></div>
+  <div class="foot"><span class="foot-src">Donn&#233;es PRIM &#183; &#206;le-de-France Mobilit&#233;s</span></div>
+</div>
+
+<!-- ═══ Slide 4 ═══ -->
+<div class="slide" id="slide-4">
+  <div class="slide-header">
+    <div class="marque"><span class="badge">IDF</span><span class="titre-h">Compteur de retards</span></div>
+    <div class="date-h date-auto"></div>
+  </div>
+  <hr class="sep">
+  <div class="body">
+    <div class="s34-kicker">La ligne la moins touch&#233;e</div>
+    <div id="pastille-best"></div>
+    <div class="s34-detail" id="detail-best">&mdash;</div>
+    <div class="s34-prevus" id="prevus-best"></div>
+    <div class="s34-ratio" id="ratio-best"></div>
+  </div>
+  <div class="s34-band" id="band-best"></div>
+  <div class="foot"><span class="foot-src">Donn&#233;es PRIM &#183; &#206;le-de-France Mobilit&#233;s</span></div>
+</div>
+
+<!-- ═══ Slide 5 ═══ -->
+<div class="slide" id="slide-5">
+  <div class="slide-header">
+    <div class="marque"><span class="badge">IDF</span><span class="titre-h">Compteur de retards</span></div>
+    <div class="date-h date-auto"></div>
+  </div>
+  <hr class="sep">
+  <div class="body">
+    <div class="s5-count" id="cta-inc">&mdash;</div>
+    <div class="s5-q">Et toi, ta ligne nous a fait perdre combien aujourd'hui ?</div>
+    <div class="s5-url">retards-idf.fr</div>
+    <div class="s5-bio">(lien en bio)</div>
+  </div>
+  <div class="s5-band"><span>Donn&#233;es PRIM &#183; &#206;le-de-France Mobilit&#233;s</span></div>
+  <div class="foot"><span class="foot-url">@retardsidf</span></div>
+</div>
+
+<script src="/duree.js"></script>
+<script>
+const META = {
+  RER_A:['RER A','#E2231A','#fff'], RER_B:['RER B','#5191CF','#fff'],
+  RER_C:['RER C','#C8A800','#1a1a17'], RER_D:['RER D','#00814F','#fff'],
+  RER_E:['RER E','#B04191','#fff'],
+  TRANSILIEN_H:['H','#7B7B7B','#fff'], TRANSILIEN_J:['J','#D2B464','#1a1a17'],
+  TRANSILIEN_K:['K','#8C4B31','#fff'], TRANSILIEN_L:['L','#9F3E96','#fff'],
+  TRANSILIEN_N:['N','#333333','#fff'], TRANSILIEN_P:['P','#E87722','#fff'],
+  TRANSILIEN_R:['R','#228B22','#fff'], TRANSILIEN_U:['U','#7B0F1F','#fff'],
+};
+const SALAIRE_MENSUEL = 2862.50;
+const nb = v => v.toLocaleString('fr-FR').replace(/ | /g, '\u202f');
+
+function pastilleHTML(id) {
+  const [nom, bg, fg] = META[id] || [id, '#555', '#fff'];
+  return `<div class="pastille" style="background:${bg};color:${fg}">${nom}</div>`;
+}
+function ratioTexte(p, t) {
+  if (!t || p <= 0) return '';
+  const r = Math.round(t / p);
+  return r <= 1 ? '1 train sur 1 perturb\u00e9' : `1 train sur ${r} perturb\u00e9`;
+}
+function pl(v, s, p) { return v >= 2 ? p : s; }
+
+function fillLine(prefix, l) {
+  document.getElementById('pastille-' + prefix).innerHTML = pastilleHTML(l.line_id);
+  document.getElementById('detail-' + prefix).textContent =
+    `${l.nb_cancelled} ${pl(l.nb_cancelled, 'supprim\u00e9', 'supprim\u00e9s')}, ${l.nb_rt_delays} en retard`;
+  document.getElementById('prevus-' + prefix).textContent =
+    l.prevus ? `sur ${nb(l.prevus)} trains pr\u00e9vus` : '';
+  document.getElementById('ratio-' + prefix).textContent =
+    l.prevus ? '\u2192 ' + ratioTexte(l.perturbes, l.prevus) : '';
+  const [nom] = META[l.line_id] || [l.line_id];
+  document.getElementById('band-' + prefix).textContent =
+    `${nom} : ${nb(l.minutes_voyageurs)} minutes-voyageurs perdues aujourd\u2019hui`;
+}
+
+(async () => {
+  const today = await (await fetch('/api/stats/today')).json();
+  const lines = await (await fetch('/api/stats/today/lines')).json();
+
+  // — Slide 1 —
+  const dateStr = new Date(today.date + 'T12:00:00').toLocaleDateString('fr-FR',
+      {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  document.querySelectorAll('.date-auto').forEach(el => el.textContent = dateStr);
+  document.getElementById('cout1').textContent = nb(today.cout_eur) + ' \u20ac';
+  const mv = today.total_minutes_voyageurs;
+  document.getElementById('s1-duree').textContent = formatDuree(mv);
+  document.getElementById('s1-label').textContent = 'de vie ' + accordPerdu(mv) + ' collectivement';
+
+  // — Slide 2 : arrondi en dessous (floor) —
+  document.getElementById('cout2').textContent = nb(today.cout_eur) + ' \u20ac';
+  const nbInf = Math.floor(today.cout_eur / SALAIRE_MENSUEL);
+  document.getElementById('s2-soit').textContent =
+    'Soit l\u2019\u00e9quivalent du salaire de';
+  document.getElementById('equiv-sal').textContent =
+    nbInf + ' infirmier\u00b7e' + (nbInf >= 2 ? '\u00b7s' : '');
+
+  // — Slides 3 & 4 —
+  const ranked = lines
+    .map(l => {
+      const perturbes = (l.nb_cancelled || 0) + (l.nb_rt_delays || 0);
+      return { ...l, perturbes, prevus: l.trains_prevus,
+               ratio: l.trains_prevus ? perturbes / l.trains_prevus : perturbes };
+    })
+    .filter(l => l.perturbes > 0)
+    .sort((a, b) => b.ratio - a.ratio);
+
+  if (ranked.length) {
+    fillLine('pire', ranked[0]);
+    fillLine('best', ranked[ranked.length - 1]);
+  }
+
+  // — Slide 5 —
+  document.getElementById('cta-inc').textContent =
+    nb(today.total_incidents) + ' incidents aujourd\u2019hui.';
+
+  await document.fonts.ready;
+  document.body.dataset.pret = '1';
+})();
+</script>
+</body>
+</html>

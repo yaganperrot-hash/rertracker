@@ -70,6 +70,36 @@ async def stats_today(db: DbDep):
     return await get_today_stats(db)
 
 
+@router.get("/stats/today/lines")
+async def stats_today_lines(db: DbDep):
+    """Métriques du jour par ligne + trains prévus (offre théorique GTFS)."""
+    from backend.profils import categorie_jour
+
+    aujourdhui = datetime.now(timezone.utc).date()
+    stmt = (
+        select(DailyMetric)
+        .where(DailyMetric.date == aujourdhui)
+        .order_by(DailyMetric.minutes_voyageurs.desc())
+    )
+    rows = (await db.execute(stmt)).scalars().all()
+
+    cat = categorie_jour(aujourdhui)
+    trains_jour = OFFRE.get("trains_jour", {})
+
+    result = []
+    for r in rows:
+        tp = trains_jour.get(r.line_id, {}).get(cat)
+        result.append({
+            "line_id": r.line_id,
+            "nb_rt_delays": r.nb_rt_delays,
+            "nb_cancelled": r.nb_cancelled,
+            "nb_incidents": r.nb_incidents,
+            "minutes_voyageurs": r.minutes_voyageurs,
+            "trains_prevus": round(tp) if tp is not None else None,
+        })
+    return result
+
+
 @router.get("/stats/line/{line_id}")
 async def stats_line(line_id: str, db: DbDep, period: int = Query(default=30, ge=1, le=366)):
     return await get_line_stats(line_id, period, db)

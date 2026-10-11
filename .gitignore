@@ -52,6 +52,9 @@ frontend/data/
 *.bak
 *.tmp
 
+# Carrousel Instagram (généré par bot.py)
+output/
+
 # Claude Code local settings
 .claude/settings.local.json
 logs/*.out
