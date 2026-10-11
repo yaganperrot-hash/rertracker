@@ -34,25 +34,26 @@
 
     /* ── Hero ── */
     .hero {
-      padding: 56px 32px 24px;
+      position: relative;
+      padding: 26px 32px 18px;
       text-align: center;
-      border-bottom: 1px solid var(--border);
     }
     .hero-date {
-      font-weight: 500;
-      font-size: 13px;
-      letter-spacing: 1px;
+      font-weight: 400;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
       color: var(--sub);
-      margin-bottom: 4px;
+      margin-bottom: 2px;
       padding-right: 48px;
-      padding-left: 48px;
     }
     .hero-time {
       font-weight: 400;
-      font-size: 12px;
-      letter-spacing: 1px;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
       color: var(--muted);
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
     .hero-subtitle {
       font-weight: 500;
@@ -68,27 +69,42 @@
       line-height: .88;
       color: var(--ink);
     }
-    .hero-equiv {
-      margin-top: 18px;
-      line-height: 1.2;
+
+    /* ── Cumul ── */
+    .cumul {
+      text-align: center;
+      padding: 0 32px 18px;
+      border-bottom: 1px solid var(--border);
     }
-    .hero-soit {
+    .cumul-inner {
+      display: inline-block;
+      border-top: 1px solid var(--border);
+      padding-top: 11px;
+      min-width: min(420px, 100%);
+    }
+    .cumul-soit {
       font-weight: 500;
-      font-size: clamp(14px, 2vw, 18px);
+      font-size: 12px;
       color: var(--ink);
+      margin-bottom: 6px;
     }
-    .hero-equiv span#hero-equiv {
+    .cumul-value {
       font-weight: 700;
       font-size: clamp(24px, 4vw, 35px);
+      line-height: 1.05;
       color: var(--red);
     }
-    .hero-base {
+    .cumul-label {
+      font-weight: 500;
+      font-size: 12px;
+      color: var(--ink);
+      margin-top: 5px;
+    }
+    .cumul-note {
       font-weight: 400;
-      font-size: 11px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-top: 8px;
+      font-size: 10px;
+      color: var(--sub);
+      margin-top: 5px;
     }
 
     /* ── Footer ── */
@@ -115,7 +131,9 @@
     .footer-right a:hover { color: var(--ink); }
 
     @media (max-width: 768px) {
-      .hero { padding: 32px 16px 20px; }
+      .hero { padding: 22px 16px 16px; }
+      .cumul { padding: 0 16px 18px; }
+      .cumul-value { font-size: 22px; }
       footer { padding: 14px 16px; flex-direction: column; align-items: flex-start; }
       .footer-right a:first-child { margin-left: 0; }
     }
@@ -139,8 +157,16 @@
   <div class="hero-time" id="hero-time">&nbsp;</div>
   <div class="hero-subtitle">Aujourd'hui, les retards des RER et Transiliens ont coûté</div>
   <div class="hero-counter" id="hero-eur">— €</div>
-  <div class="hero-equiv"><span class="hero-soit">soit </span><span id="hero-equiv"></span></div>
-  <div class="hero-base">base SMIC 12,31 €/h</div>
+</section>
+
+<!-- Cumul du jour -->
+<section class="cumul">
+  <div class="cumul-inner">
+    <div class="cumul-soit">soit</div>
+    <div class="cumul-value" id="cumul-value">—</div>
+    <div class="cumul-label" id="cumul-label">de vie perdus collectivement</div>
+    <div class="cumul-note" id="cumul-note">base SMIC — €/h · ≈ — salaires journaliers</div>
+  </div>
 </section>
 
 <!-- Et toi, ta ligne ? -->
@@ -181,16 +207,24 @@
 </script>
 <script src="pick.js"></script>
 <script>
+  var HEURES_JOUR = 7;
+
+  function renderCumul(mv, cout, smic) {
+    document.getElementById('cumul-value').textContent = formatDuree(mv);
+    document.getElementById('cumul-label').textContent = 'de vie ' + accordPerdu(mv) + ' collectivement';
+    document.getElementById('cumul-note').textContent =
+      'base SMIC ' + smic.toLocaleString('fr-FR') + ' €/h · ≈ ' +
+      fmt(Math.floor(cout / (smic * HEURES_JOUR))) + ' salaires journaliers';
+  }
+
   async function fetchToday() {
     try {
       const res = await fetch('/api/stats/today');
       if (!res.ok) return;
       const stats = await res.json();
       const cout = stats.cout_eur || 0;
-      const mv = stats.total_minutes_voyageurs || 0;
       document.getElementById('hero-eur').textContent = fmt(cout) + ' €';
-      document.getElementById('hero-equiv').textContent =
-        formatDuree(mv) + ' de vie ' + accordPerdu(mv) + ' collectivement';
+      renderCumul(stats.total_minutes_voyageurs || 0, cout, stats.smic_horaire);
     } catch (_) {}
   }
   fetchToday();
