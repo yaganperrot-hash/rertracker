@@ -1,8 +1,9 @@
 """
-bot.py — Récap quotidien à 20h00 : bilan du jour même (incidents, minutes-voyageurs, coût).
-Toujours enregistré dans publications/AAAA-MM-JJ.txt ; posté aussi sur X (Twitter) si les clés
-sont configurées.
+bot.py — Récap quotidien à 19h30 : bilan du jour même (incidents, minutes-voyageurs, coût).
+Toujours enregistré dans publications/AAAA-MM-JJ.txt + .png ; posté aussi sur X (Twitter)
+si les clés sont configurées.
 """
+import asyncio
 import logging
 import os
 from datetime import date, datetime
@@ -103,6 +104,33 @@ def enregistrer_publication(texte: str, jour: date, dossier: Path = DOSSIER_PUBL
     return chemin
 
 
+async def generer_carte_png(jour: date, dossier: Path = DOSSIER_PUBLICATIONS) -> Path | None:
+    """Ouvre carte.html dans Chromium headless, attend le rendu, screenshot 1080x1080 → PNG."""
+    from playwright.async_api import async_playwright
+
+    dossier.mkdir(parents=True, exist_ok=True)
+    chemin_png = dossier / f"{jour.isoformat()}.png"
+
+    try:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch()
+            page = await browser.new_page(viewport={"width": 1080, "height": 1080})
+            await page.goto("http://localhost:8000/carte.html", wait_until="networkidle")
+            # Attendre que carte.html signale la fin du rendu
+            await page.wait_for_function(
+                "document.body.dataset.pret === '1'",
+                timeout=15_000,
+            )
+            await page.screenshot(path=str(chemin_png), type="png")
+            await browser.close()
+
+        logger.info("Carte PNG générée : %s", chemin_png)
+        return chemin_png
+    except Exception:
+        logger.exception("Erreur lors de la génération de la carte PNG")
+        return None
+
+
 async def post_daily_recap(dossier: Path = DOSSIER_PUBLICATIONS) -> None:
     """Récap quotidien, planifié à 19h30 par le scheduler dans main.py.
 
@@ -134,6 +162,11 @@ async def post_daily_recap(dossier: Path = DOSSIER_PUBLICATIONS) -> None:
     tweet_text = _compose_tweet(total_inc, total_mv, lignes, aujourdhui, euros=euros)
     chemin = enregistrer_publication(tweet_text, aujourdhui, dossier)
     logger.info("Publication du jour enregistrée : %s\n%s", chemin, tweet_text)
+
+    # Générer la carte PNG (screenshot de carte.html)
+    chemin_png = await generer_carte_png(aujourdhui, dossier)
+    if chemin_png:
+        logger.info("Carte PNG du jour : %s", chemin_png)
 
     if not all([
         settings.twitter_api_key,
