@@ -157,6 +157,15 @@
 - Ne pas coder avant d'avoir compris ce que l'utilisateur veut : "qui des détails ?" n'était pas "trier par",
   c'était "panneau détaillé avec répartitions et causes".
 
+## Carrousel Instagram / Carte X (2026-10-11)
+- Ne jamais ajouter ou modifier du contenu que l'utilisateur n'a pas demandé : appliquer uniquement les
+  changements demandés, rien de plus. Chaque itération de DA doit être minimale.
+- DA du site : montant en **noir** (`--ink`), durées en **rouge** (`--red`), labels/kickers en `--muted`,
+  sous-texte en `--sub`. Le rouge est réservé aux chiffres d'impact (durée, ratio, salaire), pas au montant.
+- Playwright screenshot d'éléments individuels (`.slide`) : le viewport doit être assez large pour contenir
+  tous les éléments empilés, sinon les slides du bas sont coupées.
+- Un chiffre affiché sans unité est ambigu : toujours ajouter € ou min-voy. à côté des valeurs dans les barres.
+
 ## Exploitation
 - **Ne jamais tuber un script long dans `head`** : la fermeture du tube envoie un SIGPIPE et tue le
   script avant qu'il écrive son fichier de sortie. Rediriger vers un log puis `tail`, et vérifier le

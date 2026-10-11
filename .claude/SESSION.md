@@ -3,30 +3,29 @@
 ## 2026-10-11 — Windows (historique : `.claude/archive/`)
 
 ### Objectif
-Maintenance des données statiques (GTFS, offre, fréquentation) et filtrage des statistiques par période.
+Carrousel Instagram (5 slides PNG) + corrections carte X + fix durée.
 
 ### Avancement
-- **Horaires GTFS reconstruits** : fenêtre 08/10 → 09/11, 13 lignes, warning « périmés » résolu.
-- **Offre + fréquentation + recalcul** : `offre build`, `frequentation build`, `recalcul` sur 171 jours.
-- **Tranches de retard et causes filtrées par période** :
-  - `bilans.py` : `perturbations_par_ligne` et `retards_par_ligne` portent désormais la date
-    de chaque incident — `construire_hall_of_shame` calcule `causes` et `tranches_retard`
-    par période (semaine/mois/année) pour chaque ligne et au niveau réseau.
-    Nouvelle fonction utilitaire `_tranches_from_durees()`.
-  - `statistiques.html` : `renderTranchesRetard()`, `renderCauses()` et `renderCausesReseau()`
-    lisent `periodeActuelle` pour afficher les données de la bonne période.
-- **Tests** : 28/28 OK (nouveau : `test_tranches_et_causes_filtrees_par_periode`).
-
-### Limites connues
-- Les **causes** ne sont disponibles que pour les perturbations (flux Navitia). Les retards et suppressions
-  (flux SIRI realtime) n'ont pas de motif dans PRIM — seule la durée est exploitable.
+- **Carrousel Instagram** : `frontend/carousel.html` — 5 slides 1080×1080 (coût du jour, équivalent
+  salaire infirmier mensuel arrondi en dessous, pire/meilleure ligne par ratio, CTA).
+  Génération PNG via Playwright : `backend/bot.py:generer_carousel_png()` → `output/AAAA-MM-JJ/slide-N.png`.
+  Appelée dans `post_daily_recap()` après la carte.
+- **Endpoint `/api/stats/today/lines`** : métriques du jour par ligne + `trains_prevus` (GTFS + catégorie jour).
+- **Fix durée** : jours ≥ 7 → omettre les heures (`duree.js` + `bot.py:_fmt_duree()`).
+- **Fix carte X** (`carte.html`) :
+  - Hero centré, montant en noir (pas rouge), durée en rouge.
+  - Bandeau noir viré → "soit X jours de vie perdus collectivement" en rouge.
+  - Chiffres des barres en euros (pas en minutes-voyageurs).
+- **TODO.md** : bug partager noté. `.gitignore` : `output/` ajouté.
+- **Tests** : 328/328 OK.
 
 ### Blocages
 - **Clé PRIM à régénérer** (inchangé).
 
 ### Prochaine étape
 1. Régénérer la clé PRIM.
-2. Vérifier visuellement le rendu des statistiques filtrées par période.
+2. Publication automatique Instagram (API Graph) si pertinent.
+3. Investiguer le bug du bouton partager.
 
 ### Serveur
-- Aucun serveur ne tourne sur ce PC.
+- Serveur lancé sur ce PC (uvicorn, port 8000) — à arrêter si changement de poste.

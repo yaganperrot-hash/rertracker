@@ -925,3 +925,30 @@ serveur Mac lancé détaché le 30/09 (`nohup … & disown`). Le quota au premie
 **Cause** : probable timeout (exception sans message) sur le flux de ~50 Mo — non confirmé.
 **Fix** : aucun ; un seul relevé perdu sur la journée. Piste : logguer `repr(exc)` pour avoir le type d'exception.
 **Status** : 🔄 À surveiller
+
+---
+
+## Bugs résolus — Session 2026-10-11
+
+### [2026-10-11] Durée affiche heures résiduelles pour les grands nombres
+**Fichier(s)** : `frontend/duree.js`, `backend/bot.py`
+**Symptôme** : "108 jours 10 h" affiché au lieu de "108 jours"
+**Cause** : pas de seuil pour omettre les heures quand le nombre de jours est grand
+**Fix** : condition `j < 7` ajoutée — jours >= 7 → omettre les heures
+**Status** : ✅ Résolu
+
+### [2026-10-11] Carte X — montant en rouge, bandeau noir, chiffres sans unité
+**Fichier(s)** : `frontend/carte.html`
+**Symptôme** : DA non respectée — montant rouge au lieu de noir, bandeau noir, chiffres des barres en min-voy sans unité
+**Cause** : code initial non aligné sur la DA du site
+**Fix** : montant en noir, bandeau noir remplacé par "soit X jours" en rouge, barres en euros
+**Status** : ✅ Résolu
+
+## Bugs ouverts — Session 2026-10-11
+
+### [2026-10-11] Bouton partager ne fonctionne pas
+**Fichier(s)** : pick panel (à investiguer)
+**Symptôme** : le bouton Share dans le pick panel ne fait rien
+**Cause** : inconnue
+**Fix** : aucun
+**Status** : 🔄 À investiguer
