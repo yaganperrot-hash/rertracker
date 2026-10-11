@@ -178,9 +178,6 @@
     html += '    <div class="pp-name" id="pp-name"></div>';
     html += '    <div class="pp-status" id="pp-status"></div>';
     html += '  </div>';
-    html += '  <div class="pp-label">Un usager retard\u00E9 a perdu en moyenne</div>';
-    html += '  <div class="pp-amount"><span id="pp-eur"></span><span class="pp-unit">\u20AC <span id="pp-scope"></span></span></div>';
-    html += '  <div class="pp-time">soit <b id="pp-min"></b> minutes de vie \u00B7 au SMIC brut</div>';
     html += '  <div class="pp-line-stats">';
     // Mêmes voyageurs, même période : le coût est le temps perdu valorisé au SMIC
     html += '    <div class="pp-period" id="pp-period"></div>';
@@ -211,9 +208,6 @@
     const ppRound = container.querySelector('#pp-round');
     const ppName = container.querySelector('#pp-name');
     const ppStatus = container.querySelector('#pp-status');
-    const ppEur = container.querySelector('#pp-eur');
-    const ppScope = container.querySelector('#pp-scope');
-    const ppMin = container.querySelector('#pp-min');
     const ppRank = container.querySelector('#pp-rank');
     const ppShare = container.querySelector('#pp-share');
     const ppPageLink = container.querySelector('#pp-page-link');
@@ -281,12 +275,6 @@
       const days = periodDays(currentPeriod);
       const data = await loadLineStats(currentLine, days);
 
-      const user = perUser(data);
-
-      ppEur.textContent = fmtEur(user.cout);
-      ppScope.textContent = PERIOD_LABEL[currentPeriod];
-      ppMin.textContent = fmtMin(user.minutes);
-
       // Stats réseau de la ligne
       ppPeriod.textContent = data ? periodCaption(currentPeriod, data) : '';
       ppStatDuree.textContent = data ? formatDuree(data.total_minutes_voyageurs || 0, true) : '—';
@@ -335,7 +323,6 @@
       const days = periodDays(currentPeriod);
       await loadReference();
       const data = await loadLineStats(currentLine, days);
-      const user = perUser(data);
 
       const W = 1080, H = 1080;
       const canvas = document.createElement('canvas');
@@ -363,24 +350,25 @@
       ctx.font = '700 36px Roboto, sans-serif';
       ctx.fillText(meta.name, cx, cy + 140);
 
-      // Label
+      // Temps perdu
+      ctx.fillStyle = '#000';
+      ctx.font = '900 72px Roboto, sans-serif';
+      ctx.fillText(data ? formatDuree(data.total_minutes_voyageurs || 0, true) : '\u2014', cx, cy + 260);
+
       ctx.fillStyle = '#555';
       ctx.font = '400 28px Roboto, sans-serif';
-      ctx.fillText('Un usager retard\u00E9 a perdu en moyenne', cx, cy + 220);
+      ctx.fillText('de temps perdu par les voyageurs', cx, cy + 310);
 
-      // Montant
+      // Coût SMIC + incidents
       ctx.fillStyle = '#000';
-      ctx.font = '900 96px Roboto, sans-serif';
-      ctx.fillText(fmtEur(user.cout) + ' \u20AC', cx, cy + 340);
-
-      // Temps
-      ctx.fillStyle = '#555';
-      ctx.font = '500 32px Roboto, sans-serif';
-      ctx.fillText('soit ' + fmtMin(user.minutes) + ' minutes de vie', cx, cy + 400);
+      ctx.font = '700 36px Roboto, sans-serif';
+      ctx.fillText((data ? (data.total_cout_eur || 0).toLocaleString('fr-FR') : '\u2014') + ' \u20AC au SMIC', cx, cy + 390);
+      ctx.fillText((data ? (data.total_incidents || 0).toLocaleString('fr-FR') : '\u2014') + ' trains en retard ou supprim\u00E9s', cx, cy + 440);
 
       // Période
+      ctx.fillStyle = '#555';
       ctx.font = '500 26px Roboto, sans-serif';
-      ctx.fillText(PERIOD_LABEL[currentPeriod] + ' \u00B7 au SMIC brut', cx, cy + 460);
+      ctx.fillText(PERIOD_LABEL[currentPeriod], cx, cy + 500);
 
       // URL filigrane
       ctx.fillStyle = 'rgba(0,0,0,0.12)';
@@ -398,7 +386,7 @@
         if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
           navigator.share({
             title: meta.name + ' \u2014 RETARDS IDF',
-            text: 'Un usager retard\u00E9 du ' + meta.name + ' a perdu en moyenne ' + fmtEur(user.cout) + ' \u20AC ' + PERIOD_LABEL[currentPeriod],
+            text: meta.name + ' ' + PERIOD_LABEL[currentPeriod] + ' : ' + (data ? formatDuree(data.total_minutes_voyageurs || 0, true) : '\u2014') + ' de temps perdu, ' + (data ? (data.total_cout_eur || 0).toLocaleString('fr-FR') : '\u2014') + ' \u20AC',
             files: [file],
           }).catch(() => {});
         } else {
