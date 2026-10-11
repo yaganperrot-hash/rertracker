@@ -140,8 +140,8 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(
         post_daily_recap,
         "cron",
-        hour=20,
-        minute=0,
+        hour=19,
+        minute=30,
         id="daily_tweet",
         # Au-delà d'1 h de retard, on saute : le bilan porterait sur le mauvais jour
         misfire_grace_time=3600,

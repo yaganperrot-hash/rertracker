@@ -104,7 +104,7 @@ def enregistrer_publication(texte: str, jour: date, dossier: Path = DOSSIER_PUBL
 
 
 async def post_daily_recap(dossier: Path = DOSSIER_PUBLICATIONS) -> None:
-    """Récap quotidien, planifié à 20h00 par le scheduler dans main.py.
+    """Récap quotidien, planifié à 19h30 par le scheduler dans main.py.
 
     Toujours enregistré dans le projet (publications/) ; posté en plus sur X quand les
     clés sont configurées.
