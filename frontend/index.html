@@ -39,14 +39,20 @@
       border-bottom: 1px solid var(--border);
     }
     .hero-date {
-      font-weight: 400;
-      font-size: 11px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
+      font-weight: 500;
+      font-size: 13px;
+      letter-spacing: 1px;
       color: var(--sub);
-      margin-bottom: 16px;
+      margin-bottom: 4px;
       padding-right: 48px;
       padding-left: 48px;
+    }
+    .hero-time {
+      font-weight: 400;
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 16px;
     }
     .hero-subtitle {
       font-weight: 500;
@@ -63,11 +69,18 @@
       color: var(--ink);
     }
     .hero-equiv {
+      margin-top: 18px;
+      line-height: 1.2;
+    }
+    .hero-soit {
+      font-weight: 500;
+      font-size: clamp(14px, 2vw, 18px);
+      color: var(--ink);
+    }
+    .hero-equiv span#hero-equiv {
       font-weight: 700;
       font-size: clamp(24px, 4vw, 35px);
       color: var(--red);
-      margin-top: 18px;
-      line-height: 1.05;
     }
     .hero-base {
       font-weight: 400;
@@ -123,9 +136,10 @@
 <!-- Hero — coût du jour -->
 <section class="hero">
   <div class="hero-date" id="hero-date">&nbsp;</div>
+  <div class="hero-time" id="hero-time">&nbsp;</div>
   <div class="hero-subtitle">Aujourd'hui, les retards des RER et Transiliens ont coûté</div>
   <div class="hero-counter" id="hero-eur">— €</div>
-  <div class="hero-equiv" id="hero-equiv">&nbsp;</div>
+  <div class="hero-equiv"><span class="hero-soit">soit </span><span id="hero-equiv"></span></div>
   <div class="hero-base">base SMIC 12,31 €/h</div>
 </section>
 
@@ -176,7 +190,7 @@
       const mv = stats.total_minutes_voyageurs || 0;
       document.getElementById('hero-eur').textContent = fmt(cout) + ' €';
       document.getElementById('hero-equiv').textContent =
-        'soit ' + formatDuree(mv) + ' de vie ' + accordPerdu(mv) + ' collectivement';
+        formatDuree(mv) + ' de vie ' + accordPerdu(mv) + ' collectivement';
     } catch (_) {}
   }
   fetchToday();
@@ -185,13 +199,14 @@
   /* ── Date/heure ── */
   function updateDate() {
     const now = new Date();
-    const jours = ['DIMANCHE','LUNDI','MARDI','MERCREDI','JEUDI','VENDREDI','SAMEDI'];
-    const mois  = ['JANVIER','FÉVRIER','MARS','AVRIL','MAI','JUIN',
-                   'JUILLET','AOÛT','SEPTEMBRE','OCTOBRE','NOVEMBRE','DÉCEMBRE'];
+    const jours = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+    const mois  = ['janvier','février','mars','avril','mai','juin',
+                   'juillet','août','septembre','octobre','novembre','décembre'];
     document.getElementById('hero-date').textContent =
       jours[now.getDay()] + ' ' + now.getDate() + ' ' + mois[now.getMonth()] + ' ' +
-      now.getFullYear() + '  ·  MÀJ ' +
-      String(now.getHours()).padStart(2, '0') + 'H' +
+      now.getFullYear();
+    document.getElementById('hero-time').textContent =
+      String(now.getHours()).padStart(2, '0') + 'h' +
       String(now.getMinutes()).padStart(2, '0');
   }
   updateDate();

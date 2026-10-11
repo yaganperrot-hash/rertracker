@@ -151,7 +151,6 @@
     let html = '';
     if (opts.showTitle) {
       html += '<h2 class="pick-title">Et toi, ta ligne t\'a co\u00FBt\u00E9 combien aujourd\u2019hui\u00A0?</h2>';
-      html += '<div class="pick-sub">Un tap. Le jour reste \u00E0 port\u00E9e de clic.</div>';
     }
 
     // Réseaux avec au moins une ligne
@@ -238,6 +237,15 @@
       // Aligner l'onglet sur le réseau de la ligne
       const net = reseau(lineId);
       if (net !== currentTab) switchTab(net);
+
+      // Déplacer le panneau juste après le groupe de la ligne cliquée
+      const dot = container.querySelector('.pick-dot[data-id="' + lineId + '"]');
+      if (dot) {
+        const group = dot.closest('.pick-group');
+        if (group && group.nextElementSibling !== panel) {
+          group.after(panel);
+        }
+      }
 
       // Mettre à jour l'en-tête du panneau
       ppRound.textContent = meta.short;
