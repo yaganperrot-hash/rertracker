@@ -31,15 +31,13 @@
   .hero{padding:52px 0 40px;text-align:center}
   .kicker{font-size:23px;font-weight:500;letter-spacing:.1em;
           text-transform:uppercase;color:var(--muted)}
-  .montant{font-size:172px;font-weight:900;line-height:.92;color:var(--red);
+  .montant{font-size:172px;font-weight:900;line-height:.92;color:var(--ink);
            letter-spacing:-.035em;margin:14px 0 16px}
   .legende{font-size:30px;font-weight:300;color:var(--sub)}
 
-  /* — Bandeau minutes — */
-  .bandeau{background:var(--ink);color:var(--bg);padding:24px 30px;
-           display:flex;align-items:baseline;gap:16px}
-  .bandeau .gros{font-size:44px;font-weight:900;letter-spacing:-.02em}
-  .bandeau .txt{font-size:23px;font-weight:300}
+  /* — Sous-hero — */
+  .sous-hero{padding:0 0 10px;text-align:center}
+  .sous-hero .duree{font-size:28px;font-weight:500;color:var(--red)}
 
   /* — Classement — */
   .classement{flex:1;padding-top:38px}
@@ -51,7 +49,7 @@
             font-size:21px;font-weight:900;color:#fff}
   .jauge{flex:1;height:22px;background:var(--bg2);border-radius:3px;overflow:hidden}
   .jauge span{display:block;height:100%;border-radius:3px}
-  .val{width:172px;text-align:right;font-size:27px;font-weight:700;
+  .val{width:200px;text-align:right;font-size:27px;font-weight:700;
        font-variant-numeric:tabular-nums}
 
   /* — Pied — */
@@ -78,9 +76,8 @@
     <div class="legende">aux voyageurs d'Île-de-France</div>
   </div>
 
-  <div class="bandeau">
-    <span class="gros" id="mv">—</span>
-    <span class="txt" id="mvtxt">minutes-voyageurs perdues</span>
+  <div class="sous-hero">
+    <span class="duree" id="duree-txt">—</span>
   </div>
 
   <div class="classement">
@@ -114,30 +111,31 @@ const nb = v => v.toLocaleString('fr-FR').replace(/ | /g, ' ');
     new Date(today.date + 'T12:00:00').toLocaleDateString('fr-FR',
       {weekday:'long', day:'numeric', month:'long', year:'numeric'});
   document.getElementById('montant').textContent = nb(today.cout_eur) + ' €';
-  document.getElementById('mv').textContent = nb(today.total_minutes_voyageurs);
-  document.getElementById('mvtxt').textContent =
-    'minutes-voyageurs perdues' +
-    ' — soit ' + formatDuree(today.total_minutes_voyageurs);
+  document.getElementById('duree-txt').textContent =
+    'soit ' + formatDuree(today.total_minutes_voyageurs) +
+    ' de vie ' + accordPerdu(today.total_minutes_voyageurs) + ' collectivement';
   document.getElementById('inc').textContent = nb(today.total_incidents);
   document.getElementById('nbl').textContent = today.nb_lignes_perturbees;
 
-  // Minutes-voyageurs du jour, ligne par ligne
+  // Coût en euros du jour, ligne par ligne (mv × SMIC/60)
+  const SMIC = 12.31;
   const stats = await Promise.all(today.lignes_perturbees.map(async id => {
     const d = await (await fetch('/api/stats/line/' + id)).json();
     const jour = (d.daily || []).find(x => x.date === today.date);
-    return {id, mv: jour ? jour.minutes_voyageurs : 0};
+    const mv = jour ? jour.minutes_voyageurs : 0;
+    return {id, cout: Math.round(mv * SMIC / 60)};
   }));
 
-  const top = stats.sort((a,b) => b.mv - a.mv).slice(0, 5);
-  const max = top.length ? top[0].mv : 1;
+  const top = stats.sort((a,b) => b.cout - a.cout).slice(0, 5);
+  const max = top.length ? top[0].cout : 1;
 
   document.getElementById('lignes').innerHTML = top.map(l => {
     const [nom, bg, fg] = META[l.id] || [l.id, '#555', '#fff'];
-    const pct = max ? Math.max(2, Math.round(l.mv / max * 100)) : 0;
+    const pct = max ? Math.max(2, Math.round(l.cout / max * 100)) : 0;
     return `<div class="ligne">
       <div class="pastille" style="background:${bg};color:${fg}">${nom}</div>
       <div class="jauge"><span style="width:${pct}%;background:${bg}"></span></div>
-      <div class="val">${nb(l.mv)}</div>
+      <div class="val">${nb(l.cout)} \u20ac</div>
     </div>`;
   }).join('');
 
