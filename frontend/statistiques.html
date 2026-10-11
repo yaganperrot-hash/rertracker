@@ -290,22 +290,14 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
   <span class="ticker-track" id="ticker-track">Chargement des données en cours…</span>
 </div>
 
-<nav>
-  <a href="/" class="nav-logo">
-    <span class="logo-retards">RETARDS </span><span class="logo-idf">IDF</span>
-  </a>
-  <ul class="nav-links">
-    <li><a href="/">Aujourd'hui</a></li>
-    <li><a href="/temps-reel">Temps réel</a></li>
-    <li><a href="/statistiques" class="active" aria-current="page">Statistiques</a></li>
-    <li><a href="/mon-trajet">Mon trajet</a></li>
-    <li><a href="/methode.html">Méthode</a></li>
-  </ul>
-  <div class="nav-live">
-    <span class="live-dot"></span>
-    LIVE
-  </div>
-</nav>
+<button class="nav-burger" id="nav-burger" aria-label="Menu">&#9776;</button>
+<ul class="nav-menu" id="nav-menu">
+  <li><a href="/">Aujourd'hui</a></li>
+  <li><a href="/temps-reel">Temps réel</a></li>
+  <li><a href="/statistiques" class="active" aria-current="page">Statistiques</a></li>
+  <li><a href="/mon-trajet">Mon trajet</a></li>
+  <li><a href="/methode.html">Méthode</a></li>
+</ul>
 
 <div class="page">
 
@@ -947,6 +939,19 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
   Ticker.charger();
   setInterval(Ticker.charger, 300000);
 
+})();
+</script>
+<script>
+(function() {
+  var btn = document.getElementById('nav-burger');
+  var menu = document.getElementById('nav-menu');
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    menu.classList.toggle('open');
+  });
+  document.addEventListener('click', function(e) {
+    if (!menu.contains(e.target)) menu.classList.remove('open');
+  });
 })();
 </script>
 </body>

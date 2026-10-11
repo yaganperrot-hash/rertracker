@@ -1,86 +1,47 @@
-/* ── Menu de navigation commun aux 4 pages ─────────────────
-   Celui de l'accueil. Couleurs fixes : le menu est identique partout,
-   seul le fond suit la page (--nav-bg).                           */
-nav {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: var(--nav-bg, #F7F4EF);
-  border-bottom: 2px solid #000;
-  padding: 14px 32px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  font-family: 'Roboto', -apple-system, sans-serif;
-  line-height: 1.4;
+/* ── Menu hamburger — commun à toutes les pages ────────────── */
+.nav-burger {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  z-index: 200;
+  background: none;
+  border: 2px solid #000;
+  border-radius: 4px;
+  padding: 6px 9px;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  color: #000;
+  font-family: 'Roboto', sans-serif;
 }
-.nav-logo {
-  font-weight: 900;
-  font-size: 18px;
-  letter-spacing: 5px;
-  text-transform: uppercase;
-  text-decoration: none;
-  flex-shrink: 0;
-}
-.nav-logo .logo-retards { color: #000; }
-.nav-logo .logo-idf     { color: #C0392B; }
+.nav-burger:hover { background: #EDEAE4; }
 
-.nav-links {
-  display: flex;
-  gap: 28px;
+.nav-menu {
+  display: none;
+  position: fixed;
+  top: 52px;
+  right: 16px;
+  z-index: 199;
+  background: #F7F4EF;
+  border: 2px solid #000;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12);
   list-style: none;
+  padding: 8px 0;
+  min-width: 180px;
+  font-family: 'Roboto', -apple-system, sans-serif;
 }
-.nav-links a {
+.nav-menu.open { display: block; }
+
+.nav-menu li a {
+  display: block;
+  padding: 10px 20px;
   font-weight: 500;
-  font-size: 13px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  font-size: 14px;
+  letter-spacing: 0.5px;
   color: #555;
   text-decoration: none;
-  white-space: nowrap;
-  transition: color 0.15s;
+  transition: background 0.12s, color 0.12s;
 }
-.nav-links a:hover  { color: #000; }
-.nav-links a.active { color: #000; font-weight: 700; }
-
-.nav-live {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 2px;
-  color: #C0392B;
-  flex-shrink: 0;
-}
-.live-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #C0392B;
-  animation: blink 1.5s ease-in-out infinite;
-}
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.15; }
-}
-
-/* Mobile : liens conservés, sur une 2ᵉ rangée sous le logo */
-@media (max-width: 768px) {
-  nav { padding: 12px 16px 10px; flex-wrap: wrap; row-gap: 10px; }
-  .nav-links {
-    order: 3;
-    width: 100%;
-    gap: 16px;
-    overflow-x: auto;           /* filet de sécurité sur très petit écran */
-    scrollbar-width: none;
-  }
-  .nav-links::-webkit-scrollbar { display: none; }
-  .nav-links a { font-size: 12px; letter-spacing: 0.5px; }
-}
-/* 360 px : les 4 liens tiennent sans défiler */
-@media (max-width: 400px) {
-  .nav-links { gap: 11px; }
-  .nav-links a { font-size: 11px; letter-spacing: 0.3px; }
-}
+.nav-menu li a:hover { background: #EDEAE4; color: #000; }
+.nav-menu li a.active { color: #000; font-weight: 700; }

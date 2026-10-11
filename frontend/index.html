@@ -34,17 +34,9 @@
 
     /* ── Hero ── */
     .hero {
-      position: relative;
-      padding: 26px 32px 18px;
+      padding: 40px 32px 24px;
       text-align: center;
-    }
-    .stamp {
-      position: absolute; top: 16px; right: 28px;
-      border: 3px solid var(--red); padding: 3px 8px;
-      color: var(--red); font-size: 8px; font-weight: 900;
-      letter-spacing: 3px; text-transform: uppercase;
-      transform: rotate(-8deg); opacity: 0.15;
-      pointer-events: none; user-select: none;
+      border-bottom: 1px solid var(--border);
     }
     .hero-date {
       font-weight: 400;
@@ -52,7 +44,7 @@
       letter-spacing: 2px;
       text-transform: uppercase;
       color: var(--sub);
-      margin-bottom: 12px;
+      margin-bottom: 16px;
     }
     .hero-subtitle {
       font-weight: 500;
@@ -68,84 +60,20 @@
       line-height: .88;
       color: var(--ink);
     }
-    .hero-unit {
+    .hero-equiv {
+      font-weight: 500;
+      font-size: clamp(14px, 2vw, 18px);
+      color: var(--ink);
+      margin-top: 18px;
+      line-height: 1.4;
+    }
+    .hero-base {
       font-weight: 400;
       font-size: 11px;
       letter-spacing: 1px;
       text-transform: uppercase;
-      color: var(--sub);
-      margin-top: 8px;
-    }
-
-    /* ── Cumul ── */
-    .cumul {
-      text-align: center;
-      padding: 0 32px 18px;
-      border-bottom: 1px solid var(--border);
-    }
-    .cumul-inner {
-      display: inline-block;
-      border-top: 1px solid var(--border);
-      padding-top: 11px;
-      min-width: min(420px, 100%);
-    }
-    .cumul-kicker {
-      font-weight: 500;
-      font-size: 10px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
       color: var(--muted);
-      margin-bottom: 6px;
-    }
-    .cumul-value {
-      font-weight: 700;
-      font-size: clamp(24px, 4vw, 35px);
-      line-height: 1.05;
-      color: var(--red);
-    }
-    .cumul-label {
-      font-weight: 500;
-      font-size: 12px;
-      color: var(--ink);
-      margin-top: 5px;
-    }
-    .cumul-note {
-      font-weight: 400;
-      font-size: 10px;
-      color: var(--sub);
-      margin-top: 5px;
-    }
-
-    .live-dot {
-      display: inline-block;
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--red);
-      margin-right: 5px;
-      animation: pulse 1.6s ease-in-out infinite;
-      vertical-align: middle;
-    }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-
-    /* ── Ticker ── */
-    .ticker {
-      background: var(--ink);
-      padding: 7px 0;
-      overflow: hidden;
-      white-space: nowrap;
-    }
-    .ticker-track {
-      display: inline-block;
-      animation: tick 45s linear infinite;
-      font-weight: 400;
-      font-size: 13px;
-      letter-spacing: 1px;
-      color: var(--bg);
-    }
-    @keyframes tick {
-      from { transform: translateX(100vw); }
-      to   { transform: translateX(-100%); }
+      margin-top: 8px;
     }
 
     /* ── Footer ── */
@@ -172,10 +100,7 @@
     .footer-right a:hover { color: var(--ink); }
 
     @media (max-width: 768px) {
-      .hero { padding: 22px 16px 16px; }
-      .stamp { display: none; }
-      .cumul { padding: 0 16px 18px; }
-      .cumul-value { font-size: 22px; }
+      .hero { padding: 32px 16px 20px; }
       footer { padding: 14px 16px; flex-direction: column; align-items: flex-start; }
       .footer-right a:first-child { margin-left: 0; }
     }
@@ -183,46 +108,23 @@
 </head>
 <body>
 
-<!-- Ticker -->
-<div class="ticker">
-  <span class="ticker-track" id="ticker-track">Chargement des données en cours…</span>
-</div>
-
-<!-- Navigation -->
-<nav>
-  <a href="/" class="nav-logo">
-    <span class="logo-retards">RETARDS </span><span class="logo-idf">IDF</span>
-  </a>
-  <ul class="nav-links">
-    <li><a href="/" class="active" aria-current="page">Aujourd'hui</a></li>
-    <li><a href="/temps-reel">Temps réel</a></li>
-    <li><a href="/statistiques">Statistiques</a></li>
-    <li><a href="/mon-trajet">Mon trajet</a></li>
-    <li><a href="/methode.html">Méthode</a></li>
-  </ul>
-  <div class="nav-live">
-    <span class="live-dot"></span>
-    LIVE
-  </div>
-</nav>
+<!-- Hamburger -->
+<button class="nav-burger" id="nav-burger" aria-label="Menu">&#9776;</button>
+<ul class="nav-menu" id="nav-menu">
+  <li><a href="/" class="active" aria-current="page">Aujourd'hui</a></li>
+  <li><a href="/temps-reel">Temps réel</a></li>
+  <li><a href="/statistiques">Statistiques</a></li>
+  <li><a href="/mon-trajet">Mon trajet</a></li>
+  <li><a href="/methode.html">Méthode</a></li>
+</ul>
 
 <!-- Hero — coût du jour -->
 <section class="hero">
-  <span class="stamp">RETARDS IDF</span>
   <div class="hero-date" id="hero-date">&nbsp;</div>
   <div class="hero-subtitle">Aujourd'hui, les retards des RER et Transiliens ont coûté</div>
   <div class="hero-counter" id="hero-eur">— €</div>
-  <div class="hero-unit">au SMIC horaire brut · réseau IDF complet</div>
-</section>
-
-<!-- Cumul du jour -->
-<section class="cumul">
-  <div class="cumul-inner">
-    <div class="cumul-kicker">Cumul du jour · depuis <span id="debut-journee">6</span> h</div>
-    <div class="cumul-value" id="cumul-value">—</div>
-    <div class="cumul-label" id="cumul-label">de vie perdus collectivement</div>
-    <div class="cumul-note" id="cumul-note">base SMIC — €/h · ≈ — salaires journaliers</div>
-  </div>
+  <div class="hero-equiv" id="hero-equiv">&nbsp;</div>
+  <div class="hero-base">base SMIC 12,31 €/h</div>
 </section>
 
 <!-- Et toi, ta ligne ? -->
@@ -239,7 +141,6 @@
 </footer>
 
 <!-- JavaScript -->
-<script src="ticker.js"></script>
 <script src="duree.js"></script>
 <script>
   const LINE_META = {
@@ -264,31 +165,20 @@
 </script>
 <script src="pick.js"></script>
 <script>
-  var HEURES_JOUR = 7;
-
-  function renderCumul(mv, cout, smic) {
-    document.getElementById('cumul-value').textContent = formatDuree(mv);
-    document.getElementById('cumul-label').textContent = 'de vie ' + accordPerdu(mv) + ' collectivement';
-    document.getElementById('cumul-note').textContent =
-      'base SMIC ' + smic.toLocaleString('fr-FR') + ' €/h · ≈ ' +
-      fmt(Math.floor(cout / (smic * HEURES_JOUR))) + ' salaires journaliers';
-  }
-
   async function fetchToday() {
     try {
       const res = await fetch('/api/stats/today');
       if (!res.ok) return;
       const stats = await res.json();
       const cout = stats.cout_eur || 0;
+      const mv = stats.total_minutes_voyageurs || 0;
       document.getElementById('hero-eur').textContent = fmt(cout) + ' €';
-      document.getElementById('debut-journee').textContent = stats.heure_debut_journee;
-      renderCumul(stats.total_minutes_voyageurs || 0, cout, stats.smic_horaire);
+      document.getElementById('hero-equiv').textContent =
+        'soit ' + formatDuree(mv) + ' de vie ' + accordPerdu(mv) + ' collectivement';
     } catch (_) {}
   }
   fetchToday();
   setInterval(fetchToday, 300000);
-  Ticker.charger();
-  setInterval(Ticker.charger, 300000);
 
   /* ── Date/heure ── */
   function updateDate() {
@@ -312,6 +202,19 @@
     showRank: false,
     defaultPeriod: 'jour',
   });
+
+  /* ── Hamburger ── */
+  (function() {
+    var btn = document.getElementById('nav-burger');
+    var menu = document.getElementById('nav-menu');
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      menu.classList.toggle('open');
+    });
+    document.addEventListener('click', function(e) {
+      if (!menu.contains(e.target)) menu.classList.remove('open');
+    });
+  })();
 </script>
 </body>
 </html>

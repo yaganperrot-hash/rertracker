@@ -127,18 +127,14 @@
 </head>
 <body>
 
-<nav>
-  <a href="/" class="nav-logo">
-    <span class="logo-retards">RETARDS </span><span class="logo-idf">IDF</span>
-  </a>
-  <ul class="nav-links">
-    <li><a href="/">Aujourd'hui</a></li>
-    <li><a href="/temps-reel">Temps réel</a></li>
-    <li><a href="/statistiques">Statistiques</a></li>
-    <li><a href="/mon-trajet" class="active" aria-current="page">Mon trajet</a></li>
-    <li><a href="/methode.html">Méthode</a></li>
-  </ul>
-</nav>
+<button class="nav-burger" id="nav-burger" aria-label="Menu">&#9776;</button>
+<ul class="nav-menu" id="nav-menu">
+  <li><a href="/">Aujourd'hui</a></li>
+  <li><a href="/temps-reel">Temps réel</a></li>
+  <li><a href="/statistiques">Statistiques</a></li>
+  <li><a href="/mon-trajet" class="active" aria-current="page">Mon trajet</a></li>
+  <li><a href="/methode.html">Méthode</a></li>
+</ul>
 
 <main>
   <div class="kicker"><span class="beta">BÊTA</span> Aller simple · une ligne</div>
@@ -452,6 +448,19 @@
       if ($('depart').value && $('arrivee').value) calculer();
     });
   }
+})();
+</script>
+<script>
+(function() {
+  var btn = document.getElementById('nav-burger');
+  var menu = document.getElementById('nav-menu');
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    menu.classList.toggle('open');
+  });
+  document.addEventListener('click', function(e) {
+    if (!menu.contains(e.target)) menu.classList.remove('open');
+  });
 })();
 </script>
 </body>
