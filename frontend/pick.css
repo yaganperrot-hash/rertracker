@@ -85,17 +85,27 @@
 
 .pp-close {
   position: absolute;
-  top: 12px;
-  right: 14px;
-  background: none;
+  top: 14px;
+  right: 16px;
+  width: 28px;
+  height: 28px;
+  background: var(--bg2, #EDEAE4);
   border: none;
-  font-size: 22px;
-  line-height: 1;
-  color: var(--muted);
+  border-radius: 50%;
   cursor: pointer;
-  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s;
 }
-.pp-close:hover { color: var(--ink); }
+.pp-close:hover { background: var(--bg3, #E2DED7); }
+.pp-close svg {
+  width: 14px;
+  height: 14px;
+  stroke: var(--sub);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
 
 /* En-tête : pastille + nom + statut */
 .pp-head {

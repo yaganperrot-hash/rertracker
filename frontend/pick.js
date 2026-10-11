@@ -172,7 +172,7 @@
     // Panneau
     html += '<div class="pick-panel" id="pick-panel">';
     html += '<div class="pick-panel-inner">';
-    html += '  <button class="pp-close" id="pp-close" aria-label="Fermer">\u00D7</button>';
+    html += '  <button class="pp-close" id="pp-close" aria-label="Fermer"><svg viewBox="0 0 14 14"><line x1="1" y1="1" x2="13" y2="13"/><line x1="13" y1="1" x2="1" y2="13"/></svg></button>';
     html += '  <div class="pp-head">';
     html += '    <div class="pp-round" id="pp-round"></div>';
     html += '    <div class="pp-name" id="pp-name"></div>';
@@ -304,6 +304,7 @@
       panel.classList.remove('open');
       container.querySelectorAll('.pick-dot').forEach(d => d.classList.remove('sel'));
       currentLine = null;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
     // ── Clic sur les pastilles ──
