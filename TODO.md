@@ -35,9 +35,13 @@
 - [ ] **Bug : la fonction partager** (bouton Share dans le pick panel) ne fonctionne pas — à investiguer.
 
 ## À faire
-- [ ] **VPS (2026-10-12)** : redéployer après le passage à `--workers 1` (`git pull` + `up -d --build`), puis
-  vérifier dans les logs qu'un seul relevé part par intervalle et que `x-ratelimit-remaining-day` baisse de
-  216 (Estimated Timetable) et 108 (Navitia) par jour, pas du double.
+- [x] **VPS (2026-10-12)** : redéployé avec `--workers 1` — un seul relevé par intervalle constaté dans les logs
+  (avant : deux, quota Estimated Timetable 796 → 795 dans le même cycle) ; 328 tests au vert dans l'image.
+- [ ] **VPS — sécurité** : connexion SSH par mot de passe encore active (457 échecs de robots en 90 min le 12/10),
+  `ufw` inactif, port 8000 public en plus du 80, `.env` copié dans l'image (pas de `.dockerignore`).
+- [ ] **VPS — SSH muet 5-6 min après chaque session fermée** (2026-10-12) : rien côté serveur (ufw inactif, fail2ban
+  arrêté, aucun refus dans le journal sshd) ; à tester depuis un autre réseau. Contournement : une seule connexion
+  multiplexée (`ControlMaster`).
 - [ ] **Régénérer `data/profils_horaires.json` à chaque trimestre** publié par IDFM :
   `python -m backend.profils build`, puis `python -m backend.recalcul` sur le VPS (`docker compose exec backend …`).
   Le nom du jeu de données porte le trimestre (`…-3eme-trimestre`) — à mettre à jour dans `backend/profils.py`.

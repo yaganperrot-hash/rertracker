@@ -29,6 +29,10 @@ Carrousel Instagram (5 slides PNG) + corrections carte X + fix durée.
 
 ### Serveur
 - **Production sur le VPS OVH depuis le 2026-10-12** : seul serveur qui collecte. Aucun serveur à lancer sur les PC.
-- 2026-10-12 (Mac) : `--workers 1` dans `docker-compose.prod.yml` (un scheduler par worker = relevés PRIM en double) —
-  **à redéployer sur le VPS**, non vérifié sur place. Doc et commandes `/start`, `/wrap` alignées sur le VPS.
-- Ce Mac n'a plus ni venv, ni Python 3.12, ni Docker : tests non lancés ici le 12/10.
+- 2026-10-12 (Mac) : `--workers 1` dans `docker-compose.prod.yml` (un scheduler par worker = relevés PRIM en double),
+  redéployé et vérifié sur le VPS (un relevé par intervalle). Doc et commandes `/start`, `/wrap` alignées sur le VPS.
+- VPS : `ssh ubuntu@149.56.102.94` (clé du Mac installée), application dans `/home/ubuntu/rertracker` — il n'y a pas
+  d'utilisateur `rertracker`. Image du bot du 11/10 générée par le VPS mise de côté dans `~/sauvegarde-publications/`.
+- Ce Mac n'a plus ni venv, ni Python 3.12, ni Docker : les tests se lancent sur le VPS, hors réseau —
+  `docker run --rm --network none -e DATABASE_URL=postgresql://test:test@127.0.0.1:1/test -e PRIM_API_KEY=test rertracker-backend python -m pytest -q`
+  (328 passés le 12/10).
