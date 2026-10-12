@@ -174,7 +174,7 @@ Le serveur doit tourner à 20h00 (tolérance d'1 h en cas de retard du scheduler
 │   ├── bilans.py          # Génération JSON bilans
 │   ├── causes.py          # Extraction causes incidents
 │   ├── bot.py             # Récap quotidien X + publications/
-│   ├── transfert.py       # Export/import incidents entre PC
+│   ├── transfert.py       # Export/import d'incidents entre bases
 │   ├── models.py          # SQLAlchemy (Incident, DailyMetric)
 │   ├── database.py        # Session async PostgreSQL
 │   ├── config.py          # Settings (pydantic-settings)
@@ -205,7 +205,7 @@ Le serveur doit tourner à 20h00 (tolérance d'1 h en cas de retard du scheduler
 ├── logs/                  # uvicorn.log ; flux_brut/ : réponses PRIM brutes, 3 jours (gitignored)
 ├── publications/          # Récaps quotidiens (AAAA-MM-JJ.txt)
 ├── tests/                 # pytest (test_*.py)
-├── transferts/            # Exports JSON incidents inter-PC
+├── transferts/            # Exports JSON d'incidents (historique d'avant le VPS)
 ├── docker-compose.yml
 ├── Dockerfile
 ├── requirements.txt

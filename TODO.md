@@ -23,11 +23,7 @@
     `compute_daily_metrics` toutes les 5 min, `ECART_MAX_RELEVES` (45 min) pour les arrêts sautés
 - [ ] **« Mon trajet » (bêta, aller simple, 2026-09-17)** — suite : aller-retour, correspondances entre lignes,
   garder les horaires passés quand le GTFS est reconstruit (`data/horaires.json.gz` ne couvre que sa fenêtre de 30 jours)
-- [ ] **PC Windows** : `git pull`, serveur arrêté, `python -m backend.recalcul` (plafond remplacé le 17/09),
-  `POLLING_INTERVAL_MINUTES=5` dans `.env` (collecte globale du 17/09)
 - [x] **Mac** : transferts du 15 au 18/09 importés, recalcul fait (2026-09-18)
-- [ ] **PC Windows — après `git pull` (2026-09-18)** : serveur arrêté, `python -m backend.recalcul` (journée depuis 6 h,
-  trains supprimés réparés, données fiables depuis le 16/09) ; lancer le serveur avec la veille empêchée
 - [ ] **Audit des chiffres (2026-09-18)** — faits : panneau de ligne, journée depuis 6 h, données fiables, suppressions,
   bot sans « Métro », séparateur des milliers ; puis Mon trajet (JSON « null »), arrêts sautés hors coût,
   Statistiques en périodes calendaires, page Méthode, salaires journaliers, accord de la Carte. Attentes > 1 h
@@ -39,16 +35,16 @@
 - [ ] **Bug : la fonction partager** (bouton Share dans le pick panel) ne fonctionne pas — à investiguer.
 
 ## À faire
-- [ ] **PC Windows — recalculer l'historique** après `git pull` : `python -m backend.recalcul`.
-  Sa base est encore calculée avec les anciens poids horaires ; sans ça les deux PC afficheront des
-  chiffres différents pour les mêmes jours.
+- [ ] **VPS (2026-10-12)** : redéployer après le passage à `--workers 1` (`git pull` + `up -d --build`), puis
+  vérifier dans les logs qu'un seul relevé part par intervalle et que `x-ratelimit-remaining-day` baisse de
+  216 (Estimated Timetable) et 108 (Navitia) par jour, pas du double.
 - [ ] **Régénérer `data/profils_horaires.json` à chaque trimestre** publié par IDFM :
-  `python -m backend.profils build`, puis `python -m backend.recalcul` sur chaque PC.
+  `python -m backend.profils build`, puis `python -m backend.recalcul` sur le VPS (`docker compose exec backend …`).
   Le nom du jeu de données porte le trimestre (`…-3eme-trimestre`) — à mettre à jour dans `backend/profils.py`.
 - [ ] **Régénérer `data/offre_theorique.json` puis `data/frequentation_gares.json` au moins chaque mois** (le GTFS ne
   couvre que 30 jours ; les jours de vacances y reprennent l'offre hors vacances tant qu'aucun n'est dans la fenêtre ;
   les comptages SNCF sont mis à jour par campagne) : `python -m backend.offre build`,
-  `python -m backend.frequentation build`, puis `python -m backend.recalcul` sur chaque PC.
+  `python -m backend.frequentation build`, puis `python -m backend.recalcul` sur le VPS (`docker compose exec backend …`).
   Avec eux, `python -m backend.offre horaires` (« Mon trajet », fenêtre GTFS actuelle : 19/09 → 21/10).
   **Les horaires se reconstruisent à chaque publication GTFS** (nouveaux `trip_id`, bug 45) : le warning
   « Horaires GTFS périmés » dans les logs le signale.

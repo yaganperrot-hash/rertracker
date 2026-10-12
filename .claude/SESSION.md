@@ -28,4 +28,7 @@ Carrousel Instagram (5 slides PNG) + corrections carte X + fix durée.
 3. Investiguer le bug du bouton partager.
 
 ### Serveur
-- Serveur lancé sur ce PC (uvicorn, port 8000) — à arrêter si changement de poste.
+- **Production sur le VPS OVH depuis le 2026-10-12** : seul serveur qui collecte. Aucun serveur à lancer sur les PC.
+- 2026-10-12 (Mac) : `--workers 1` dans `docker-compose.prod.yml` (un scheduler par worker = relevés PRIM en double) —
+  **à redéployer sur le VPS**, non vérifié sur place. Doc et commandes `/start`, `/wrap` alignées sur le VPS.
+- Ce Mac n'a plus ni venv, ni Python 3.12, ni Docker : tests non lancés ici le 12/10.

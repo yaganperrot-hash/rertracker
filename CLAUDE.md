@@ -17,7 +17,7 @@ sur les lignes RER et Transilien d'Île-de-France.
 | Frontend | HTML/CSS/JS vanilla |
 | Graphiques | Chart.js (CDN) | 
 | Conteneurisation | Docker + docker-compose | 
-| Déploiement cible | VPS Ubuntu 24 | 
+| Déploiement | VPS OVH Ubuntu 24 (`deploy/`) | 
 
 ---
 
@@ -82,7 +82,8 @@ cp .env.example .env
 brew install postgresql@16 && brew services start postgresql@16 && createdb retards_idf
 /opt/homebrew/bin/python3.12 -m venv venv && ./venv/bin/pip install -r requirements.txt
 
-# 3. Lancer dans son propre terminal, ou détaché (`nohup … & disown`) — `run_in_background` seul est tué
+# 3. Lancer dans son propre terminal, ou détaché (`nohup … & disown`) — `run_in_background` seul est tué.
+#    Ce serveur collecte sur le quota PRIM du VPS (voir « Production ») : ne le lancer que le temps d'un essai.
 ./venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 
 # 4. Accès
@@ -94,7 +95,7 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb reta
 
 ## Conventions de rangement
 - Backend : `backend/` — FastAPI + scheduler. Collecte PRIM, calcul des minutes-voyageurs,
-  génération des JSON bilans, extraction des causes, bot X, exports inter-PC.
+  génération des JSON bilans, extraction des causes, bot X, transfert d'incidents entre bases.
 - Frontend : `frontend/` — HTML/CSS/JS vanilla, une page par vue ; nav et sélecteur de ligne
   factorisés (`nav.css`, `pick.*`).
 - Tests → `tests/` (`test_*.py`, pytest). Config/env → `backend/config.py`.
@@ -143,15 +144,17 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb reta
 
 ---
 
-## Transfert inter-PC (temporaire — retirer après migration VPS)
-Chaque PC a sa propre base PostgreSQL. Pour ne pas perdre les données collectées en changeant de poste :
-- **Export** : `python -m backend.transfert export [AAAA-MM-JJ]` → `transferts/incidents-<date>.json`
-- **Import** : `python -m backend.transfert import transferts/<fichier>.json` (fusionne, recalcule métriques + bilans)
-- `/start` importe automatiquement les fichiers `transferts/*.json` présents.
-- `/wrap` exporte automatiquement la journée en cours avant le commit.
-- **Un seul serveur à la fois** : les deux PC partagent la clé PRIM et ses quotas de 1 000 req/jour par flux
-  (216 Estimated Timetable et 108 Navitia pour un serveur au réglage par défaut). Toute affirmation sur la limite PRIM se vérifie dans les en-têtes
-  `x-ratelimit-*-day` d'une réponse, jamais de mémoire.
+## Production — VPS OVH (depuis le 2026-10-12)
+Le VPS est le seul serveur qui collecte : sa base PostgreSQL fait référence. Procédures dans `deploy/README.md`.
+- **Mise à jour** : sur le VPS, `git pull` puis
+  `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build`.
+- **Un seul serveur, un seul worker** : la clé PRIM et ses quotas de 1 000 req/jour par flux sont communs à toutes
+  les machines (216 Estimated Timetable et 108 Navitia pour un serveur au réglage par défaut). Ne pas lancer de
+  serveur collecteur sur un PC de développement, et garder `--workers 1` en prod : le scheduler démarre une fois
+  par worker. Toute affirmation sur la limite PRIM se vérifie dans les en-têtes `x-ratelimit-*-day` d'une réponse,
+  jamais de mémoire.
+- **Transfert inter-PC** (`backend/transfert.py`, `transferts/`) : plus utilisé au quotidien, gardé pour rapatrier
+  une journée dans une base locale — `python -m backend.transfert export [AAAA-MM-JJ]` / `import <fichier>.json`.
 
 ---
 
