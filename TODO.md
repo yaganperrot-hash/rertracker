@@ -32,7 +32,11 @@
 - [ ] Lot 5 (valeur du temps) : décidé le 2026-09-16 de garder le SMIC seul — TASK-29/30 abandonnées.
 
 ## Bugs
-- [ ] **Bug : la fonction partager** (bouton Share dans le pick panel) ne fonctionne pas — à investiguer.
+- [ ] **Bug : la fonction partager** (bouton Share dans le pick panel) — 2026-10-12 : le partage natif partait après
+  des attentes (données, `toBlob`), ce que Safari refuse hors du clic ; l'image est maintenant préparée à l'ouverture
+  du menu et le partage part dans le clic. **À confirmer sur téléphone** (non testé dans un navigateur).
+- [ ] **Domaine `retards-idf.fr` inexistant** (NXDOMAIN le 2026-10-12) mais imprimé sur l'image de partage
+  (`pick.js`) et le carrousel (`carousel.html`). Le lien du tweet utilise désormais l'adresse réelle du site.
 
 ## À faire
 - [x] **VPS (2026-10-12)** : redéployé avec `--workers 1` — un seul relevé par intervalle constaté dans les logs

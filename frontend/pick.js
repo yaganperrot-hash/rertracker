@@ -408,35 +408,21 @@
     ppShare.addEventListener('click', async function (e) {
       e.stopPropagation();
       if (!currentLine) return;
+      if (shareMenu) { closeShareMenu(); return; }
 
       var meta = LINE_META[currentLine];
+      var slug = SLUGS[currentLine];
       var days = periodDays(currentPeriod);
       await loadReference();
       var data = await loadLineStats(currentLine, days);
 
-      // Mobile : Web Share API natif
-      if (navigator.share && navigator.canShare) {
-        var canvas = buildShareCanvas(meta, data);
-        var shared = await new Promise(function (resolve) {
-          canvas.toBlob(function (blob) {
-            if (!blob) { resolve(false); return; }
-            var file = new File([blob], 'retards-' + SLUGS[currentLine] + '.png', { type: 'image/png' });
-            if (navigator.canShare({ files: [file] })) {
-              navigator.share({
-                title: meta.name + ' \u2014 RETARDS IDF',
-                text: shareText(meta, data),
-                files: [file],
-              }).then(function () { resolve(true); }).catch(function () { resolve(true); });
-            } else {
-              resolve(false);
-            }
-          }, 'image/png');
-        });
-        if (shared) return;
-      }
-
-      // Desktop : menu popup
-      if (shareMenu) { closeShareMenu(); return; }
+      // Image préparée dès l'ouverture du menu : le partage natif doit partir dans le clic lui-même
+      // (Safari le refuse après une attente), donc le fichier doit déjà exister à ce moment-là.
+      var canvas = buildShareCanvas(meta, data);
+      var shareFile = null;
+      canvas.toBlob(function (blob) {
+        if (blob) shareFile = new File([blob], 'retards-' + slug + '.png', { type: 'image/png' });
+      }, 'image/png');
 
       shareMenu = document.createElement('div');
       shareMenu.className = 'pp-share-menu';
@@ -444,9 +430,9 @@
         '<button type="button" class="pp-share-item" data-action="x">' +
         '<svg viewBox="0 0 24 24" width="18" height="18"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>' +
         'Partager sur X</button>' +
-        '<button type="button" class="pp-share-item" data-action="download">' +
-        '<svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 16l-6-6h4V4h4v6h4l-6 6z" fill="currentColor"/><path d="M20 18H4v2h16v-2z" fill="currentColor"/></svg>' +
-        'T\u00E9l\u00E9charger l\u2019image</button>';
+        '<button type="button" class="pp-share-item" data-action="instagram">' +
+        '<svg viewBox="0 0 24 24" width="18" height="18"><path fill-rule="evenodd" d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7zm5 3.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM17.5 5.4a1.1 1.1 0 1 1 0 2.2 1.1 1.1 0 0 1 0-2.2z"/></svg>' +
+        'Partager sur Instagram</button>';
 
       ppShare.parentElement.style.position = 'relative';
       ppShare.parentElement.appendChild(shareMenu);
@@ -456,10 +442,20 @@
         if (!btn) return;
 
         if (btn.dataset.action === 'x') {
-          var text = shareText(meta, data) + '\n\nretards-idf.fr/' + SLUGS[currentLine];
+          // X n'accepte qu'un texte et un lien depuis un site web : pas d'image jointe possible.
+          var text = shareText(meta, data) + '\n\n' + window.location.origin + '/' + slug;
           window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text), '_blank');
-        } else if (btn.dataset.action === 'download') {
-          downloadPng(buildShareCanvas(meta, data));
+        } else if (btn.dataset.action === 'instagram') {
+          // Instagram n'a pas de lien de partage web. Téléphone : menu de partage du système avec l'image.
+          // Ordinateur : l'image est enregistrée et instagram.com s'ouvre pour la publier.
+          if (shareFile && navigator.canShare && navigator.canShare({ files: [shareFile] })) {
+            navigator.share({ files: [shareFile] }).catch(function (err) {
+              if (!err || err.name !== 'AbortError') downloadPng(canvas);
+            });
+          } else {
+            window.open('https://www.instagram.com/', '_blank');
+            downloadPng(canvas);
+          }
         }
         closeShareMenu();
       });
