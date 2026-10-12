@@ -203,6 +203,8 @@
 .pp-stat-val {
   font-weight: 700;
   font-size: 20px;
+  /* Jamais coupé : « € » et « j » restent sur la ligne du chiffre */
+  white-space: nowrap;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
@@ -327,4 +329,17 @@
   .pick-section { padding: 20px 16px; }
   .pick-title { font-size: 19px; }
   .pp-amount { font-size: clamp(40px, 12vw, 60px); }
+}
+/* Écrans étroits : colonnes à la largeur de leur chiffre, l'espace restant réparti entre elles —
+   un grand chiffre prend la place qu'un petit laisse, au lieu de déborder d'un tiers fixe. */
+@media (max-width: 600px) {
+  .pp-line-stats {
+    grid-template-columns: repeat(3, auto);
+    justify-content: space-evenly;
+    gap: 18px 10px;
+  }
+  .pp-stat { min-width: 84px; }
+  .pp-stat-val { font-size: clamp(15px, 4.2vw, 20px); }
+  /* Le libellé suit la largeur du chiffre sans l'élargir */
+  .pp-stat-label { width: 0; min-width: 100%; }
 }
