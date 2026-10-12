@@ -117,7 +117,7 @@ docker compose restart db
 
 ```
 docker-compose.yml          — config de base (dev)
-docker-compose.prod.yml     — override prod (restart, logs, port 80, pas de --reload)
+docker-compose.prod.yml     — override prod (restart, logs, port 80, pas de --reload, un seul worker)
 ```
 
 Lancement prod : toujours les deux fichiers :
@@ -132,5 +132,5 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml <commande>
 | `./logs` | Logs applicatifs |
 | `./data` | Données statiques (fréquentation, GTFS) |
 | `./frontend/data` | Bilans JSON générés |
-| `./transferts` | Exports/imports inter-PC |
+| `./transferts` | Exports/imports d'incidents entre bases |
 | `./publications` | Publications bot X |
