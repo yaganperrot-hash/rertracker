@@ -41,8 +41,9 @@
 ## À faire
 - [x] **VPS (2026-10-12)** : redéployé avec `--workers 1` — un seul relevé par intervalle constaté dans les logs
   (avant : deux, quota Estimated Timetable 796 → 795 dans le même cycle) ; 328 tests au vert dans l'image.
-- [ ] **VPS — sécurité** : connexion SSH par mot de passe encore active (457 échecs de robots en 90 min le 12/10),
-  `ufw` inactif, port 8000 public en plus du 80, `.env` copié dans l'image (pas de `.dockerignore`).
+- [ ] **VPS — sécurité** : connexion SSH par mot de passe désactivée le 2026-10-12
+  (`/etc/ssh/sshd_config.d/00-cle-seulement.conf`, clé uniquement). Reste : `ufw` inactif, port 8000 public en plus
+  du 80, `.env` copié dans l'image (pas de `.dockerignore`).
 - [ ] **VPS — SSH muet 5-6 min après chaque session fermée** (2026-10-12) : rien côté serveur (ufw inactif, fail2ban
   arrêté, aucun refus dans le journal sshd) ; à tester depuis un autre réseau. Contournement : une seule connexion
   multiplexée (`ControlMaster`).
