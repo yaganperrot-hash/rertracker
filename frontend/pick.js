@@ -383,15 +383,17 @@
       return meta.name + ' ' + PERIOD_LABEL[currentPeriod] + ' : ' + duree + ' de temps perdu, ' + cout + ' \u20AC';
     }
 
-    function downloadPng(canvas) {
-      canvas.toBlob(function (blob) {
-        if (!blob) return;
-        var a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'retards-' + SLUGS[currentLine] + '.png';
-        a.click();
-        URL.revokeObjectURL(a.href);
-      }, 'image/png');
+    // Le fichier doit déjà exister : un téléchargement lancé après une attente (toBlob) ou après
+    // l'ouverture d'un onglet n'est plus rattaché au clic, et le navigateur l'ignore.
+    function downloadFile(file) {
+      var url = URL.createObjectURL(file);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
     }
 
     // ── Menu de partage ──
@@ -443,18 +445,23 @@
 
         if (btn.dataset.action === 'x') {
           // X n'accepte qu'un texte et un lien depuis un site web : pas d'image jointe possible.
-          var text = shareText(meta, data) + '\n\n' + window.location.origin + '/' + slug;
+          // Lien ajouté seulement si le site a un nom de domaine : une adresse IP n'est pas cliquable sur X.
+          var text = shareText(meta, data);
+          if (!/^[\d.]+$|:/.test(window.location.hostname) && window.location.hostname !== 'localhost') {
+            text += '\n\n' + window.location.origin + '/' + slug;
+          }
           window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text), '_blank');
         } else if (btn.dataset.action === 'instagram') {
           // Instagram n'a pas de lien de partage web. Téléphone : menu de partage du système avec l'image.
           // Ordinateur : l'image est enregistrée et instagram.com s'ouvre pour la publier.
-          if (shareFile && navigator.canShare && navigator.canShare({ files: [shareFile] })) {
+          if (!shareFile) return;
+          if (navigator.canShare && navigator.canShare({ files: [shareFile] })) {
             navigator.share({ files: [shareFile] }).catch(function (err) {
-              if (!err || err.name !== 'AbortError') downloadPng(canvas);
+              if (!err || err.name !== 'AbortError') downloadFile(shareFile);
             });
           } else {
+            downloadFile(shareFile);
             window.open('https://www.instagram.com/', '_blank');
-            downloadPng(canvas);
           }
         }
         closeShareMenu();
