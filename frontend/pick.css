@@ -182,8 +182,9 @@
 .pp-line-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 18px 16px;
-  margin-top: 22px;
+  gap: 18px 24px;
+  /* Les deux chiffres latéraux mordent de 10 px sur la marge de la carte (22 px) pour s'écarter du central */
+  margin: 22px -10px 0;
 }
 .pp-period {
   grid-column: 1 / -1;
