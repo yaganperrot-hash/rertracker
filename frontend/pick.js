@@ -385,9 +385,11 @@
     }
 
     function shareText(meta, data) {
-      var duree = data ? formatDuree(data.total_minutes_voyageurs || 0, true) : '\u2014';
+      // Mêmes mots que la carte : durée en « jrs », montant « perdu à cause des perturbations »
+      var duree = data ? dureeCarte(data.total_minutes_voyageurs || 0) : '\u2014';
       var cout = data ? (data.total_cout_eur || 0).toLocaleString('fr-FR') : '\u2014';
-      return meta.name + ' ' + PERIOD_LABEL[currentPeriod] + ' : ' + duree + ' de temps perdu, ' + cout + ' \u20AC';
+      return meta.name + ', ' + PERIOD_LABEL[currentPeriod] + ' : ' + duree + ' et ' + cout +
+        '\u00A0\u20AC ont \u00E9t\u00E9 perdus \u00E0 cause des perturbations.';
     }
 
     // Le fichier doit déjà exister : un téléchargement lancé après une attente (toBlob) ou après
