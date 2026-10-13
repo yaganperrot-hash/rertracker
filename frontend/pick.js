@@ -65,6 +65,13 @@
     return txt;
   }
 
+  // Durée compacte de la carte : les jours s'écrivent « jrs » (« j » seul se lisait mal)
+  function dureeCarte(min) {
+    return formatDuree(min, true).replace(/(\d+) j(?![a-z])/g, function (_, n) {
+      return n + (n === '1' ? ' jr' : ' jrs');
+    });
+  }
+
   // ── Cache des données (fréquentation + stats par ligne/période) ──
   let frequentation = null;
   let smicHoraire = 12.31;
@@ -149,7 +156,7 @@
     // HTML du sélecteur
     let html = '';
     if (opts.showTitle) {
-      html += '<h2 class="pick-title">Et toi, ta ligne t\'a co\u00FBt\u00E9 combien aujourd\u2019hui\u00A0?</h2>';
+      html += '<h2 class="pick-title">Et toi, ta ligne nous a fait perdre combien aujourd\u2019hui\u00A0?</h2>';
     }
 
     // Réseaux avec au moins une ligne
@@ -182,7 +189,7 @@
     // Mêmes voyageurs, même période : le coût est le temps perdu valorisé au SMIC
     html += '    <div class="pp-period" id="pp-period"></div>';
     html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-duree">\u2014</span><span class="pp-stat-label">Temps perdu par les voyageurs</span></div>';
-    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-cout">\u2014</span><span class="pp-stat-label">Co\u00FBt pour les voyageurs (SMIC)</span></div>';
+    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-cout">\u2014</span><span class="pp-stat-label">ont \u00E9t\u00E9 perdus \u00E0 cause des perturbations</span></div>';
     html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-incidents">\u2014</span><span class="pp-stat-label">Trains en retard ou supprim\u00E9s</span></div>';
     html += '  </div>';
     html += '  <div class="pp-toggle">';
@@ -277,7 +284,7 @@
 
       // Stats réseau de la ligne
       ppPeriod.textContent = data ? periodCaption(currentPeriod, data) : '';
-      ppStatDuree.textContent = data ? formatDuree(data.total_minutes_voyageurs || 0, true) : '\u2014';
+      ppStatDuree.textContent = data ? dureeCarte(data.total_minutes_voyageurs || 0) : '\u2014';
       ppStatCout.textContent = data ? (data.total_cout_eur || 0).toLocaleString('fr-FR') + ' \u20AC' : '\u2014';
       ppStatIncidents.textContent = data ? (data.total_incidents || 0).toLocaleString('fr-FR') : '\u2014';
 
