@@ -188,14 +188,11 @@
     html += '  <div class="pp-line-stats">';
     // Mêmes voyageurs, même période : le coût est le temps perdu valorisé au SMIC
     html += '    <div class="pp-period" id="pp-period"></div>';
-    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-duree">\u2014</span><span class="pp-stat-label">Temps perdu par les voyageurs</span></div>';
-    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-cout">\u2014</span><span class="pp-stat-label">ont \u00E9t\u00E9 perdus \u00E0 cause des perturbations</span></div>';
-    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-incidents">\u2014</span><span class="pp-stat-label">Trains en retard ou supprim\u00E9s</span></div>';
+    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-cout">\u2014</span><span class="pp-stat-label">perdus aujourd\u2019hui</span></div>';
+    html += '    <div class="pp-stat"><span class="pp-stat-val pp-stat-jours" id="pp-stat-jours">\u2014</span><span class="pp-stat-label">jours de travail</span></div>';
     html += '  </div>';
     html += '  <div class="pp-toggle">';
-    html += '    <button type="button" data-p="jour"' + (currentPeriod === 'jour' ? ' class="on"' : '') + '>Aujourd\u2019hui</button>';
-    html += '    <button type="button" data-p="semaine"' + (currentPeriod === 'semaine' ? ' class="on"' : '') + '>Semaine</button>';
-    html += '    <button type="button" data-p="annee"' + (currentPeriod === 'annee' ? ' class="on"' : '') + '>Ann\u00E9e</button>';
+    html += '    <button type="button" data-p="jour" class="on">Aujourd\u2019hui</button>';
     html += '  </div>';
     if (opts.showRank) {
       html += '  <div class="pp-rank" id="pp-rank"></div>';
@@ -218,9 +215,8 @@
     const ppRank = container.querySelector('#pp-rank');
     const ppShare = container.querySelector('#pp-share');
     const ppPageLink = container.querySelector('#pp-page-link');
-    const ppStatIncidents = container.querySelector('#pp-stat-incidents');
     const ppStatCout = container.querySelector('#pp-stat-cout');
-    const ppStatDuree = container.querySelector('#pp-stat-duree');
+    const ppStatJours = container.querySelector('#pp-stat-jours');
     const ppPeriod = container.querySelector('#pp-period');
 
     // ── Onglets (rétro-compatibilité) ──
@@ -284,9 +280,9 @@
 
       // Stats réseau de la ligne
       ppPeriod.textContent = data ? periodCaption(currentPeriod, data) : '';
-      ppStatDuree.textContent = data ? dureeCarte(data.total_minutes_voyageurs || 0) : '\u2014';
-      ppStatCout.textContent = data ? (data.total_cout_eur || 0).toLocaleString('fr-FR') + ' \u20AC' : '\u2014';
-      ppStatIncidents.textContent = data ? (data.total_incidents || 0).toLocaleString('fr-FR') : '\u2014';
+      var cout = data ? (data.total_cout_eur || 0) : 0;
+      ppStatCout.textContent = cout.toLocaleString('fr-FR') + ' \u20AC';
+      ppStatJours.textContent = data ? Math.floor(cout / (smicHoraire * 7)).toLocaleString('fr-FR') : '\u2014';
 
       // Statut : perturbé si incidents aujourd'hui
       const todayData = await loadLineStats(currentLine, 1);
