@@ -1,6 +1,7 @@
-# Environment
+# Environment / secrets
 .env
 *.env
+PRIM_KEY.txt
 
 # Python
 __pycache__/

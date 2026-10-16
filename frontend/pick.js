@@ -429,11 +429,13 @@
 
       // Image préparée dès l'ouverture du menu : le partage natif doit partir dans le clic lui-même
       // (Safari le refuse après une attente), donc le fichier doit déjà exister à ce moment-là.
+      // toDataURL est synchrone — pas de race condition avec les clics du menu.
       var canvas = buildShareCanvas(meta, data);
-      var shareFile = null;
-      canvas.toBlob(function (blob) {
-        if (blob) shareFile = new File([blob], 'retards-' + slug + '.png', { type: 'image/png' });
-      }, 'image/png');
+      var dataUrl = canvas.toDataURL('image/png');
+      var bin = atob(dataUrl.split(',')[1]);
+      var buf = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+      var shareFile = new File([buf], 'retards-' + slug + '.png', { type: 'image/png' });
 
       shareMenu = document.createElement('div');
       shareMenu.className = 'pp-share-menu';
