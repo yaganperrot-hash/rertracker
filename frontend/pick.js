@@ -293,7 +293,7 @@
         const rank = await computeRank(currentLine, days);
         if (rank) {
           const total = Object.keys(LINE_META).length;
-          ppRank.innerHTML = '<strong>' + rank + (rank === 1 ? '\u02B3\u1D49' : '\u1D49') + ' pire ligne</strong> sur ' + total + ' \u00B7 ' + PERIOD_LABEL[currentPeriod];
+          ppRank.innerHTML = '<strong>' + rank + (rank === 1 ? '\u02B3\u1D49' : '\u1D49') + ' pire ligne</strong> sur ' + total;
         } else {
           ppRank.textContent = '';
         }
