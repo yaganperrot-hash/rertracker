@@ -315,16 +315,6 @@
       });
     });
 
-    // ── Toggle période ──
-    container.querySelector('.pp-toggle').addEventListener('click', e => {
-      const btn = e.target.closest('button[data-p]');
-      if (!btn) return;
-      container.querySelectorAll('.pp-toggle button').forEach(b => b.classList.remove('on'));
-      btn.classList.add('on');
-      currentPeriod = btn.dataset.p;
-      updatePanel();
-    });
-
     // ── Génération du canvas 1080×1080 ──
     function buildShareCanvas(meta, data) {
       const W = 1080, H = 1080;
