@@ -181,10 +181,10 @@
 /* Stats réseau de la ligne */
 .pp-line-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 18px 24px;
-  /* Les deux chiffres latéraux mordent de 10 px sur la marge de la carte (22 px) pour s'écarter du central */
-  margin: 22px -10px 0;
+  grid-template-columns: repeat(2, auto);
+  justify-content: center;
+  gap: 18px 48px;
+  margin: 22px 0 0;
 }
 .pp-period {
   grid-column: 1 / -1;
@@ -334,12 +334,9 @@
    un grand chiffre prend la place qu'un petit laisse, au lieu de déborder d'un tiers fixe. */
 @media (max-width: 600px) {
   .pp-line-stats {
-    grid-template-columns: repeat(3, auto);
-    justify-content: space-evenly;
-    gap: 18px 10px;
+    grid-template-columns: repeat(2, auto);
+    justify-content: center;
+    gap: 18px 24px;
   }
-  .pp-stat { min-width: 84px; }
   .pp-stat-val { font-size: clamp(15px, 4.2vw, 20px); }
-  /* Le libellé suit la largeur du chiffre sans l'élargir */
-  .pp-stat-label { width: 0; min-width: 100%; }
 }
