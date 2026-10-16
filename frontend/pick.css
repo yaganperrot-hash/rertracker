@@ -180,11 +180,17 @@
 
 /* Stats réseau de la ligne */
 .pp-line-stats {
-  display: grid;
-  grid-template-columns: repeat(2, auto);
-  justify-content: center;
-  gap: 18px 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
   margin: 22px 0 0;
+}
+.pp-soit {
+  font-weight: 900;
+  font-size: 22px;
+  color: var(--ink);
+  letter-spacing: .04em;
 }
 .pp-period {
   grid-column: 1 / -1;
@@ -333,10 +339,5 @@
 /* Écrans étroits : colonnes à la largeur de leur chiffre, l'espace restant réparti entre elles —
    un grand chiffre prend la place qu'un petit laisse, au lieu de déborder d'un tiers fixe. */
 @media (max-width: 600px) {
-  .pp-line-stats {
-    grid-template-columns: repeat(2, auto);
-    justify-content: center;
-    gap: 18px 24px;
-  }
   .pp-stat-val { font-size: clamp(15px, 4.2vw, 20px); }
 }
