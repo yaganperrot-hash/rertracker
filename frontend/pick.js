@@ -341,55 +341,60 @@
       ctx.fillStyle = '#F7F4EF';
       ctx.fillRect(0, 0, W, H);
 
-      const cx = W / 2, cy = 280;
+      const cx = W / 2;
+
+      // Pastille de ligne
+      const cy = 300;
       ctx.beginPath();
-      ctx.arc(cx, cy, 90, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 100, 0, Math.PI * 2);
       ctx.fillStyle = meta.color;
       ctx.fill();
       ctx.fillStyle = meta.textColor || '#fff';
-      ctx.font = '900 60px Roboto, sans-serif';
+      ctx.font = '900 68px Roboto, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(meta.short, cx, cy);
 
+      // Nom de la ligne
       ctx.fillStyle = '#000';
-      ctx.font = '700 36px Roboto, sans-serif';
-      ctx.fillText(meta.name, cx, cy + 140);
+      ctx.font = '700 40px Roboto, sans-serif';
+      ctx.fillText(meta.name, cx, cy + 150);
 
+      // Coût en euros
+      var cout = data ? (data.total_cout_eur || 0) : 0;
       ctx.fillStyle = '#000';
-      ctx.font = '900 72px Roboto, sans-serif';
-      ctx.fillText(data ? formatDuree(data.total_minutes_voyageurs || 0, true) : '\u2014', cx, cy + 260);
+      ctx.font = '900 80px Roboto, sans-serif';
+      ctx.fillText(cout.toLocaleString('fr-FR') + ' \u20AC', cx, cy + 280);
 
       ctx.fillStyle = '#555';
-      ctx.font = '400 28px Roboto, sans-serif';
-      ctx.fillText('de temps perdu par les voyageurs', cx, cy + 310);
+      ctx.font = '400 32px Roboto, sans-serif';
+      ctx.fillText('perdus aujourd\u2019hui', cx, cy + 330);
 
-      ctx.fillStyle = '#000';
-      ctx.font = '700 36px Roboto, sans-serif';
-      ctx.fillText((data ? (data.total_cout_eur || 0).toLocaleString('fr-FR') : '\u2014') + ' \u20AC au SMIC', cx, cy + 390);
-      ctx.fillText((data ? (data.total_incidents || 0).toLocaleString('fr-FR') : '\u2014') + ' trains en retard ou supprim\u00E9s', cx, cy + 440);
+      // Jours de travail
+      var jours = Math.floor(cout / (smicHoraire * 7));
+      ctx.fillStyle = '#C00';
+      ctx.font = '900 56px Roboto, sans-serif';
+      ctx.fillText(jours.toLocaleString('fr-FR') + ' jours de travail', cx, cy + 440);
 
-      ctx.fillStyle = '#555';
-      ctx.font = '500 26px Roboto, sans-serif';
-      ctx.fillText(PERIOD_LABEL[currentPeriod], cx, cy + 500);
+      // Footer
+      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      ctx.font = '900 20px Roboto, sans-serif';
+      ctx.fillText('RETARDS IDF', cx, H - 100);
 
       ctx.fillStyle = 'rgba(0,0,0,0.12)';
       ctx.font = '500 22px Roboto, sans-serif';
       ctx.fillText('retards-idf.fr/' + SLUGS[currentLine], cx, H - 60);
 
-      ctx.fillStyle = 'rgba(0,0,0,0.15)';
-      ctx.font = '900 20px Roboto, sans-serif';
-      ctx.fillText('RETARDS IDF', cx, H - 100);
-
       return canvas;
     }
 
     function shareText(meta, data) {
-      // Mêmes mots que la carte : durée en « jrs », montant « perdu à cause des perturbations »
-      var duree = data ? dureeCarte(data.total_minutes_voyageurs || 0) : '\u2014';
       var cout = data ? (data.total_cout_eur || 0).toLocaleString('fr-FR') : '\u2014';
-      return meta.name + ', ' + PERIOD_LABEL[currentPeriod] + ' : ' + duree + ' et ' + cout +
-        '\u00A0\u20AC ont \u00E9t\u00E9 perdus \u00E0 cause des perturbations.';
+      var jours = data ? Math.floor((data.total_cout_eur || 0) / (smicHoraire * 7)) : 0;
+      return '\uD83D\uDEA8\uD83D\uDEA8 ' + meta.name + ' :\n' +
+        "Aujourd\u2019hui les perturbations ont co\u00FBt\u00E9 " + cout + '\u00A0\u20AC ' +
+        "soit l\u2019\u00E9quivalent de " + jours.toLocaleString('fr-FR') + ' jours de travail.\n' +
+        'Et toi, ta ligne a co\u00FBt\u00E9 combien ? \uD83D\uDEA8\uD83D\uDEA8';
     }
 
     // Le fichier doit déjà exister : un téléchargement lancé après une attente (toBlob) ou après
@@ -463,17 +468,10 @@
           }
           window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text), '_blank');
         } else if (btn.dataset.action === 'instagram') {
-          // Instagram n'a pas de lien de partage web. Téléphone : menu de partage du système avec l'image.
-          // Ordinateur : l'image est enregistrée et instagram.com s'ouvre pour la publier.
+          // Télécharge l'image puis ouvre Instagram pour que l'utilisateur la publie.
           if (!shareFile) return;
-          if (navigator.canShare && navigator.canShare({ files: [shareFile] })) {
-            navigator.share({ files: [shareFile] }).catch(function (err) {
-              if (!err || err.name !== 'AbortError') downloadFile(shareFile);
-            });
-          } else {
-            downloadFile(shareFile);
-            window.open('https://www.instagram.com/', '_blank');
-          }
+          downloadFile(shareFile);
+          window.open('https://www.instagram.com/', '_blank');
         }
         closeShareMenu();
       });
