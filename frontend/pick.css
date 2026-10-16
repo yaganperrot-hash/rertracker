@@ -188,15 +188,14 @@
 }
 .pp-soit {
   font-weight: 900;
-  font-size: 22px;
+  font-size: 16px;
   color: var(--ink);
   letter-spacing: .04em;
 }
 .pp-period {
-  grid-column: 1 / -1;
   text-align: center;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 900;
   color: var(--ink);
 }
 .pp-stat {
@@ -208,14 +207,14 @@
 }
 .pp-stat-val {
   font-weight: 700;
-  font-size: 20px;
+  font-size: 26px;
   /* Jamais coupé : « € » et « j » restent sur la ligne du chiffre */
   white-space: nowrap;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 .pp-stat-label {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--muted);
   font-weight: 400;
 }

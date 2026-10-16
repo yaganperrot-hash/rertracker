@@ -190,7 +190,7 @@
     html += '    <div class="pp-period" id="pp-period"></div>';
     html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-cout">\u2014</span><span class="pp-stat-label">perdus aujourd\u2019hui</span></div>';
     html += '    <div class="pp-soit">SOIT</div>';
-    html += '    <div class="pp-stat"><span class="pp-stat-val pp-stat-jours" id="pp-stat-jours">\u2014</span><span class="pp-stat-label">jours de travail</span></div>';
+    html += '    <div class="pp-stat"><span class="pp-stat-val pp-stat-jours" id="pp-stat-jours">\u2014</span><span class="pp-stat-label">jours de travail au SMIC horaire</span></div>';
     html += '  </div>';
     if (opts.showRank) {
       html += '  <div class="pp-rank" id="pp-rank"></div>';
