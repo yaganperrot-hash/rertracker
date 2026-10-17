@@ -1,4 +1,6 @@
-# CLAUDE.md — Compteur de Retards IDF
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Vue d'ensemble
 Tableau de bord temps réel comptabilisant incidents, retards et minutes-voyageurs perdues
@@ -93,6 +95,29 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb reta
 
 ---
 
+## Commandes fréquentes
+
+```bash
+# Tests (328 tests, ~13 s)
+venv/Scripts/python -m pytest tests/ -x -q          # Windows
+./venv/bin/python -m pytest tests/ -x -q             # Mac
+
+# Recalcul historique (après modification metrics/bilans/fréquentation)
+python -m backend.recalcul
+
+# Déploiement VPS
+ssh ubuntu@149.56.102.94 "cd ~/rertracker && git pull && docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build"
+
+# Reconstruction données statiques (dans l'ordre)
+python -m backend.profils build
+python -m backend.offre build
+python -m backend.frequentation build
+python -m backend.recalcul
+python -m backend.offre horaires   # Mon trajet, indépendant
+```
+
+---
+
 ## Conventions de rangement
 - Backend : `backend/` — FastAPI + scheduler. Collecte PRIM, calcul des minutes-voyageurs,
   génération des JSON bilans, extraction des causes, bot X, transfert d'incidents entre bases.
@@ -159,8 +184,9 @@ Le VPS est le seul serveur qui collecte : sa base PostgreSQL fait référence. P
 ---
 
 ## Prochaine étape à reprendre
-Voir `TODO.md` et les bugs ouverts de `.claude/DEBUG.md`. Priorités : **régénérer la clé PRIM** (en clair dans
-l'historique git), puis observer les arrêts sautés (B, règle réécrite le 2026-09-22) avant de décider s'ils entrent dans le coût.
+Voir `TODO.md` et les bugs ouverts de `.claude/DEBUG.md`. Priorités : **régénérer la clé PRIM** (fichier supprimé
+du repo mais clé encore dans l'historique git — à renouveler sur le portail PRIM IDFM), puis observer les arrêts
+sautés (B, règle réécrite le 2026-09-22) avant de décider s'ils entrent dans le coût.
 
 ---
 
