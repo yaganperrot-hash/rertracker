@@ -1,38 +1,24 @@
 # SESSION — État courant
 
-## 2026-10-11 — Windows (historique : `.claude/archive/`)
+## 2026-10-17 — Windows
 
 ### Objectif
-Carrousel Instagram (5 slides PNG) + corrections carte X + fix durée.
+Envoi automatique du récap quotidien par e-mail + suppression « aujourd'hui » des cartes.
 
 ### Avancement
-- **Carrousel Instagram** : `frontend/carousel.html` — 5 slides 1080×1080 (coût du jour, équivalent
-  salaire infirmier mensuel arrondi en dessous, pire/meilleure ligne par ratio, CTA).
-  Génération PNG via Playwright : `backend/bot.py:generer_carousel_png()` → `output/AAAA-MM-JJ/slide-N.png`.
-  Appelée dans `post_daily_recap()` après la carte.
-- **Endpoint `/api/stats/today/lines`** : métriques du jour par ligne + `trains_prevus` (GTFS + catégorie jour).
-- **Fix durée** : jours ≥ 7 → omettre les heures (`duree.js` + `bot.py:_fmt_duree()`).
-- **Fix carte X** (`carte.html`) :
-  - Hero centré, montant en noir (pas rouge), durée en rouge.
-  - Bandeau noir viré → "soit X jours de vie perdus collectivement" en rouge.
-  - Chiffres des barres en euros (pas en minutes-voyageurs).
-- **TODO.md** : bug partager noté. `.gitignore` : `output/` ajouté.
+- **Email récap** : `backend/bot.py:envoyer_email_recap()` — envoie texte + carte PNG + slides carrousel
+  en PJ via Gmail SMTP_SSL (`asyncio.to_thread`). Config dans `backend/config.py` (3 settings `email_*`).
+  Appelé dans `post_daily_recap()` après génération images, avant Twitter. Try/except non bloquant.
+- **Cartes « aujourd'hui »** supprimé de `frontend/pick.js` : canvas, stat affichée, texte de partage.
 - **Tests** : 328/328 OK.
+- **Déployé** sur le VPS (commits `e3ae81c` + `0527d24`).
 
 ### Blocages
+- **Email non fonctionnel** : les variables `EMAIL_*` ne sont pas dans le `.env` du VPS.
+  Gmail App Password impossible à créer (vérification téléphone échouée). Alternatives discutées :
+  Brevo (free tier 300/jour) ou résoudre le problème Google.
 - **Clé PRIM à régénérer** (inchangé).
 
 ### Prochaine étape
-1. Régénérer la clé PRIM.
-2. Publication automatique Instagram (API Graph) si pertinent.
-3. Investiguer le bug du bouton partager.
-
-### Serveur
-- **Production sur le VPS OVH depuis le 2026-10-12** : seul serveur qui collecte. Aucun serveur à lancer sur les PC.
-- 2026-10-12 (Mac) : `--workers 1` dans `docker-compose.prod.yml` (un scheduler par worker = relevés PRIM en double),
-  redéployé et vérifié sur le VPS (un relevé par intervalle). Doc et commandes `/start`, `/wrap` alignées sur le VPS.
-- VPS : `ssh ubuntu@149.56.102.94` (clé du Mac installée), application dans `/home/ubuntu/rertracker` — il n'y a pas
-  d'utilisateur `rertracker`. Image du bot du 11/10 générée par le VPS mise de côté dans `~/sauvegarde-publications/`.
-- Ce Mac n'a plus ni venv, ni Python 3.12, ni Docker : les tests se lancent sur le VPS, hors réseau —
-  `docker run --rm --network none -e DATABASE_URL=postgresql://test:test@127.0.0.1:1/test -e PRIM_API_KEY=test rertracker-backend python -m pytest -q`
-  (328 passés le 12/10).
+1. Résoudre l'accès SMTP (App Password Gmail ou Brevo) et ajouter les variables au `.env` VPS.
+2. Régénérer la clé PRIM.

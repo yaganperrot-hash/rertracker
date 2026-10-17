@@ -166,6 +166,13 @@
   tous les éléments empilés, sinon les slides du bas sont coupées.
 - Un chiffre affiché sans unité est ambigu : toujours ajouter € ou min-voy. à côté des valeurs dans les barres.
 
+## Email SMTP depuis Python
+- `smtplib` + `email.message.EmailMessage` = stdlib pure, pas besoin de dépendance externe.
+- Gmail exige un **App Password** (vérification en 2 étapes activée) pour SMTP — le mot de passe
+  normal du compte ne fonctionne pas. Alternative gratuite : Brevo (300 mails/jour, SMTP classique).
+- Proton Mail n'offre pas de SMTP sans abonnement payant (Bridge).
+- Toujours wrapper l'envoi SMTP dans `asyncio.to_thread()` dans un contexte async (FastAPI/APScheduler).
+
 ## Exploitation
 - **Ne jamais tuber un script long dans `head`** : la fermeture du tube envoie un SIGPIPE et tue le
   script avant qu'il écrive son fichier de sortie. Rediriger vers un log puis `tail`, et vérifier le
