@@ -39,26 +39,6 @@
       overflow-x: hidden;
     }
 
-    /* ─── 1. TICKER ─── */
-    .ticker {
-      background: var(--ink);
-      padding: 7px 0;
-      overflow: hidden;
-      white-space: nowrap;
-    }
-    .ticker-track {
-      display: inline-block;
-      animation: tick 45s linear infinite;
-      font-weight: 400;
-      font-size: 13px;
-      letter-spacing: 1px;
-      color: var(--bg);
-    }
-    @keyframes tick {
-      from { transform: translateX(100vw); }
-      to   { transform: translateX(-100%); }
-    }
-
     /* ─── 2. NAVIGATION : nav.css, commune aux 4 pages ─── */
 
     /* ─── 3. HERO — coût du jour ─── */
@@ -507,13 +487,6 @@
 <body>
 
 <!-- ════════════════════════════════════════════════════════
-     1. TICKER
-════════════════════════════════════════════════════════ -->
-<div class="ticker">
-  <span class="ticker-track" id="ticker-track">Chargement des données en cours…</span>
-</div>
-
-<!-- ════════════════════════════════════════════════════════
      2. NAVIGATION
 ════════════════════════════════════════════════════════ -->
 <button class="nav-burger" id="nav-burger" aria-label="Menu">&#9776;</button>
@@ -603,7 +576,6 @@
      JAVASCRIPT
 ════════════════════════════════════════════════════════ -->
 <script src="duree.js"></script>
-<script src="ticker.js"></script>
 <script>
   /* ── Registre des lignes — déclaré en premier, consommé par pick.js ── */
   var HEURES_JOUR = 7;  // salaire journalier = 7 h au SMIC
@@ -739,7 +711,6 @@
       const incidents = await res.json();
       const list = document.getElementById('incidents-list');
 
-      Ticker.render(incidents);
       if (incidents.length === 0) {
         list.innerHTML = '<div class="empty-msg">Aucun incident en cours ✓</div>';
         return;

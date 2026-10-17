@@ -263,32 +263,9 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
   .cause-label { width: 110px; font-size: 13px; }
   .month-tiles { flex-direction: column; }
 }
-/* ── Ticker ── */
-.ticker {
-  background: var(--ink);
-  padding: 7px 0;
-  overflow: hidden;
-  white-space: nowrap;
-}
-.ticker-track {
-  display: inline-block;
-  animation: tick 45s linear infinite;
-  font-weight: 400;
-  font-size: 13px;
-  letter-spacing: 1px;
-  color: var(--bg);
-}
-@keyframes tick {
-  from { transform: translateX(100vw); }
-  to   { transform: translateX(-100%); }
-}
 </style>
 </head>
 <body>
-
-<div class="ticker">
-  <span class="ticker-track" id="ticker-track">Chargement des données en cours…</span>
-</div>
 
 <button class="nav-burger" id="nav-burger" aria-label="Menu">&#9776;</button>
 <ul class="nav-menu" id="nav-menu">
@@ -333,7 +310,6 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
 
 </div>
 
-<script src="ticker.js"></script>
 <script src="duree.js"></script>
 <script src="bilan.js?v=2"></script>
 <script>
@@ -936,8 +912,6 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
   // ── Init ──────────────────────────────────────────────────
 
   chargerDonnees();
-  Ticker.charger();
-  setInterval(Ticker.charger, 300000);
 
 })();
 </script>

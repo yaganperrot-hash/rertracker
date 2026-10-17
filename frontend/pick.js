@@ -315,70 +315,133 @@
       });
     });
 
-    // ── Génération du canvas 1080×1080 ──
+    // ── Génération du canvas 1080×1080 (aligné sur carte.html) ──
     function buildShareCanvas(meta, data) {
-      const W = 1080, H = 1080;
-      const canvas = document.createElement('canvas');
+      var W = 1080, H = 1080;
+      var canvas = document.createElement('canvas');
       canvas.width = W; canvas.height = H;
-      const ctx = canvas.getContext('2d');
+      var ctx = canvas.getContext('2d');
 
-      ctx.fillStyle = '#F7F4EF';
+      // Palette charte
+      var BG = '#F7F4EF', INK = '#000', SUB = '#333', MUTED = '#555', RED = '#C0392B';
+      var PAD = 72, TOP = 64;
+
+      ctx.fillStyle = BG;
       ctx.fillRect(0, 0, W, H);
+      ctx.textBaseline = 'alphabetic';
 
-      const cx = W / 2;
+      // ── Header ──
+      // Badge "IDF" (bordure rouge, texte rouge)
+      ctx.strokeStyle = RED; ctx.lineWidth = 3;
+      ctx.strokeRect(PAD, TOP, 72, 36);
+      ctx.fillStyle = RED;
+      ctx.font = '900 15px Roboto, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('IDF', PAD + 36, TOP + 26);
 
-      // Pastille de ligne
-      const cy = 300;
+      // Titre
+      ctx.fillStyle = INK;
+      ctx.font = '900 22px Roboto, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.letterSpacing = '4px';
+      ctx.fillText('COMPTEUR DE RETARDS', PAD + 86, TOP + 26);
+      ctx.letterSpacing = '0px';
+
+      // Date à droite
+      var dateStr = new Date().toLocaleDateString('fr-FR',
+        { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' });
+      dateStr = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+      ctx.fillStyle = SUB;
+      ctx.font = '500 21px Roboto, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(dateStr, W - PAD, TOP + 26);
+
+      // Trait sous header
       ctx.beginPath();
-      ctx.arc(cx, cy, 100, 0, Math.PI * 2);
+      ctx.moveTo(PAD, TOP + 52);
+      ctx.lineTo(W - PAD, TOP + 52);
+      ctx.strokeStyle = INK; ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // ── Corps centré ──
+      var cx = W / 2;
+      var bodyTop = TOP + 52 + 80;
+
+      // Pastille rectangulaire arrondie (comme carte.html)
+      var pW = 160, pH = 70, pR = 10;
+      var pX = cx - pW / 2, pY = bodyTop;
+      ctx.beginPath();
+      ctx.roundRect(pX, pY, pW, pH, pR);
       ctx.fillStyle = meta.color;
       ctx.fill();
       ctx.fillStyle = meta.textColor || '#fff';
-      ctx.font = '900 68px Roboto, sans-serif';
+      ctx.font = '900 36px Roboto, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(meta.short, cx, cy);
+      ctx.fillText(meta.short, cx, pY + pH / 2);
+      ctx.textBaseline = 'alphabetic';
 
       // Nom de la ligne
-      ctx.fillStyle = '#000';
-      ctx.font = '700 40px Roboto, sans-serif';
-      ctx.fillText(meta.name, cx, cy + 150);
+      ctx.fillStyle = INK;
+      ctx.font = '700 36px Roboto, sans-serif';
+      ctx.fillText(meta.name, cx, bodyTop + pH + 56);
 
-      // Coût en euros
+      // Montant en euros (gros, noir, 900)
       var cout = data ? (data.total_cout_eur || 0) : 0;
-      ctx.fillStyle = '#000';
-      ctx.font = '900 80px Roboto, sans-serif';
-      ctx.fillText(cout.toLocaleString('fr-FR') + ' \u20AC', cx, cy + 280);
+      var coutTxt = cout.toLocaleString('fr-FR') + ' \u20AC';
+      ctx.fillStyle = INK;
+      ctx.font = '900 120px Roboto, sans-serif';
+      ctx.fillText(coutTxt, cx, bodyTop + pH + 200);
 
-      ctx.fillStyle = '#555';
-      ctx.font = '400 32px Roboto, sans-serif';
-      ctx.fillText('perdus aujourd\u2019hui', cx, cy + 330);
+      // "aux voyageurs" (léger, gris)
+      ctx.fillStyle = SUB;
+      ctx.font = '300 30px Roboto, sans-serif';
+      ctx.fillText('perdus aujourd\u2019hui aux voyageurs', cx, bodyTop + pH + 250);
 
-      // Jours de travail
+      // Durée en rouge (format lisible)
+      var mv = data ? (data.total_minutes_voyageurs || 0) : 0;
+      var dureeTxt = 'soit ' + formatDuree(mv) + ' de vie ' + accordPerdu(mv) + ' collectivement';
+      ctx.fillStyle = RED;
+      ctx.font = '500 28px Roboto, sans-serif';
+      ctx.fillText(dureeTxt, cx, bodyTop + pH + 320);
+
+      // Jours de travail au SMIC
       var jours = Math.floor(cout / (smicHoraire * 7));
-      ctx.fillStyle = '#C00';
-      ctx.font = '900 56px Roboto, sans-serif';
-      ctx.fillText(jours.toLocaleString('fr-FR') + ' jours de travail', cx, cy + 440);
+      if (jours > 0) {
+        ctx.fillStyle = MUTED;
+        ctx.font = '400 26px Roboto, sans-serif';
+        ctx.fillText(jours.toLocaleString('fr-FR') + ' jours de travail au SMIC horaire', cx, bodyTop + pH + 370);
+      }
 
-      // Footer
-      ctx.fillStyle = 'rgba(0,0,0,0.15)';
-      ctx.font = '900 20px Roboto, sans-serif';
-      ctx.fillText('RETARDS IDF', cx, H - 100);
+      // ── Footer ──
+      var footY = H - 64;
+      // Trait au-dessus
+      ctx.beginPath();
+      ctx.moveTo(PAD, footY - 40);
+      ctx.lineTo(W - PAD, footY - 40);
+      ctx.strokeStyle = INK; ctx.lineWidth = 2;
+      ctx.stroke();
 
-      ctx.fillStyle = 'rgba(0,0,0,0.12)';
-      ctx.font = '500 22px Roboto, sans-serif';
-      ctx.fillText('retards-idf.fr/' + SLUGS[currentLine], cx, H - 60);
+      ctx.fillStyle = MUTED;
+      ctx.font = '400 17px Roboto, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('Donn\u00E9es PRIM \u00B7 \u00CEle-de-France Mobilit\u00E9s', PAD, footY);
+
+      ctx.fillStyle = INK;
+      ctx.font = '900 17px Roboto, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText('retards-idf.fr', W - PAD, footY);
 
       return canvas;
     }
 
     function shareText(meta, data) {
       var cout = data ? (data.total_cout_eur || 0).toLocaleString('fr-FR') : '\u2014';
-      var jours = data ? Math.floor((data.total_cout_eur || 0) / (smicHoraire * 7)) : 0;
-      return '\uD83D\uDEA8\uD83D\uDEA8 ' + meta.name + ' :\n' +
-        "Aujourd\u2019hui les perturbations ont co\u00FBt\u00E9 " + cout + '\u00A0\u20AC ' +
-        "soit l\u2019\u00E9quivalent de " + jours.toLocaleString('fr-FR') + ' jours de travail.\n' +
-        'Et toi, ta ligne a co\u00FBt\u00E9 combien ? \uD83D\uDEA8\uD83D\uDEA8';
+      var mv = data ? (data.total_minutes_voyageurs || 0) : 0;
+      var duree = formatDuree(mv);
+      return meta.name + ' \u2014 Les retards ont co\u00FBt\u00E9 ' + cout + '\u00A0\u20AC ' +
+        "aujourd\u2019hui, soit " + duree +
+        ' de vie ' + accordPerdu(mv) + ' collectivement.';
     }
 
     // Le fichier doit déjà exister : un téléchargement lancé après une attente (toBlob) ou après

@@ -58,7 +58,7 @@
   .s2-label{font-size:42px;font-weight:400;color:var(--sub);margin-top:20px}
   .s2-sep{width:140px;border:none;border-top:3px solid var(--ink);margin:40px auto}
   .s2-soit{font-size:42px;font-weight:500;color:var(--ink);margin-bottom:20px}
-  .s2-equiv{font-size:120px;font-weight:900;color:var(--red);line-height:1}
+  .s2-equiv{font-size:88px;font-weight:900;color:var(--red);line-height:1}
   .s2-who{font-size:42px;font-weight:500;color:var(--ink);margin-top:12px}
 
   /* ═══ Slides 3 & 4 ═══ */
@@ -76,7 +76,6 @@
   .s5-count{font-size:90px;font-weight:900;color:var(--ink);margin-bottom:48px}
   .s5-q{font-size:60px;font-weight:400;color:var(--sub);margin-bottom:56px;line-height:1.25}
   .s5-url{font-size:80px;font-weight:900;color:var(--red)}
-  .s5-bio{font-size:34px;font-weight:400;color:var(--muted);margin-top:16px}
   .s5-band{display:none}
 </style>
 </head>
@@ -109,10 +108,11 @@
   <div class="body">
     <div class="s2-euros" id="cout2">&mdash;</div>
     <hr class="s2-sep">
-    <div class="s2-soit" id="s2-soit"></div>
-    <div class="s2-equiv" id="equiv-sal">&mdash;</div>
+    <div class="s2-soit" id="s2-soit">soit</div>
+    <div class="s2-equiv" id="s2-duree">&mdash;</div>
+    <div class="s2-who" id="s2-label">de vie perdues collectivement</div>
   </div>
-  <div class="foot"><span class="foot-src">Salaire m&#233;dian infirmier : 2 863 &#8364;/mois brut &#183; talent.com</span></div>
+  <div class="foot"><span class="foot-src">Donn&#233;es PRIM &#183; &#206;le-de-France Mobilit&#233;s</span></div>
 </div>
 
 <!-- ═══ Slide 3 ═══ -->
@@ -160,9 +160,8 @@
   <hr class="sep">
   <div class="body">
     <div class="s5-count" id="cta-inc">&mdash;</div>
-    <div class="s5-q">Et toi, ta ligne nous a fait perdre combien aujourd'hui ?</div>
+    <div class="s5-q">Suivez le co&#251;t des retards en temps r&#233;el</div>
     <div class="s5-url">retards-idf.fr</div>
-    <div class="s5-bio">(lien en bio)</div>
   </div>
   <div class="s5-band"><span>Donn&#233;es PRIM &#183; &#206;le-de-France Mobilit&#233;s</span></div>
   <div class="foot"><span class="foot-url">@retardsidf</span></div>
@@ -179,7 +178,6 @@ const META = {
   TRANSILIEN_N:['N','#333333','#fff'], TRANSILIEN_P:['P','#E87722','#fff'],
   TRANSILIEN_R:['R','#228B22','#fff'], TRANSILIEN_U:['U','#7B0F1F','#fff'],
 };
-const SALAIRE_MENSUEL = 2862.50;
 const nb = v => v.toLocaleString('fr-FR').replace(/ | /g, '\u202f');
 
 function pastilleHTML(id) {
@@ -219,13 +217,11 @@ function fillLine(prefix, l) {
   document.getElementById('s1-duree').textContent = formatDuree(mv);
   document.getElementById('s1-label').textContent = 'de vie ' + accordPerdu(mv) + ' collectivement';
 
-  // — Slide 2 : arrondi en dessous (floor) —
+  // — Slide 2 : durée de vie perdue —
   document.getElementById('cout2').textContent = nb(today.cout_eur) + ' \u20ac';
-  const nbInf = Math.floor(today.cout_eur / SALAIRE_MENSUEL);
-  document.getElementById('s2-soit').textContent =
-    'Soit l\u2019\u00e9quivalent du salaire de';
-  document.getElementById('equiv-sal').textContent =
-    nbInf + ' infirmier\u00b7e' + (nbInf >= 2 ? '\u00b7s' : '');
+  document.getElementById('s2-duree').textContent = formatDuree(mv);
+  document.getElementById('s2-label').textContent =
+    'de vie ' + accordPerdu(mv) + ' collectivement';
 
   // — Slides 3 & 4 —
   const ranked = lines

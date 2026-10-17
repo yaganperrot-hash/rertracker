@@ -32,26 +32,6 @@
       overflow-x: hidden;
     }
 
-    /* ─── TICKER ─── */
-    .ticker {
-      background: var(--ink);
-      padding: 7px 0;
-      overflow: hidden;
-      white-space: nowrap;
-    }
-    .ticker-track {
-      display: inline-block;
-      animation: tick 45s linear infinite;
-      font-weight: 300;
-      font-size: 10px;
-      letter-spacing: 1.5px;
-      color: var(--bg);
-    }
-    @keyframes tick {
-      from { transform: translateX(100vw); }
-      to   { transform: translateX(-100%); }
-    }
-
     /* ─── NAV : nav.css, commune aux 4 pages ─── */
 
     /* ─── HERO ─── */
@@ -306,11 +286,6 @@
   </style>
 </head>
 <body>
-
-<!-- TICKER -->
-<div class="ticker">
-  <span class="ticker-track" id="ticker-track">Chargement des données en cours…</span>
-</div>
 
 <!-- NAV -->
 <button class="nav-burger" id="nav-burger" aria-label="Menu">&#9776;</button>
@@ -573,11 +548,7 @@
   </div>
 </footer>
 
-<script src="ticker.js"></script>
 <script>
-  Ticker.charger();
-  setInterval(Ticker.charger, 300000);
-
   /* Chiffres de la méthode lus dans la config du backend (/api/reference) : taux SMIC,
      rythme des relevés, paramètres du calcul et exemple calculé sur la fréquentation réelle. */
   (async function () {
