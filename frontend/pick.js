@@ -188,7 +188,7 @@
     html += '  <div class="pp-line-stats">';
     // Mêmes voyageurs, même période : le coût est le temps perdu valorisé au SMIC
     html += '    <div class="pp-period" id="pp-period"></div>';
-    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-cout">\u2014</span><span class="pp-stat-label">perdus aujourd\u2019hui</span></div>';
+    html += '    <div class="pp-stat"><span class="pp-stat-val" id="pp-stat-cout">\u2014</span><span class="pp-stat-label">perdus</span></div>';
     html += '    <div class="pp-soit">SOIT</div>';
     html += '    <div class="pp-stat"><span class="pp-stat-val pp-stat-jours" id="pp-stat-jours">\u2014</span><span class="pp-stat-label">jours de travail au SMIC horaire</span></div>';
     html += '  </div>';
@@ -396,7 +396,7 @@
       // "aux voyageurs" (léger, gris)
       ctx.fillStyle = SUB;
       ctx.font = '300 30px Roboto, sans-serif';
-      ctx.fillText('perdus aujourd\u2019hui aux voyageurs', cx, bodyTop + pH + 250);
+      ctx.fillText('perdus aux voyageurs', cx, bodyTop + pH + 250);
 
       // Durée en rouge (format lisible)
       var mv = data ? (data.total_minutes_voyageurs || 0) : 0;
@@ -440,7 +440,7 @@
       var mv = data ? (data.total_minutes_voyageurs || 0) : 0;
       var duree = formatDuree(mv);
       return meta.name + ' \u2014 Les retards ont co\u00FBt\u00E9 ' + cout + '\u00A0\u20AC ' +
-        "aujourd\u2019hui, soit " + duree +
+        "soit " + duree +
         ' de vie ' + accordPerdu(mv) + ' collectivement.';
     }
 
