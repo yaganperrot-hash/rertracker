@@ -504,7 +504,7 @@
       if (joursLabel) txt += ', soit ' + joursLabel + ' de travail au SMIC.';
       else txt += '.';
       txt += rankTxt;
-      txt += '\n\nEt toi, ta ligne nous a co\u00FBt\u00E9 combien\u00A0?';
+      txt += '\n\nEt toi, ta ligne nous a co\u00FBt\u00E9 combien\u00A0? \u26A0\uFE0F\u26A0\uFE0F';
       return txt;
     }
 
