@@ -66,10 +66,10 @@
   box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--ink);
 }
 
-/* ── Panneau inline ── */
+/* ── Panneau inline (design carte) ── */
 .pick-panel {
   margin-top: 20px;
-  background: #fff;
+  background: var(--bg, #F7F4EF);
   border: 1px solid var(--border);
   border-radius: 16px;
   overflow: hidden;
@@ -78,10 +78,14 @@
   transition: max-height .32s ease, opacity .24s ease;
 }
 .pick-panel.open {
-  max-height: 700px;
+  max-height: 900px;
   opacity: 1;
 }
-.pick-panel-inner { padding: 22px; }
+.pp-band {
+  height: 10px;
+  width: 100%;
+}
+.pick-panel-inner { padding: 24px 28px 28px; }
 
 .pp-close {
   float: right;
@@ -106,15 +110,17 @@
   stroke-linecap: round;
 }
 
-/* En-tête : pastille + nom + statut */
-.pp-head {
+/* ── Contenu carte centré ── */
+.pp-card-center {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  text-align: center;
+  gap: 8px;
 }
 .pp-round {
-  width: 40px;
-  height: 40px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   flex: none;
   color: #fff;
@@ -122,101 +128,65 @@
   align-items: center;
   justify-content: center;
   font-weight: 900;
-  font-size: 17px;
+  font-size: 30px;
   letter-spacing: -.03em;
   line-height: 1;
+  margin-top: 8px;
 }
 .pp-round[data-tc="dark"] { color: #1A1916; }
-.pp-name {
+.pp-date {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--muted, #555);
+  letter-spacing: .06em;
+  margin-top: 4px;
+}
+.pp-accroche {
+  font-weight: 400;
+  font-size: 18px;
+  color: var(--sub, #333);
+  margin-top: 8px;
+}
+.pp-montant {
+  font-weight: 900;
+  font-size: clamp(44px, 12vw, 72px);
+  letter-spacing: -.03em;
+  color: var(--ink, #000);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  margin: 8px 0;
+}
+.pp-montant-zero {
+  font-weight: 400;
+  font-size: 20px;
+  color: var(--muted, #555);
+}
+.pp-filet {
+  width: 60%;
+  max-width: 320px;
+  height: 2px;
+  background: var(--muted, #555);
+  opacity: .3;
+  margin: 4px auto;
+}
+.pp-smic {
   font-weight: 700;
   font-size: 17px;
-  color: var(--ink);
+  color: #C0392B;
+  margin-top: 4px;
 }
-.pp-status {
-  margin-left: auto;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 100px;
+.pp-rank {
+  font-size: 15px;
+  color: var(--muted, #555);
+  margin-top: 4px;
 }
-.pp-status.perturbé {
-  background: rgba(192, 57, 43, .1);
-  color: var(--red);
-}
-.pp-status.ok {
-  background: rgba(46, 204, 113, .12);
-  color: #27ae60;
-}
-
-/* Chiffre principal */
-.pp-label {
-  font-size: 13px;
-  color: var(--muted);
-  margin-top: 14px;
-}
-.pp-amount {
-  font-weight: 900;
-  letter-spacing: -.04em;
-  line-height: .95;
-  color: var(--ink);
-  font-size: clamp(50px, 15vw, 74px);
-  font-variant-numeric: tabular-nums;
-}
-.pp-amount .pp-unit {
-  font-size: .30em;
-  font-weight: 500;
-  color: var(--muted);
-  letter-spacing: 0;
-  margin-left: 4px;
-}
-.pp-time {
-  margin-top: 8px;
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-}
-.pp-time b { font-weight: 700; }
-
-/* Stats réseau de la ligne */
-.pp-line-stats {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  margin: 22px 0 0;
-}
-.pp-soit {
-  font-weight: 900;
-  font-size: 16px;
-  color: var(--ink);
-  letter-spacing: .04em;
-}
-.pp-period {
+.pp-signature {
   text-align: center;
-  font-size: 18px;
-  font-weight: 900;
-  color: var(--ink);
-}
-.pp-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 4px;
-}
-.pp-stat-val {
   font-weight: 700;
-  font-size: 26px;
-  /* Jamais coupé : « € » et « j » restent sur la ligne du chiffre */
-  white-space: nowrap;
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-}
-.pp-stat-label {
-  font-size: 14px;
-  color: var(--muted);
-  font-weight: 400;
+  font-size: 12px;
+  color: var(--muted, #555);
+  margin-top: 16px;
+  letter-spacing: .04em;
 }
 
 /* Toggle période */
@@ -247,23 +217,11 @@
   font-weight: 700;
 }
 
-/* Classement (page ligne) */
-.pp-rank {
-  margin-top: 14px;
-  font-size: 14px;
-  color: var(--sub);
-  text-align: center;
-}
-.pp-rank strong {
-  font-weight: 700;
-  color: var(--ink);
-}
-
 /* Boutons bas */
 .pp-actions {
   display: flex;
-  gap: 10px;
-  margin-top: 16px;
+  gap: 12px;
+  margin-top: 22px;
 }
 .pp-actions button,
 .pp-actions a {
@@ -272,9 +230,9 @@
   cursor: pointer;
   font-family: inherit;
   font-weight: 700;
-  font-size: 14px;
-  padding: 12px;
-  border-radius: 10px;
+  font-size: 16px;
+  padding: 14px;
+  border-radius: 12px;
   background: #fff;
   color: var(--ink);
   text-align: center;
