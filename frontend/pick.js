@@ -472,9 +472,40 @@
     }
 
     function shareText(meta, data) {
-      var cout = data ? (data.total_cout_eur || 0).toLocaleString('fr-FR') : '\u2014';
-      var article = meta.name.startsWith('RER') ? 'Le ' : 'La ';
-      return article + meta.name + ' nous a co\u00FBt\u00E9 ' + cout + '\u00A0\u20AC de retards aujourd\u2019hui.';
+      var cout = data ? (data.total_cout_eur || 0) : 0;
+      var coutTxt = cout.toLocaleString('fr-FR');
+      var article = meta.name.startsWith('RER') ? 'le ' : 'la ';
+
+      // Jours SMIC
+      var jours = Math.floor(cout / (smicHoraire * 7));
+      var joursLabel = '';
+      if (jours > 0) {
+        if (jours < 365) joursLabel = jours.toLocaleString('fr-FR') + ' jours';
+        else {
+          var mois = Math.round(jours / 30.44);
+          if (mois < 24) joursLabel = mois + ' mois';
+          else {
+            var a = Math.floor(jours / 365.25);
+            var m = Math.round((jours / 365.25 - a) * 12);
+            joursLabel = a + ' ans' + (m ? ' ' + m + ' mois' : '');
+          }
+        }
+      }
+
+      // Classement
+      var rankTxt = '';
+      if (data._rank) {
+        var total = Object.keys(LINE_META).length;
+        var suf = data._rank === 1 ? '\u02B3\u1D49' : '\u1D49';
+        rankTxt = '\n' + data._rank + suf + ' pire ligne / ' + total + '.';
+      }
+
+      var txt = '\u26A0\uFE0F\u26A0\uFE0F Aujourd\u2019hui ' + article + meta.name + ' nous a co\u00FBt\u00E9 ' + coutTxt + '\u00A0\u20AC';
+      if (joursLabel) txt += ', soit ' + joursLabel + ' de travail au SMIC.';
+      else txt += '.';
+      txt += rankTxt;
+      txt += '\n\nEt toi, ta ligne nous a co\u00FBt\u00E9 combien\u00A0?';
+      return txt;
     }
 
     // Le fichier doit déjà exister : un téléchargement lancé après une attente (toBlob) ou après
@@ -583,7 +614,7 @@
         if (btn.dataset.action === 'x') {
           var xText = text;
           if (!/^[\d.]+$|:/.test(window.location.hostname) && window.location.hostname !== 'localhost') {
-            xText += '\n\n' + pageUrl;
+            xText += '\n\n' + window.location.origin;
           }
           window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(xText), '_blank');
         } else if (btn.dataset.action === 'instagram') {
