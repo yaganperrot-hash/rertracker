@@ -505,6 +505,10 @@
       else txt += '.';
       txt += rankTxt;
       txt += '\n\nEt toi, ta ligne nous a co\u00FBt\u00E9 combien\u00A0? \u26A0\uFE0F\u26A0\uFE0F';
+      // Lien du site (seulement en prod, pas en local)
+      if (!/^[\d.]+$|:/.test(window.location.hostname) && window.location.hostname !== 'localhost') {
+        txt += '\n\n' + window.location.origin;
+      }
       return txt;
     }
 
@@ -612,11 +616,7 @@
         if (!btn) return;
 
         if (btn.dataset.action === 'x') {
-          var xText = text;
-          if (!/^[\d.]+$|:/.test(window.location.hostname) && window.location.hostname !== 'localhost') {
-            xText += '\n\n' + window.location.origin;
-          }
-          window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(xText), '_blank');
+          window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text), '_blank');
         } else if (btn.dataset.action === 'instagram') {
           if (shareFile) downloadFile(shareFile);
           window.open('https://www.instagram.com/', '_blank');
