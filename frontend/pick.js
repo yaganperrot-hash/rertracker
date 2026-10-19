@@ -505,10 +505,7 @@
       else txt += '.';
       txt += rankTxt;
       txt += '\n\nEt toi, ta ligne nous a co\u00FBt\u00E9 combien\u00A0? \u26A0\uFE0F\u26A0\uFE0F';
-      // Lien du site (seulement en prod, pas en local)
-      if (!/^[\d.]+$|:/.test(window.location.hostname) && window.location.hostname !== 'localhost') {
-        txt += '\n\n' + window.location.origin;
-      }
+      txt += '\n\nhttps://retards-idf.fr';
       return txt;
     }
 
