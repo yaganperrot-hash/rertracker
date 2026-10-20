@@ -451,8 +451,9 @@
 
       /* Incidents : une rangée par ligne, détail déplié au toucher */
       .inc-groups { flex-direction: column; gap: 1px; }
-      .inc-chip { border: 0; padding: 10px 12px; }
-      .chip-cout { margin-left: auto; font-size: 15px; }
+      .inc-chip { border: 0; padding: 10px 12px; gap: 8px; }
+      .chip-count { white-space: normal; min-width: 0; font-size: 13px; }
+      .chip-cout { margin-left: auto; font-size: 15px; flex-shrink: 0; }
       .incident-cout { font-size: 13px; }
       .chip-chevron { display: block; font-size: 14px; color: var(--sub); transition: transform 0.15s; }
       .inc-group.open .chip-chevron { transform: rotate(180deg); }
