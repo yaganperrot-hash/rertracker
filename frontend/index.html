@@ -45,7 +45,6 @@
       text-transform: uppercase;
       color: var(--sub);
       margin-bottom: 2px;
-      padding-right: 48px;
     }
     .hero-time {
       font-weight: 400;
@@ -240,7 +239,7 @@
       jours[now.getDay()] + ' ' + now.getDate() + ' ' + mois[now.getMonth()] + ' ' +
       now.getFullYear();
     document.getElementById('hero-time').textContent =
-      String(now.getHours()).padStart(2, '0') + 'h' +
+      'MàJ ' + String(now.getHours()).padStart(2, '0') + 'h' +
       String(now.getMinutes()).padStart(2, '0');
   }
   updateDate();

@@ -62,7 +62,7 @@ a { color: var(--muted); }
   padding: 7px 20px; color: var(--gris); border-radius: 6px;
 }
 .toggle button:hover, .toggle a:hover { color: var(--encre); }
-.toggle [aria-pressed="true"] { background: var(--encre); color: var(--creme); }
+.toggle [aria-pressed="true"] { background: var(--encre); color: #fff; }
 .toggle button:focus-visible { outline: 2px solid var(--encre); outline-offset: 1px; }
 
 /* ── Hero ── */
@@ -73,7 +73,11 @@ a { color: var(--muted); }
 }
 .hero-date {
   font-weight: 400; font-size: 11px; letter-spacing: 2px;
-  text-transform: uppercase; color: var(--sub); margin-bottom: 12px;
+  text-transform: uppercase; color: var(--sub); margin-bottom: 2px;
+}
+.hero-time {
+  font-weight: 400; font-size: 11px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 12px;
 }
 .hero-subtitle {
   font-weight: 500; font-size: clamp(16px, 2.4vw, 22px);
@@ -191,9 +195,17 @@ a { color: var(--muted); }
 /* Calendrier heatmap */
 .heatmap-section { margin-bottom: 20px; }
 .heatmap-section .eyebrow { margin-bottom: 10px; }
-.heatmap-wrap { overflow-x: auto; padding-bottom: 6px; }
+.heatmap-wrap { overflow-x: auto; padding-bottom: 6px; position: relative; }
 .heatmap-wrap::-webkit-scrollbar { height: 4px; }
 .heatmap-wrap::-webkit-scrollbar-thumb { background: var(--creux); border-radius: 2px; }
+.heatmap-section { position: relative; }
+.heatmap-hint {
+  display: none; font-size: 11px; color: var(--gris-clair); text-align: center;
+  margin-top: 4px; letter-spacing: 0.5px;
+}
+@media (max-width: 768px) {
+  .heatmap-hint { display: block; }
+}
 .heatmap {
   display: grid;
   grid-template-columns: 40px repeat(31, 20px);
@@ -253,7 +265,8 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
 }
 @media (max-width: 480px) {
   .kpi-bar { display: grid; grid-template-columns: repeat(3, 1fr); }
-  .kpi-card { max-width: none; }
+  .kpi-card { max-width: none; padding: 10px 8px; min-width: 0; }
+  .kpi-label { font-size: 9px; letter-spacing: 1px; }
   .ligne-card { grid-template-columns: 24px 50px 1fr 70px 16px; gap: 6px; padding: 10px 12px; }
   .heatmap {
     grid-template-columns: 34px repeat(31, 16px);
@@ -287,6 +300,7 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
   <main id="contenu">
     <section class="hero" aria-label="Chiffres de la période">
       <div class="hero-date" id="h-date">&nbsp;</div>
+      <div class="hero-time" id="h-time">&nbsp;</div>
       <div class="hero-subtitle" id="h-subtitle">Ce mois-ci, les retards ont coûté</div>
       <div class="hero-counter" id="h-cout">— €</div>
       <div class="hero-unit">au SMIC horaire brut · réseau IDF complet</div>
@@ -363,12 +377,14 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
   function labelPeriode() {
     if (!meta || !meta.periodes) return '';
     var au = dateIso(meta.au);
+    // Pour "Année" avec données partielles : afficher directement "Depuis le 16 septembre 2026"
+    if (periodeActuelle === 'annee' && meta.debut_donnees && meta.debut_donnees > meta.periodes[periodeActuelle]) {
+      var debut = dateIso(meta.debut_donnees);
+      return ('Depuis le ' + debut.getDate() + ' ' + MOIS[debut.getMonth()] + ' ' + au.getFullYear()).toUpperCase();
+    }
     var txt = fmtDateCourte(dateIso(meta.periodes[periodeActuelle])) + ' — ' + fmtDateCourte(au) + ' ' + au.getFullYear();
     if (meta.debut_donnees && meta.debut_donnees > meta.periodes[periodeActuelle]) {
       txt += ' · données depuis le ' + fmtDateCourte(dateIso(meta.debut_donnees));
-    }
-    if (majHeure) {
-      txt += ' · MÀJ ' + majHeure;
     }
     return txt.toUpperCase();
   }
@@ -401,6 +417,7 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
     var totalEur = t ? t.euros : 0;
 
     $('h-date').textContent = labelPeriode();
+    $('h-time').textContent = majHeure ? 'MÀJ ' + majHeure : '';
     $('h-subtitle').textContent = p.subtitle;
     $('h-cout').textContent = fmtNombre(totalEur) + ' €';
   }
@@ -456,6 +473,7 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
       kpiOuvert = null;
       $('kpi-detail').innerHTML = '';
       renderKpiBar();
+      $('kpi-bar').scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
     kpiOuvert = cle;
@@ -651,6 +669,7 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
       document.querySelectorAll('.ligne-card').forEach(function(c) {
         c.setAttribute('aria-expanded', 'false');
       });
+      $('kpi-bar').scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
     ligneSelectionnee = id;
@@ -789,7 +808,9 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
       }
     }
 
-    html += '</div></div></div>';
+    html += '</div></div>';
+    html += '<div class="heatmap-hint">← glisser pour voir tout le calendrier →</div>';
+    html += '</div>';
     return html;
   }
 

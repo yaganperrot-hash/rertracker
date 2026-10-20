@@ -41,7 +41,7 @@ a { color: var(--gris); }
   padding: 5px 15px; color: var(--gris); border-radius: 6px;
 }
 .toggle button:hover, .toggle a:hover { color: var(--encre); }
-.toggle [aria-pressed="true"], .toggle [aria-current="page"] { background: var(--encre); color: var(--creme); }
+.toggle [aria-pressed="true"], .toggle [aria-current="page"] { background: var(--encre); color: #fff; }
 .toggle button:focus-visible, .toggle a:focus-visible { outline: 2px solid var(--encre); outline-offset: 1px; }
 .titre-page { margin-bottom: 18px; }
 

@@ -61,6 +61,14 @@
       letter-spacing: 2px;
       text-transform: uppercase;
       color: var(--sub);
+      margin-bottom: 2px;
+    }
+    .hero-time {
+      font-weight: 400;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
       margin-bottom: 12px;
     }
     .hero-subtitle {
@@ -444,7 +452,8 @@
       /* Incidents : une rangée par ligne, détail déplié au toucher */
       .inc-groups { flex-direction: column; gap: 1px; }
       .inc-chip { border: 0; padding: 10px 12px; }
-      .chip-cout { margin-left: auto; font-size: 17px; }
+      .chip-cout { margin-left: auto; font-size: 15px; }
+      .incident-cout { font-size: 13px; }
       .chip-chevron { display: block; font-size: 14px; color: var(--sub); transition: transform 0.15s; }
       .inc-group.open .chip-chevron { transform: rotate(180deg); }
       .inc-pop { position: static; width: auto; padding-top: 0; }
@@ -504,6 +513,7 @@
 <section class="hero">
   <span class="stamp">RETARDS IDF</span>
   <div class="hero-date" id="hero-date">&nbsp;</div>
+  <div class="hero-time" id="hero-time">&nbsp;</div>
   <div class="hero-subtitle">Aujourd'hui, les retards des RER et Transiliens ont coûté</div>
   <div class="hero-counter" id="ctr-eur">— €</div>
   <div class="hero-unit">au SMIC horaire brut · réseau IDF complet</div>
@@ -898,8 +908,9 @@
       jours[now.getDay()] + ' ' +
       now.getDate() + ' ' +
       mois[now.getMonth()] + ' ' +
-      now.getFullYear() +
-      '  ·  MÀJ ' +
+      now.getFullYear();
+    document.getElementById('hero-time').textContent =
+      'MÀJ ' +
       String(now.getHours()).padStart(2, '0') + 'H' +
       String(now.getMinutes()).padStart(2, '0');
   }

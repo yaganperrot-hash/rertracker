@@ -1,4 +1,6 @@
 /* ── Menu hamburger — commun à toutes les pages ────────────── */
+html { overflow-x: hidden; }
+
 .nav-burger {
   position: fixed;
   top: 14px;
