@@ -615,7 +615,14 @@
         if (btn.dataset.action === 'x') {
           window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text), '_blank');
         } else if (btn.dataset.action === 'instagram') {
+          // Deux temps : l'image d'abord, Instagram ensuite sur un second clic. Ouvert dans le même clic,
+          // l'onglet Instagram prenait le dessus avant que le téléchargement soit visible (ou l'annulait).
           if (shareFile) downloadFile(shareFile);
+          btn.dataset.action = 'instagram-open';
+          btn.innerHTML = btn.querySelector('svg').outerHTML +
+            '<span>Image enregistrée ✓<br><strong>Ouvrir Instagram →</strong></span>';
+          return; // le menu reste ouvert pour le second clic
+        } else if (btn.dataset.action === 'instagram-open') {
           window.open('https://www.instagram.com/', '_blank');
         } else if (btn.dataset.action === 'download') {
           if (shareFile) downloadFile(shareFile);
