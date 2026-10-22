@@ -1,16 +1,16 @@
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from backend.config import get_settings, SLUG_TO_ID
+from backend.config import get_settings, LINE_SLUGS, SLUG_TO_ID
 from backend.database import init_db
 from backend.collector import collect_disruptions, collect_rt_delays, collecte_autorisee, dernier_releve
 from backend.metrics import compute_daily_metrics, journee_de
@@ -156,7 +156,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Compteur de Retards IDF",
+    title="IDF-RETARD",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -228,6 +228,113 @@ for _slug in SLUG_TO_ID:
     @app.get(f"/{_slug}", include_in_schema=False)
     async def _page_ligne(_s=_slug):
         return FileResponse(_ligne_html)
+
+
+# ── Partage réseaux sociaux ──
+
+async def _share_metrics(target_date: date) -> list[dict]:
+    """Charge les DailyMetric de toutes les lignes pour une date donnée."""
+    from sqlalchemy import select as sa_select
+    from backend.database import AsyncSessionLocal
+    from backend.models import DailyMetric
+    from backend.metrics import cout_eur
+
+    smic = get_settings().smic_horaire
+    async with AsyncSessionLocal() as db:
+        stmt = sa_select(DailyMetric).where(DailyMetric.date == target_date)
+        rows = (await db.execute(stmt)).scalars().all()
+        return [
+            {"line_id": r.line_id, "minutes_voyageurs": r.minutes_voyageurs,
+             "cout_eur": cout_eur(r.minutes_voyageurs, smic)}
+            for r in rows
+        ]
+
+
+@app.get("/share/{slug}/{date_str}.png", include_in_schema=False)
+async def share_image(slug: str, date_str: str, format: str = Query(default="square")):
+    from backend.share import LINE_COLORS, FORMATS, compute_card_data, render_card, effective_date
+
+    line_id = SLUG_TO_ID.get(slug)
+    if not line_id or line_id not in LINE_COLORS:
+        return Response(status_code=404, content="Ligne inconnue")
+
+    if format not in FORMATS:
+        format = "square"
+
+    if date_str == "today":
+        target_date = effective_date()
+    else:
+        try:
+            target_date = date.fromisoformat(date_str)
+        except ValueError:
+            return Response(status_code=400, content="Date invalide (AAAA-MM-JJ)")
+
+    metrics = await _share_metrics(target_date)
+    data = compute_card_data(line_id, target_date, metrics)
+    png = render_card(data, format)
+
+    return Response(
+        content=png,
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=600"},
+    )
+
+
+@app.get("/share/{slug}/{date_str}", include_in_schema=False)
+async def share_page(slug: str, date_str: str):
+    from backend.share import LINE_COLORS, compute_card_data, effective_date, _fmt, _date_label
+
+    line_id = SLUG_TO_ID.get(slug)
+    if not line_id or line_id not in LINE_COLORS:
+        return Response(status_code=404, content="Ligne inconnue")
+
+    if date_str == "today":
+        target_date = effective_date()
+    else:
+        try:
+            target_date = date.fromisoformat(date_str)
+        except ValueError:
+            return Response(status_code=400, content="Date invalide")
+
+    metrics = await _share_metrics(target_date)
+    data = compute_card_data(line_id, target_date, metrics)
+    meta = LINE_COLORS[line_id]
+
+    cout_txt = f"{_fmt(data['cout_eur'])} €" if data["cout_eur"] else "0 €"
+    date_fmt = f"{target_date.day}/{target_date.month:02d}/{target_date.year}"
+    title = f"{meta['name']} — {cout_txt} de retards le {date_fmt}"
+    description = f"Coût des retards sur {meta['name']} le {date_fmt}, estimé par IDF-RETARD."
+    og_image = f"/share/{slug}/{target_date.isoformat()}.png?format=og"
+    page_url = f"/{slug}"
+
+    html = f"""<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{title}</title>
+<meta property="og:title" content="{title}">
+<meta property="og:description" content="{description}">
+<meta property="og:image" content="{og_image}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:type" content="article">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{title}">
+<meta name="twitter:description" content="{description}">
+<meta name="twitter:image" content="{og_image}">
+<style>body{{font-family:Roboto,sans-serif;text-align:center;padding:60px 20px;background:#F7F4EF;color:#000}}
+h1{{font-size:24px}}p{{color:#555;font-size:16px}}a{{color:#C0392B}}</style>
+</head>
+<body>
+<h1>{title}</h1>
+<p>{description}</p>
+<p>Redirection vers <a href="{page_url}">{meta['name']}</a>…</p>
+<script>setTimeout(function(){{location.href="{page_url}"}},1500)</script>
+</body>
+</html>"""
+
+    return HTMLResponse(content=html, headers={"Cache-Control": "public, max-age=600"})
 
 
 # Serve frontend static files

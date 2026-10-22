@@ -190,7 +190,7 @@
     html += '    <div class="pp-smic" id="pp-smic"></div>';
     html += '    <div class="pp-rank" id="pp-rank"></div>';
     html += '  </div>';
-    html += '  <div class="pp-signature">RETARDS IDF \u00B7 retards-idf.fr</div>';
+    html += '  <div class="pp-signature">IDF-RETARD \u00B7 idf-retard.fr</div>';
     html += '  <div class="pp-actions">';
     html += '    <button type="button" class="pp-btn-share" id="pp-share">Partager</button>';
     if (opts.showPageLink) {
@@ -466,7 +466,7 @@
 
       ctx.fillStyle = MUTED;
       ctx.font = '700 22px Roboto, sans-serif';
-      ctx.fillText('RETARDS IDF \u00B7 retards-idf.fr', cx, footY + 8);
+      ctx.fillText('IDF-RETARD \u00B7 idf-retard.fr', cx, footY + 8);
 
       return canvas;
     }
@@ -505,7 +505,7 @@
       else txt += '.';
       txt += rankTxt;
       txt += '\n\nEt toi, ta ligne nous a co\u00FBt\u00E9 combien\u00A0? \u26A0\uFE0F\u26A0\uFE0F';
-      txt += '\n\nhttps://retards-idf.fr';
+      txt += '\n\nhttps://idf-retard.fr';
       return txt;
     }
 

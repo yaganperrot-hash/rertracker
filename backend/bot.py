@@ -84,7 +84,7 @@ def _compose_tweet(total_incidents: int, total_mv: int, lignes: list[str], d: da
         f"⏱ {_fmt_duree(total_mv)} de vie {_accord_perdu(total_mv)} collectivement",
         f"🔴 {total_incidents} incident{'s' if total_incidents != 1 else ''}"
         + (f" — {pire} en tête" if pire else ""),
-        f"Base SMIC {smic:.2f}€/h · retardsidf.fr".replace(".", ",", 1),
+        f"Base SMIC {smic:.2f}€/h · idf-retard.fr".replace(".", ",", 1),
     ]
 
     return "\n".join(lines)
