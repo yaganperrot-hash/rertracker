@@ -122,11 +122,10 @@ const nb = v => v.toLocaleString('fr-FR').replace(/ | /g, ' ');
 
   // Coût en euros du jour, ligne par ligne (mv × SMIC/60)
   const SMIC = 12.31;
-  const stats = await Promise.all(today.lignes_perturbees.map(async id => {
-    const d = await (await fetch('/api/stats/line/' + id)).json();
-    const jour = (d.daily || []).find(x => x.date === today.date);
-    const mv = jour ? jour.minutes_voyageurs : 0;
-    return {id, cout: Math.round(mv * SMIC / 60)};
+  const lines = await (await fetch('/api/stats/today/lines')).json();
+  const stats = lines.map(l => ({
+    id: l.line_id,
+    cout: Math.round((l.minutes_voyageurs || 0) * SMIC / 60)
   }));
 
   const top = stats.sort((a,b) => b.cout - a.cout).slice(0, 5);
