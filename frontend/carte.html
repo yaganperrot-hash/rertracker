@@ -142,7 +142,7 @@ const nb = v => v.toLocaleString('fr-FR').replace(/ | /g, ' ');
     </div>`;
   }).join('');
 
-  await document.fonts.ready;
+  await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 3000))]);
   document.body.dataset.pret = '1';
 })();
 </script>

@@ -244,7 +244,7 @@ function fillLine(prefix, l) {
   document.getElementById('cta-inc').textContent =
     nb(today.total_incidents) + ' incidents aujourd\u2019hui.';
 
-  await document.fonts.ready;
+  await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 3000))]);
   document.body.dataset.pret = '1';
 })();
 </script>
