@@ -112,7 +112,7 @@ async def generer_carte_png(jour: date, dossier: Path = DOSSIER_PUBLICATIONS) ->
         async with async_playwright() as p:
             browser = await p.chromium.launch(args=["--no-sandbox", "--disable-gpu"])
             page = await browser.new_page(viewport={"width": 1080, "height": 1080})
-            await page.goto("http://127.0.0.1:8000/carte.html", wait_until="networkidle")
+            await page.goto("http://127.0.0.1:8000/carte.html", wait_until="load")
             # Attendre que carte.html signale la fin du rendu
             await page.wait_for_function(
                 "document.body.dataset.pret === '1'",
@@ -141,7 +141,7 @@ async def generer_carousel_png(jour: date, dossier: Path = DOSSIER_PUBLICATIONS)
             browser = await p.chromium.launch(args=["--no-sandbox", "--disable-gpu"])
             # Hauteur large pour contenir les 5 slides empilées
             page = await browser.new_page(viewport={"width": 1080, "height": 5400})
-            await page.goto("http://127.0.0.1:8000/carousel.html", wait_until="networkidle")
+            await page.goto("http://127.0.0.1:8000/carousel.html", wait_until="load")
             await page.wait_for_function(
                 "document.body.dataset.pret === '1'",
                 timeout=15_000,
