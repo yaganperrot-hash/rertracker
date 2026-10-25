@@ -49,10 +49,6 @@ Contenu de `.env` :
 
 ```env
 PRIM_API_KEY=your_prim_api_key
-TWITTER_API_KEY=your_twitter_key
-TWITTER_API_SECRET=your_twitter_secret
-TWITTER_ACCESS_TOKEN=your_access_token
-TWITTER_ACCESS_SECRET=your_access_secret
 DATABASE_URL=postgresql://user:password@db:5432/retards_idf
 POLLING_INTERVAL_MINUTES=12
 LOG_LEVEL=INFO

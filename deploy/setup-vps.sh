@@ -60,7 +60,7 @@ if [ ! -f "$APP_DIR/.env" ]; then
   echo "    - PRIM_API_KEY"
   echo "    - POSTGRES_USER / POSTGRES_PASSWORD (choisir un vrai mot de passe)"
   echo "    - DATABASE_URL (mettre le même user/password)"
-  echo "    - TWITTER_* (si bot X activé)"
+  echo "    - EMAIL_PASSWORD (App Password Gmail pour le récap quotidien)"
   echo ""
   echo ">>> Puis relancez l'étape 7 manuellement :"
   echo "    su - $APP_USER"

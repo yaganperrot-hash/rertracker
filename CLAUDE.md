@@ -56,11 +56,10 @@ RER A, B, C, D, E — Transilien H, J, K, L, N, P, R, U
 ## Variables d'environnement (voir `.env.example`)
 ```
 PRIM_API_KEY=
-TWITTER_API_KEY=
-TWITTER_API_SECRET=
-TWITTER_ACCESS_TOKEN=
-TWITTER_ACCESS_SECRET=
 DATABASE_URL=postgresql://user:password@db:5432/retards_idf
+EMAIL_SENDER=idf.retard@gmail.com
+EMAIL_PASSWORD=
+EMAIL_RECIPIENT=idf.retard@gmail.com
 POLLING_INTERVAL_MINUTES=20
 LOG_LEVEL=INFO
 ```

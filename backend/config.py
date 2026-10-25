@@ -7,10 +7,6 @@ from functools import lru_cache
 class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://user:password@db:5432/retards_idf"
     prim_api_key: str = ""
-    twitter_api_key: str = ""
-    twitter_api_secret: str = ""
-    twitter_access_token: str = ""
-    twitter_access_secret: str = ""
     # Retards et suppressions : 1 req Estimated Timetable (flux global) par relevé × 216 relevés (6 h → minuit) = 216/jour
     polling_interval_minutes: int = 5
     # Perturbations déclarées : 2 req Navitia par relevé × 54 relevés = 108/jour (annonces qui changent lentement)

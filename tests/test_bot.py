@@ -10,6 +10,7 @@ from backend.bot import (
 )
 
 
+
 @pytest.mark.parametrize("minutes, attendu", [
     (0, "0 minute"),
     (1, "1 minute"),
@@ -71,18 +72,17 @@ class _Session:
         return res
 
 
-async def test_sans_cles_x_publication_enregistree_sans_tweet(tmp_path):
+async def test_publication_enregistree_avec_email(tmp_path):
     rows = [
         SimpleNamespace(nb_incidents=5, minutes_voyageurs=97, line_id="RER_A", est_jour_perturbe=True),
         SimpleNamespace(nb_incidents=2, minutes_voyageurs=97, line_id="RER_B", est_jour_perturbe=True),
     ]
-    settings = SimpleNamespace(smic_horaire=12.31, twitter_api_key="", twitter_api_secret="",
-                               twitter_access_token="", twitter_access_secret="")
+    settings = SimpleNamespace(smic_horaire=12.31)
     with patch("backend.bot.AsyncSessionLocal", return_value=_Session(rows)), \
          patch("backend.bot.get_settings", return_value=settings), \
-         patch("backend.bot.tweepy.Client") as client, \
          patch("backend.bot.generer_carte_png", return_value=None), \
-         patch("backend.bot.generer_carousel_png", return_value=[]):
+         patch("backend.bot.generer_carousel_png", return_value=[]), \
+         patch("backend.bot.envoyer_email_recap") as mock_email:
         await post_daily_recap(dossier=tmp_path)
 
     fichiers = list(tmp_path.iterdir())
@@ -91,12 +91,11 @@ async def test_sans_cles_x_publication_enregistree_sans_tweet(tmp_path):
     # 19 € + 19 € arrondis par ligne (arrondir la somme donnerait 39 €)
     assert "💶 38 € de temps de travail volé" in texte
     assert "🔴 7 incidents — RER A en tête" in texte
-    client.assert_not_called()
+    mock_email.assert_awaited_once()
 
 
 async def test_aucun_incident_aucune_publication(tmp_path):
-    settings = SimpleNamespace(smic_horaire=12.31, twitter_api_key="", twitter_api_secret="",
-                               twitter_access_token="", twitter_access_secret="")
+    settings = SimpleNamespace(smic_horaire=12.31)
     with patch("backend.bot.AsyncSessionLocal", return_value=_Session([])), \
          patch("backend.bot.get_settings", return_value=settings), \
          patch("backend.bot.generer_carte_png", return_value=None), \

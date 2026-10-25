@@ -1,7 +1,7 @@
 """
 bot.py — Récap quotidien à 19h30 : bilan du jour même (incidents, minutes-voyageurs, coût).
-Toujours enregistré dans publications/AAAA-MM-JJ.txt + .png ; posté aussi sur X (Twitter)
-si les clés sont configurées.
+Enregistré dans publications/ (texte + carte PNG + carousel Instagram) et envoyé par e-mail
+pour publication manuelle sur X et Instagram.
 """
 import asyncio
 import logging
@@ -12,7 +12,6 @@ from email.message import EmailMessage
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-import tweepy
 from sqlalchemy import select
 
 from backend.config import get_settings
@@ -133,11 +132,8 @@ async def generer_carte_png(jour: date, dossier: Path = DOSSIER_PUBLICATIONS) ->
         return None
 
 
-DOSSIER_CAROUSEL = Path(__file__).parent.parent / "output"
-
-
-async def generer_carousel_png(jour: date, dossier: Path = DOSSIER_CAROUSEL) -> list[Path]:
-    """Ouvre carousel.html, screenshot chaque .slide → output/AAAA-MM-JJ/slide-N.png."""
+async def generer_carousel_png(jour: date, dossier: Path = DOSSIER_PUBLICATIONS) -> list[Path]:
+    """Ouvre carousel.html, screenshot chaque .slide → publications/AAAA-MM-JJ/slide-N.png."""
     from playwright.async_api import async_playwright
 
     dossier_jour = dossier / jour.isoformat()
@@ -208,8 +204,8 @@ async def envoyer_email_recap(
 async def post_daily_recap(dossier: Path = DOSSIER_PUBLICATIONS) -> None:
     """Récap quotidien, planifié à 19h30 par le scheduler dans main.py.
 
-    Toujours enregistré dans le projet (publications/) ; posté en plus sur X quand les
-    clés sont configurées.
+    Enregistre texte + images dans publications/, puis envoie le tout par e-mail
+    pour publication manuelle sur X et Instagram.
     """
     settings = get_settings()
     aujourdhui = datetime.now(ZoneInfo("Europe/Paris")).date()
@@ -243,7 +239,7 @@ async def post_daily_recap(dossier: Path = DOSSIER_PUBLICATIONS) -> None:
         logger.info("Carte PNG du jour : %s", chemin_png)
 
     # Générer le carrousel Instagram (5 slides PNG)
-    slides = await generer_carousel_png(aujourdhui)
+    slides = await generer_carousel_png(aujourdhui, dossier)
     if slides:
         logger.info("Carrousel Instagram : %d slides dans %s", len(slides), slides[0].parent)
 
@@ -253,23 +249,4 @@ async def post_daily_recap(dossier: Path = DOSSIER_PUBLICATIONS) -> None:
     except Exception:
         logger.exception("Erreur lors de l'envoi de l'e-mail récap")
 
-    if not all([
-        settings.twitter_api_key,
-        settings.twitter_api_secret,
-        settings.twitter_access_token,
-        settings.twitter_access_secret,
-    ]):
-        logger.info("Clés Twitter/X non configurées — publication enregistrée seulement dans le projet")
-        return
-
-    try:
-        client = tweepy.Client(
-            consumer_key=settings.twitter_api_key,
-            consumer_secret=settings.twitter_api_secret,
-            access_token=settings.twitter_access_token,
-            access_token_secret=settings.twitter_access_secret,
-        )
-        response = client.create_tweet(text=tweet_text)
-        logger.info("Tweet posté avec succès — ID : %s", response.data["id"])
-    except tweepy.TweepyException as exc:
-        logger.error("Erreur tweepy lors de l'envoi du tweet : %s", exc)
+    logger.info("Publication prête — texte + images envoyés par e-mail pour publication manuelle")
