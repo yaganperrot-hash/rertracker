@@ -217,11 +217,13 @@ function fillLine(prefix, l) {
   document.getElementById('s1-duree').textContent = formatDuree(mv);
   document.getElementById('s1-label').textContent = 'de vie ' + accordPerdu(mv) + ' collectivement';
 
-  // — Slide 2 : durée de vie perdue —
+  // — Slide 2 : équivalent salaire infirmier —
+  const SALAIRE_INFIRMIER_NET = 2100;
+  const nbSalaires = Math.floor(today.cout_eur / SALAIRE_INFIRMIER_NET);
   document.getElementById('cout2').textContent = nb(today.cout_eur) + ' \u20ac';
-  document.getElementById('s2-duree').textContent = formatDuree(mv);
-  document.getElementById('s2-label').textContent =
-    'de vie ' + accordPerdu(mv) + ' collectivement';
+  document.getElementById('s2-soit').textContent = "c'est l'\u00e9quivalent de";
+  document.getElementById('s2-duree').textContent = nb(nbSalaires) + ' mois';
+  document.getElementById('s2-label').textContent = "de salaire d'infirmier\u00b7e";
 
   // — Slides 3 & 4 —
   const ranked = lines
