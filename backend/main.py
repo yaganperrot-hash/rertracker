@@ -212,6 +212,11 @@ async def ancienne_page_stats():
     return RedirectResponse("/statistiques", status_code=301)
 
 
+@app.get("/publications", include_in_schema=False)
+async def page_publications():
+    return FileResponse(frontend_dir / "publications.html")
+
+
 @app.get("/mon-trajet", include_in_schema=False)
 async def page_mon_trajet():
     return FileResponse(frontend_dir / "mon-trajet.html")

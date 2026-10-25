@@ -1,7 +1,10 @@
+import re
 from datetime import date, datetime, timezone
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import FileResponse
 from sqlalchemy import or_
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -222,6 +225,73 @@ async def trajet(
         return await trajets.calculer(db, ligne, depart, arrivee, heure, {int(j) for j in jours.split(",")}, periode)
     except ValueError:
         raise HTTPException(status_code=422, detail="heure invalide")
+
+
+_PUBLICATIONS_DIR = Path(__file__).parent.parent / "publications"
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+@router.get("/publications")
+async def list_publications():
+    """Liste les publications disponibles (texte + images), triées par date décroissante."""
+    if not _PUBLICATIONS_DIR.is_dir():
+        return []
+
+    # Regrouper par date
+    dates: dict[str, dict] = {}
+    for f in _PUBLICATIONS_DIR.iterdir():
+        nom = f.stem  # AAAA-MM-JJ
+        if f.is_file() and f.suffix == ".txt" and _DATE_RE.match(nom):
+            d = nom
+            entry = dates.setdefault(d, {"date": d, "texte": "", "has_png": False, "has_slides": False, "nb_slides": 0})
+            entry["texte"] = f.read_text(encoding="utf-8").strip()
+        elif f.is_file() and f.suffix == ".png" and _DATE_RE.match(nom):
+            d = nom
+            dates.setdefault(d, {"date": d, "texte": "", "has_png": False, "has_slides": False, "nb_slides": 0})
+            dates[d]["has_png"] = True
+        elif f.is_dir() and _DATE_RE.match(f.name):
+            d = f.name
+            slides = sorted(f.glob("slide-*.png"))
+            if slides:
+                dates.setdefault(d, {"date": d, "texte": "", "has_png": False, "has_slides": False, "nb_slides": 0})
+                dates[d]["has_slides"] = True
+                dates[d]["nb_slides"] = len(slides)
+
+    return sorted(dates.values(), key=lambda x: x["date"], reverse=True)
+
+
+@router.get("/publications/{date_str}/{filename}")
+async def serve_publication_file(date_str: str, filename: str):
+    """Sert un fichier statique depuis publications/ (PNG, slides)."""
+    if not _DATE_RE.match(date_str):
+        raise HTTPException(status_code=400, detail="date invalide")
+    # Validation anti-traversal : pas de .. ni de séparateurs
+    if ".." in filename or "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=400, detail="nom de fichier invalide")
+
+    chemin = (_PUBLICATIONS_DIR / date_str / filename).resolve()
+    # Vérifier que le chemin résolu reste dans publications/
+    if not str(chemin).startswith(str(_PUBLICATIONS_DIR.resolve())):
+        raise HTTPException(status_code=400, detail="chemin invalide")
+    if not chemin.is_file():
+        raise HTTPException(status_code=404, detail="fichier introuvable")
+
+    return FileResponse(chemin)
+
+
+@router.get("/publications/{date_str}.png")
+async def serve_publication_png(date_str: str):
+    """Sert la carte PNG d'une date (publications/AAAA-MM-JJ.png)."""
+    if not _DATE_RE.match(date_str):
+        raise HTTPException(status_code=400, detail="date invalide")
+
+    chemin = (_PUBLICATIONS_DIR / f"{date_str}.png").resolve()
+    if not str(chemin).startswith(str(_PUBLICATIONS_DIR.resolve())):
+        raise HTTPException(status_code=400, detail="chemin invalide")
+    if not chemin.is_file():
+        raise HTTPException(status_code=404, detail="fichier introuvable")
+
+    return FileResponse(chemin)
 
 
 @router.post("/admin/collect")

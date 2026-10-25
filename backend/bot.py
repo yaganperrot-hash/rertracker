@@ -1,14 +1,10 @@
 """
 bot.py — Récap quotidien à 19h30 : bilan du jour même (incidents, minutes-voyageurs, coût).
-Enregistré dans publications/ (texte + carte PNG + carousel Instagram) et envoyé par e-mail
-pour publication manuelle sur X et Instagram.
+Enregistré dans publications/ (texte + carte PNG + carousel Instagram), récupérable sur /publications.
 """
-import asyncio
 import logging
 import os
-import smtplib
 from datetime import date, datetime
-from email.message import EmailMessage
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -165,47 +161,10 @@ async def generer_carousel_png(jour: date, dossier: Path = DOSSIER_PUBLICATIONS)
     return chemins
 
 
-async def envoyer_email_recap(
-    texte: str,
-    carte_png: Path | None,
-    slides: list[Path],
-    jour: date,
-) -> None:
-    """Envoie le récap quotidien par e-mail (Gmail SMTP) avec la carte et les slides en PJ."""
-    settings = get_settings()
-    if not all([settings.email_sender, settings.email_password, settings.email_recipient]):
-        logger.info("E-mail non configuré — envoi ignoré")
-        return
-
-    msg = EmailMessage()
-    msg["Subject"] = f"Récap RER/Transilien — {jour:%d/%m/%Y}"
-    msg["From"] = settings.email_sender
-    msg["To"] = settings.email_recipient
-    msg.set_content(texte)
-
-    if carte_png and carte_png.exists():
-        data = carte_png.read_bytes()
-        msg.add_attachment(data, maintype="image", subtype="png", filename=carte_png.name)
-
-    for slide in slides:
-        if slide.exists():
-            data = slide.read_bytes()
-            msg.add_attachment(data, maintype="image", subtype="png", filename=slide.name)
-
-    def _send() -> None:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-            smtp.login(settings.email_sender, settings.email_password)
-            smtp.send_message(msg)
-
-    await asyncio.to_thread(_send)
-    logger.info("E-mail récap envoyé à %s", settings.email_recipient)
-
-
 async def post_daily_recap(dossier: Path = DOSSIER_PUBLICATIONS) -> None:
     """Récap quotidien, planifié à 19h30 par le scheduler dans main.py.
 
-    Enregistre texte + images dans publications/, puis envoie le tout par e-mail
-    pour publication manuelle sur X et Instagram.
+    Enregistre texte + images dans publications/, récupérables sur /publications.
     """
     settings = get_settings()
     aujourdhui = datetime.now(ZoneInfo("Europe/Paris")).date()
@@ -243,10 +202,4 @@ async def post_daily_recap(dossier: Path = DOSSIER_PUBLICATIONS) -> None:
     if slides:
         logger.info("Carrousel Instagram : %d slides dans %s", len(slides), slides[0].parent)
 
-    # Envoi par e-mail (texte + carte + slides en PJ)
-    try:
-        await envoyer_email_recap(tweet_text, chemin_png, slides, aujourdhui)
-    except Exception:
-        logger.exception("Erreur lors de l'envoi de l'e-mail récap")
-
-    logger.info("Publication prête — texte + images envoyés par e-mail pour publication manuelle")
+    logger.info("Publication prête — texte + images disponibles sur /publications")

@@ -23,9 +23,6 @@ class Settings(BaseSettings):
     # les jours d'avant restent en base mais n'entrent dans aucun cumul ni aucune comparaison affichés
     debut_donnees_fiables: date = date(2026, 9, 16)
     archive_flux_jours: int = 3           # réponses brutes du flux Estimated Timetable gardées dans logs/flux_brut/ (0 = aucune)
-    email_sender: str = ""                # adresse Gmail expéditrice du récap quotidien
-    email_password: str = ""              # App Password Gmail (16 caractères, sans espaces)
-    email_recipient: str = ""             # adresse destinataire du récap quotidien
 
     class Config:
         env_file = ".env"

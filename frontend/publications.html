@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IDF-RETARD — Publications</title>
+<meta name="description" content="Récaps quotidiens RER et Transilien : texte et images pour publication sur les réseaux sociaux.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="nav.css?v=2">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+
+:root {
+  --bg:     #F7F4EF;
+  --bg2:    #EDEAE4;
+  --bg3:    #E2DED7;
+  --border: #D4CFC7;
+  --ink:    #000000;
+  --text:   #000000;
+  --muted:  #555555;
+  --sub:    #333333;
+  --red:    #C0392B;
+  --blanc:  #fff;
+}
+
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--bg);
+  font-family: 'Roboto', -apple-system, sans-serif;
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.4;
+}
+a { color: var(--muted); }
+
+.page { max-width: 720px; margin: 0 auto; padding-block: 32px; padding-inline: 16px; }
+@media (min-width: 600px) { .page { padding-inline: 30px; } }
+
+h1 {
+  font-size: 22px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; text-align: center; margin-bottom: 6px;
+}
+.subtitle {
+  font-size: 13px; color: var(--muted); text-align: center; margin-bottom: 28px;
+}
+
+/* Publication card */
+.pub-card {
+  background: var(--blanc); border-radius: 10px; padding: 20px 24px;
+  margin-bottom: 16px;
+}
+.pub-date {
+  font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--sub); margin-bottom: 12px;
+}
+.pub-text {
+  white-space: pre-wrap; font-size: 15px; line-height: 1.6;
+  background: var(--bg); border-radius: 8px; padding: 14px 16px;
+  margin-bottom: 12px; font-family: inherit;
+}
+.pub-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 2px solid var(--ink); background: none; color: var(--ink);
+  font: 500 13px/1 'Roboto', sans-serif; letter-spacing: 0.5px;
+  padding: 8px 16px; border-radius: 6px; cursor: pointer;
+  text-decoration: none; transition: background 0.12s, color 0.12s;
+}
+.btn:hover { background: var(--ink); color: var(--blanc); }
+.btn-ok { border-color: #2ECC71; color: #1B7A3D; }
+.btn-ok:hover { background: #2ECC71; color: var(--blanc); }
+
+.pub-images { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.pub-images a {
+  display: block; border-radius: 8px; overflow: hidden;
+  border: 1px solid var(--border); transition: box-shadow 0.15s;
+}
+.pub-images a:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+.pub-images img {
+  display: block; width: 120px; height: 120px; object-fit: cover;
+}
+
+.message { font-size: 15px; color: var(--muted); padding: 40px 0; text-align: center; }
+.pied {
+  font-size: 12px; color: #a39c8c; text-align: center;
+  margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--bg2);
+}
+</style>
+</head>
+<body>
+
+<button class="nav-burger" id="nav-burger" aria-label="Menu">&#9776;</button>
+<ul class="nav-menu" id="nav-menu">
+  <li><a href="/">Aujourd'hui</a></li>
+  <li><a href="/temps-reel">Temps réel</a></li>
+  <li><a href="/statistiques">Statistiques</a></li>
+  <li><a href="/publications" class="active" aria-current="page">Publications</a></li>
+  <li><a href="/methode.html">Méthode</a></li>
+</ul>
+
+<div class="page">
+  <h1>Publications</h1>
+  <p class="subtitle">Récaps quotidiens — texte et images pour X et Instagram</p>
+
+  <div id="contenu">
+    <p class="message" id="loading">Chargement...</p>
+  </div>
+
+  <footer class="pied">idf-retard.fr</footer>
+</div>
+
+<script>
+(function () {
+  var JOURS = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+  var MOIS = ['janvier','février','mars','avril','mai','juin',
+              'juillet','août','septembre','octobre','novembre','décembre'];
+
+  function fmtDate(iso) {
+    var p = iso.split('-').map(Number);
+    var d = new Date(p[0], p[1] - 1, p[2]);
+    return JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()] + ' ' + d.getFullYear();
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/[&<>"']/g, function(c) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  async function copier(btn, texte) {
+    try {
+      await navigator.clipboard.writeText(texte);
+      var old = btn.innerHTML;
+      btn.classList.add('btn-ok');
+      btn.textContent = 'Copié !';
+      setTimeout(function() { btn.innerHTML = old; btn.classList.remove('btn-ok'); }, 1500);
+    } catch (e) {
+      btn.textContent = 'Erreur';
+    }
+  }
+
+  async function charger() {
+    var contenu = document.getElementById('contenu');
+    try {
+      var resp = await fetch('/api/publications');
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      var pubs = await resp.json();
+
+      if (!pubs.length) {
+        contenu.innerHTML = '<p class="message">Aucune publication disponible.</p>';
+        return;
+      }
+
+      var html = '';
+      pubs.forEach(function(pub) {
+        html += '<div class="pub-card">';
+        html += '<div class="pub-date">' + esc(fmtDate(pub.date)) + '</div>';
+
+        if (pub.texte) {
+          html += '<div class="pub-text">' + esc(pub.texte) + '</div>';
+          html += '<div class="pub-actions">';
+          html += '<button class="btn" data-copy="' + esc(pub.texte).replace(/"/g, '&quot;') + '">Copier le texte</button>';
+        } else {
+          html += '<div class="pub-actions">';
+        }
+
+        if (pub.has_png) {
+          html += '<a class="btn" href="/api/publications/' + pub.date + '.png" download="' + pub.date + '.png">Carte PNG</a>';
+        }
+
+        if (pub.has_slides && pub.nb_slides > 0) {
+          for (var i = 1; i <= pub.nb_slides; i++) {
+            html += '<a class="btn" href="/api/publications/' + pub.date + '/slide-' + i + '.png" download="slide-' + i + '.png">Slide ' + i + '</a>';
+          }
+        }
+
+        html += '</div>';
+
+        // Miniatures
+        var imgs = [];
+        if (pub.has_png) imgs.push({src: '/api/publications/' + pub.date + '.png', alt: 'Carte ' + pub.date});
+        if (pub.has_slides) {
+          for (var j = 1; j <= pub.nb_slides; j++) {
+            imgs.push({src: '/api/publications/' + pub.date + '/slide-' + j + '.png', alt: 'Slide ' + j});
+          }
+        }
+        if (imgs.length) {
+          html += '<div class="pub-images">';
+          imgs.forEach(function(img) {
+            html += '<a href="' + img.src + '" target="_blank"><img src="' + img.src + '" alt="' + esc(img.alt) + '" loading="lazy"></a>';
+          });
+          html += '</div>';
+        }
+
+        html += '</div>';
+      });
+
+      contenu.innerHTML = html;
+
+      // Boutons copier
+      contenu.querySelectorAll('[data-copy]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          copier(btn, btn.getAttribute('data-copy'));
+        });
+      });
+
+    } catch (e) {
+      contenu.innerHTML = '<p class="message">Erreur lors du chargement des publications.</p>';
+    }
+  }
+
+  charger();
+
+  // Nav burger
+  var btn = document.getElementById('nav-burger');
+  var menu = document.getElementById('nav-menu');
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    menu.classList.toggle('open');
+  });
+  document.addEventListener('click', function(e) {
+    if (!menu.contains(e.target)) menu.classList.remove('open');
+  });
+})();
+</script>
+</body>
+</html>

@@ -72,7 +72,7 @@ class _Session:
         return res
 
 
-async def test_publication_enregistree_avec_email(tmp_path):
+async def test_publication_enregistree(tmp_path):
     rows = [
         SimpleNamespace(nb_incidents=5, minutes_voyageurs=97, line_id="RER_A", est_jour_perturbe=True),
         SimpleNamespace(nb_incidents=2, minutes_voyageurs=97, line_id="RER_B", est_jour_perturbe=True),
@@ -81,8 +81,7 @@ async def test_publication_enregistree_avec_email(tmp_path):
     with patch("backend.bot.AsyncSessionLocal", return_value=_Session(rows)), \
          patch("backend.bot.get_settings", return_value=settings), \
          patch("backend.bot.generer_carte_png", return_value=None), \
-         patch("backend.bot.generer_carousel_png", return_value=[]), \
-         patch("backend.bot.envoyer_email_recap") as mock_email:
+         patch("backend.bot.generer_carousel_png", return_value=[]):
         await post_daily_recap(dossier=tmp_path)
 
     fichiers = list(tmp_path.iterdir())
@@ -91,7 +90,6 @@ async def test_publication_enregistree_avec_email(tmp_path):
     # 19 € + 19 € arrondis par ligne (arrondir la somme donnerait 39 €)
     assert "💶 38 € de temps de travail volé" in texte
     assert "🔴 7 incidents — RER A en tête" in texte
-    mock_email.assert_awaited_once()
 
 
 async def test_aucun_incident_aucune_publication(tmp_path):
