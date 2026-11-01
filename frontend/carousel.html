@@ -53,13 +53,13 @@
   .s1-label{font-size:34px;font-weight:500;color:var(--ink);margin-top:10px}
 
   /* ═══ Slide 2 ═══ */
-  .s2-euros{font-size:200px;font-weight:900;line-height:.85;color:var(--ink);
-            letter-spacing:-.04em}
-  .s2-label{font-size:42px;font-weight:400;color:var(--sub);margin-top:20px}
+  .s2-intro{font-size:42px;font-weight:500;color:var(--sub);margin-bottom:24px}
+  .s2-nb{font-size:200px;font-weight:900;line-height:.95;color:var(--red);
+         letter-spacing:-.03em}
+  .s2-who{font-size:56px;font-weight:700;color:var(--ink);line-height:1.15;margin-top:16px}
   .s2-sep{width:140px;border:none;border-top:3px solid var(--ink);margin:40px auto}
-  .s2-soit{font-size:42px;font-weight:500;color:var(--ink);margin-bottom:20px}
-  .s2-equiv{font-size:88px;font-weight:900;color:var(--red);line-height:1}
-  .s2-who{font-size:42px;font-weight:500;color:var(--ink);margin-top:12px}
+  .s2-ref{font-size:32px;font-weight:400;color:var(--sub);line-height:1.35}
+  .s2-note{font-size:22px;font-weight:400;color:var(--muted);margin-top:20px}
 
   /* ═══ Slides 3 & 4 ═══ */
   .s34-kicker{font-size:38px;font-weight:900;letter-spacing:.14em;
@@ -106,11 +106,12 @@
   </div>
   <hr class="sep">
   <div class="body">
-    <div class="s2-euros" id="cout2">&mdash;</div>
+    <div class="s2-intro">Le temps perdu aujourd'hui, c'est&hellip;</div>
+    <div class="s2-nb" id="s2-nb">&mdash;</div>
+    <div class="s2-who" id="s2-who">infirmiers pay&#233;s pendant un an.</div>
     <hr class="s2-sep">
-    <div class="s2-soit" id="s2-soit">soit</div>
-    <div class="s2-equiv" id="s2-duree">&mdash;</div>
-    <div class="s2-who" id="s2-label">de vie perdues collectivement</div>
+    <div class="s2-ref" id="s2-ref"></div>
+    <div class="s2-note">Temps perdu valoris&#233; au SMIC brut horaire (INSEE). Source retards : PRIM.</div>
   </div>
   <div class="foot"><div class="foot-url">idf-retard.fr</div><div class="foot-handle">@idfretard</div></div>
 </div>
@@ -217,13 +218,21 @@ function fillLine(prefix, l) {
   document.getElementById('s1-duree').textContent = formatDuree(mv);
   document.getElementById('s1-label').textContent = 'de vie ' + accordPerdu(mv) + ' collectivement';
 
-  // — Slide 2 : équivalent salaire infirmier —
-  const SALAIRE_INFIRMIER_NET = 2100;
-  const nbSalaires = Math.floor(today.cout_eur / SALAIRE_INFIRMIER_NET);
-  document.getElementById('cout2').textContent = nb(today.cout_eur) + ' \u20ac';
-  document.getElementById('s2-soit').textContent = "c'est l'\u00e9quivalent de";
-  document.getElementById('s2-duree').textContent = nb(nbSalaires) + ' mois';
-  document.getElementById('s2-label').textContent = "de salaire d'infirmier\u00b7e";
+  // — Slide 2 : équivalent en infirmiers payés un an —
+  // Même total que la slide 1 (today.cout_eur), rapporté au salaire brut annuel moyen
+  // d'un·e infirmier·e de l'hôpital public.
+  // Source : DREES, Études et Résultats n° 1278 (sept. 2023), données 2021 — salaire brut moyen en EQTP
+  // de la fonction publique hospitalière : 3 174 €/mois ≈ 38 000 €/an. Moyenne tous personnels
+  // (médecins compris), pas propre aux infirmiers : à remplacer par un chiffre par métier si trouvé.
+  const SALAIRE_INFIRMIER_BRUT_ANNUEL = 38000;
+  if (SALAIRE_INFIRMIER_BRUT_ANNUEL) {
+    const nbInf = Math.round(today.cout_eur / SALAIRE_INFIRMIER_BRUT_ANNUEL);
+    document.getElementById('s2-nb').textContent = nb(nbInf);
+    document.getElementById('s2-who').textContent =
+      `${pl(nbInf, 'infirmier pay\u00e9', 'infirmiers pay\u00e9s')} pendant un an.`;
+    document.getElementById('s2-ref').textContent =
+      `Salaire moyen d\u2019un\u00b7e infirmier\u00b7e \u00e0 l\u2019h\u00f4pital public : ${nb(SALAIRE_INFIRMIER_BRUT_ANNUEL)}\u00a0\u20ac brut\u00a0/\u00a0an.`;
+  }
 
   // — Slides 3 & 4 —
   const ranked = lines
