@@ -58,8 +58,8 @@ def _fmt_duree(minutes: int) -> str:
     return f"{_fmt(a)} ans{reste}"
 
 
-def _accord_perdu(minutes: int) -> str:
-    return "perdues" if minutes < 2 * _J else "perdus"
+def _accord_gache(minutes: int) -> str:
+    return "gâchées" if minutes < 2 * _J else "gâchés"
 
 
 _JOURS = ["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"]
@@ -74,12 +74,14 @@ def _compose_tweet(total_incidents: int, total_mv: int, lignes: list[str], d: da
     pire = LINE_DISPLAY.get(lignes[0], lignes[0]) if lignes else None
 
     lines = [
-        f"🚨 {jour.capitalize()} {d.day:02d}/{d.month:02d}/{d.year} — Bilan RER & Transilien IDF",
-        f"💶 {_fmt(euros)} € de temps de travail volé",
-        f"⏱ {_fmt_duree(total_mv)} de vie {_accord_perdu(total_mv)} collectivement",
-        f"🔴 {total_incidents} incident{'s' if total_incidents != 1 else ''}"
-        + (f" — {pire} en tête" if pire else ""),
-        f"Base SMIC {smic:.2f}€/h · idf-retard.fr".replace(".", ",", 1),
+        f"🚨 {jour.capitalize()} {d.day:02d}/{d.month:02d} — Bilan RER & Transilien 🚨",
+        "",
+        f"{_fmt(euros)} € perdus à cause des retards",
+        f"{_fmt_duree(total_mv)} de vie {_accord_gache(total_mv)}",
+        f"{_fmt(total_incidents)} incident{'s' if total_incidents != 1 else ''}"
+        + (f", {pire} en tête" if pire else ""),
+        "",
+        f"Base SMIC {smic:.2f} €/h · idf-retard.fr".replace(".", ",", 1),
     ]
 
     return "\n".join(lines)

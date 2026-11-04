@@ -47,7 +47,8 @@
   .s1-subtitle{font-size:42px;font-weight:500;color:var(--ink);line-height:1.3;
                margin-bottom:28px}
   .s1-euros{font-size:220px;font-weight:900;line-height:.85;color:var(--ink);
-            letter-spacing:-.04em}
+            letter-spacing:-.04em;white-space:nowrap}
+  .s1-euros.long{font-size:170px}
   .s1-soit{font-size:34px;font-weight:500;color:var(--ink);margin-top:40px}
   .s1-duree{font-size:88px;font-weight:900;color:var(--red);margin-top:10px;line-height:1}
   .s1-label{font-size:34px;font-weight:500;color:var(--ink);margin-top:10px}
@@ -213,7 +214,10 @@ function fillLine(prefix, l) {
   const dateStr = new Date(today.date + 'T12:00:00').toLocaleDateString('fr-FR',
       {weekday:'long', day:'numeric', month:'long', year:'numeric'});
   document.querySelectorAll('.date-auto').forEach(el => el.textContent = dateStr);
-  document.getElementById('cout1').textContent = nb(today.cout_eur) + ' \u20ac';
+  const cout1 = document.getElementById('cout1');
+  // Espace ins\u00e9cable normale : \u00e0 cette taille, l'espace fine colle les groupes de chiffres
+  cout1.textContent = nb(today.cout_eur).replace(/\u202f/g, '\u00a0') + '\u00a0\u20ac';
+  if (today.cout_eur > 999999) cout1.classList.add('long');
   const mv = today.total_minutes_voyageurs;
   document.getElementById('s1-duree').textContent = formatDuree(mv);
   document.getElementById('s1-label').textContent = 'de vie ' + accordPerdu(mv) + ' collectivement';

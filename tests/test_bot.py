@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from backend.bot import (
-    _accord_perdu, _compose_tweet, _fmt_duree, enregistrer_publication, post_daily_recap,
+    _accord_gache, _compose_tweet, _fmt_duree, enregistrer_publication, post_daily_recap,
 )
 
 
@@ -29,19 +29,32 @@ def test_fmt_duree(minutes, attendu):
     assert _fmt_duree(minutes) == attendu
 
 
-def test_accord_perdu():
-    assert _accord_perdu(2879) == "perdues"
-    assert _accord_perdu(2880) == "perdus"
+def test_accord_gache():
+    assert _accord_gache(2879) == "gâchées"
+    assert _accord_gache(2880) == "gâchés"
 
 
 def test_tweet_utilise_duree_lisible():
     tweet = _compose_tweet(42, 2_847_340, ["RER_B"], date(2026, 9, 10))
-    assert "⏱ 5 ans 152 jours de vie perdus collectivement" in tweet
+    assert "5 ans 152 jours de vie gâchés" in tweet
 
 
 def test_tweet_affiche_le_montant_fourni():
     tweet = _compose_tweet(3, 1000, ["RER_A"], date(2026, 9, 10), euros=205)
-    assert "💶 205 € de temps de travail volé" in tweet
+    assert "205 € perdus à cause des retards" in tweet
+
+
+def test_tweet_format_complet():
+    tweet = _compose_tweet(1878, 6_304_320, ["RER_A"], date(2026, 11, 3), euros=1_293_567)
+    assert tweet == (
+        "🚨 Mardi 03/11 — Bilan RER & Transilien 🚨\n"
+        "\n"
+        "1 293 567 € perdus à cause des retards\n"
+        "11 ans 363 jours de vie gâchés\n"
+        "1 878 incidents, RER A en tête\n"
+        "\n"
+        "Base SMIC 12,31 €/h · idf-retard.fr"
+    )
 
 
 def test_publication_enregistree_par_date(tmp_path):
@@ -88,8 +101,8 @@ async def test_publication_enregistree(tmp_path):
     assert len(fichiers) == 1
     texte = fichiers[0].read_text(encoding="utf-8")
     # 19 € + 19 € arrondis par ligne (arrondir la somme donnerait 39 €)
-    assert "💶 38 € de temps de travail volé" in texte
-    assert "🔴 7 incidents — RER A en tête" in texte
+    assert "38 € perdus à cause des retards" in texte
+    assert "7 incidents, RER A en tête" in texte
 
 
 async def test_aucun_incident_aucune_publication(tmp_path):
