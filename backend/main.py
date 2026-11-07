@@ -16,7 +16,7 @@ from backend.collector import collect_disruptions, collect_rt_delays, collecte_a
 from backend.metrics import compute_daily_metrics, journee_de
 from backend.bilans import generer_bilans
 from backend.api import router
-from backend.bot import post_daily_recap
+from backend.bot import post_daily_recap, post_recaps_periode
 
 settings = get_settings()
 logging.basicConfig(level=settings.log_level)
@@ -145,6 +145,17 @@ async def lifespan(app: FastAPI):
         timezone=PARIS_TZ,
         id="daily_recap",
         # Au-delà d'1 h de retard, on saute : le bilan porterait sur le mauvais jour
+        misfire_grace_time=3600,
+    )
+    # Dimanche, après le bilan du jour : bilan de la semaine (et du mois le dernier dimanche)
+    scheduler.add_job(
+        post_recaps_periode,
+        "cron",
+        day_of_week="sun",
+        hour=19,
+        minute=35,
+        timezone=PARIS_TZ,
+        id="recaps_periode",
         misfire_grace_time=3600,
     )
     scheduler.start()

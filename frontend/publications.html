@@ -118,9 +118,19 @@ h1 {
   var MOIS = ['janvier','février','mars','avril','mai','juin',
               'juillet','août','septembre','octobre','novembre','décembre'];
 
+  // iso : AAAA-MM-JJ (bilan du jour), AAAA-MM-JJ-semaine ou AAAA-MM-JJ-mois (bilans du dimanche)
   function fmtDate(iso) {
-    var p = iso.split('-').map(Number);
+    var p = iso.slice(0, 10).split('-').map(Number);
     var d = new Date(p[0], p[1] - 1, p[2]);
+    var type = iso.slice(11);
+    if (type === 'semaine') {
+      var lundi = new Date(p[0], p[1] - 1, p[2] - 6);
+      return 'Semaine du ' + lundi.getDate() + ' ' + MOIS[lundi.getMonth()] + ' au ' +
+        d.getDate() + ' ' + MOIS[d.getMonth()] + ' ' + d.getFullYear();
+    }
+    if (type === 'mois') {
+      return 'Mois de ' + MOIS[d.getMonth()] + ' ' + d.getFullYear() + ' (du 1er au ' + d.getDate() + ')';
+    }
     return JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()] + ' ' + d.getFullYear();
   }
 

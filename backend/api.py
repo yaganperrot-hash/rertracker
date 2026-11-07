@@ -103,6 +103,18 @@ async def stats_today_lines(db: DbDep):
     return result
 
 
+@router.get("/stats/periode")
+async def stats_periode(db: DbDep, du: date = Query(...), au: date = Query(...)):
+    """Totaux et détail par ligne entre du et au inclus (bilans du dimanche : carte et carrousel)."""
+    from backend.periodes import agreger, trains_prevus_offre
+
+    if du > au or (au - du).days > 62:
+        raise HTTPException(status_code=422, detail="période invalide (du ≤ au, 63 jours au plus)")
+    stmt = select(DailyMetric).where(DailyMetric.date >= du, DailyMetric.date <= au)
+    rows = (await db.execute(stmt)).scalars().all()
+    return agreger(rows, du, au, get_settings().smic_horaire, trains_prevus_offre)
+
+
 @router.get("/stats/line/{line_id}")
 async def stats_line(line_id: str, db: DbDep, period: int = Query(default=30, ge=1, le=366)):
     return await get_line_stats(line_id, period, db)
@@ -228,36 +240,40 @@ async def trajet(
 
 
 _PUBLICATIONS_DIR = Path(__file__).parent.parent / "publications"
-_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+# AAAA-MM-JJ (bilan du jour), AAAA-MM-JJ-semaine, AAAA-MM-JJ-mois (bilans du dimanche)
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}(-semaine|-mois)?$")
+_ORDRE_TYPE = {"mois": 0, "semaine": 1, "jour": 2}  # le même dimanche : le bilan le plus large d'abord
+
+
+def _entree(dates: dict[str, dict], d: str) -> dict:
+    type_ = d[11:] or "jour"
+    return dates.setdefault(d, {"date": d, "type": type_, "texte": "", "has_png": False,
+                                "has_slides": False, "nb_slides": 0})
 
 
 @router.get("/publications")
 async def list_publications():
-    """Liste les publications disponibles (texte + images), triées par date décroissante."""
+    """Liste les publications disponibles (texte + images), date décroissante ; le même jour : mois, semaine, jour."""
     if not _PUBLICATIONS_DIR.is_dir():
         return []
 
-    # Regrouper par date
+    # Regrouper par publication (date + type) ; le champ « date » est l'identifiant utilisé dans les URL
     dates: dict[str, dict] = {}
     for f in _PUBLICATIONS_DIR.iterdir():
-        nom = f.stem  # AAAA-MM-JJ
+        nom = f.stem  # AAAA-MM-JJ[-semaine|-mois]
         if f.is_file() and f.suffix == ".txt" and _DATE_RE.match(nom):
-            d = nom
-            entry = dates.setdefault(d, {"date": d, "texte": "", "has_png": False, "has_slides": False, "nb_slides": 0})
-            entry["texte"] = f.read_text(encoding="utf-8").strip()
+            _entree(dates, nom)["texte"] = f.read_text(encoding="utf-8").strip()
         elif f.is_file() and f.suffix == ".png" and _DATE_RE.match(nom):
-            d = nom
-            dates.setdefault(d, {"date": d, "texte": "", "has_png": False, "has_slides": False, "nb_slides": 0})
-            dates[d]["has_png"] = True
+            _entree(dates, nom)["has_png"] = True
         elif f.is_dir() and _DATE_RE.match(f.name):
-            d = f.name
             slides = sorted(f.glob("slide-*.png"))
             if slides:
-                dates.setdefault(d, {"date": d, "texte": "", "has_png": False, "has_slides": False, "nb_slides": 0})
-                dates[d]["has_slides"] = True
-                dates[d]["nb_slides"] = len(slides)
+                entree = _entree(dates, f.name)
+                entree["has_slides"] = True
+                entree["nb_slides"] = len(slides)
 
-    return sorted(dates.values(), key=lambda x: x["date"], reverse=True)
+    pubs = sorted(dates.values(), key=lambda x: _ORDRE_TYPE[x["type"]])
+    return sorted(pubs, key=lambda x: x["date"][:10], reverse=True)
 
 
 @router.get("/publications/{date_str}/{filename}")

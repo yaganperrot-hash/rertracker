@@ -90,7 +90,7 @@
   </div>
   <hr class="sep">
   <div class="body">
-    <div class="s1-subtitle">Aujourd'hui, les retards des RER<br>et Transiliens ont co&#251;t&#233;</div>
+    <div class="s1-subtitle"><span id="s1-quand">Aujourd'hui</span>, les retards des RER<br>et Transiliens ont co&#251;t&#233;</div>
     <div class="s1-euros" id="cout1">&mdash;</div>
     <div class="s1-soit">soit</div>
     <div class="s1-duree" id="s1-duree">&mdash;</div>
@@ -107,7 +107,7 @@
   </div>
   <hr class="sep">
   <div class="body">
-    <div class="s2-intro">Le temps perdu aujourd'hui, c'est&hellip;</div>
+    <div class="s2-intro" id="s2-intro">Le temps perdu aujourd'hui, c'est&hellip;</div>
     <div class="s2-nb" id="s2-nb">&mdash;</div>
     <div class="s2-who" id="s2-who">infirmiers pay&#233;s pendant un an.</div>
     <hr class="s2-sep">
@@ -170,6 +170,7 @@
 </div>
 
 <script src="/duree.js"></script>
+<script src="/periode.js"></script>
 <script>
 const META = {
   RER_A:['RER A','#E2231A','#fff'], RER_B:['RER B','#5191CF','#fff'],
@@ -203,17 +204,17 @@ function fillLine(prefix, l) {
     l.prevus ? '\u2192 ' + ratioTexte(l.perturbes, l.prevus) : '';
   const [nom] = META[l.line_id] || [l.line_id];
   document.getElementById('band-' + prefix).textContent =
-    `${nom} : ${nb(l.minutes_voyageurs)} minutes-voyageurs perdues aujourd\u2019hui`;
+    `${nom} : ${nb(l.minutes_voyageurs)} minutes-voyageurs perdues ${PERIODE.pendant}`;
 }
 
 (async () => {
-  const today = await (await fetch('/api/stats/today')).json();
-  const lines = await (await fetch('/api/stats/today/lines')).json();
+  const { today, lines } = await chargerDonnees();
 
   // — Slide 1 —
-  const dateStr = new Date(today.date + 'T12:00:00').toLocaleDateString('fr-FR',
-      {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  const dateStr = libellePeriode(today);
   document.querySelectorAll('.date-auto').forEach(el => el.textContent = dateStr);
+  document.getElementById('s1-quand').textContent = PERIODE.quand;
+  document.getElementById('s2-intro').textContent = `Le temps perdu ${PERIODE.pendant}, c’est…`;
   const cout1 = document.getElementById('cout1');
   // Espace ins\u00e9cable normale : \u00e0 cette taille, l'espace fine colle les groupes de chiffres
   cout1.textContent = nb(today.cout_eur).replace(/\u202f/g, '\u00a0') + '\u00a0\u20ac';
@@ -255,7 +256,7 @@ function fillLine(prefix, l) {
 
   // — Slide 5 —
   document.getElementById('cta-inc').textContent =
-    nb(today.total_incidents) + ' incidents aujourd\u2019hui.';
+    nb(today.total_incidents) + ' incidents ' + PERIODE.pendant + '.';
 
   await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 3000))]);
   document.body.dataset.pret = '1';

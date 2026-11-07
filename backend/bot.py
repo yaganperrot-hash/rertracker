@@ -1,10 +1,11 @@
 """
-bot.py — Récap quotidien à 19h30 : bilan du jour même (incidents, minutes-voyageurs, coût).
+bot.py — Récap quotidien à 19h30 : bilan du jour même (incidents, minutes-voyageurs, coût) ;
+le dimanche à 19h35, bilan de la semaine, et du mois le dernier dimanche (agrégats : periodes.py).
 Enregistré dans publications/ (texte + carte PNG + carousel Instagram), récupérable sur /publications.
 """
 import logging
 import os
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -90,31 +91,34 @@ def _compose_tweet(total_incidents: int, total_mv: int, lignes: list[str], d: da
 DOSSIER_PUBLICATIONS = Path(__file__).parent.parent / "publications"
 
 
-def enregistrer_publication(texte: str, jour: date, dossier: Path = DOSSIER_PUBLICATIONS) -> Path:
-    """Écrit le post dans dossier/AAAA-MM-JJ.txt (date de publication).
+def enregistrer_publication(texte: str, jour: date, dossier: Path = DOSSIER_PUBLICATIONS,
+                            suffixe: str = "") -> Path:
+    """Écrit le post dans dossier/AAAA-MM-JJ{suffixe}.txt (date de publication ; suffixe « -semaine », « -mois »).
 
     Écriture atomique ; relancé le même jour, le fichier est remplacé, jamais dupliqué.
     """
     dossier.mkdir(parents=True, exist_ok=True)
-    chemin = dossier / f"{jour.isoformat()}.txt"
+    chemin = dossier / f"{jour.isoformat()}{suffixe}.txt"
     tmp = chemin.with_suffix(".txt.tmp")
     tmp.write_text(texte + "\n", encoding="utf-8")
     os.replace(tmp, chemin)
     return chemin
 
 
-async def generer_carte_png(jour: date, dossier: Path = DOSSIER_PUBLICATIONS) -> Path | None:
-    """Ouvre carte.html dans Chromium headless, attend le rendu, screenshot 1080x1080 → PNG."""
+async def generer_carte_png(jour: date, dossier: Path = DOSSIER_PUBLICATIONS,
+                            suffixe: str = "", params: str = "") -> Path | None:
+    """Ouvre carte.html{params} dans Chromium headless, attend le rendu, screenshot 1080x1080 → PNG."""
     from playwright.async_api import async_playwright
 
     dossier.mkdir(parents=True, exist_ok=True)
-    chemin_png = dossier / f"{jour.isoformat()}.png"
+    chemin_png = dossier / f"{jour.isoformat()}{suffixe}.png"
 
     try:
         async with async_playwright() as p:
             browser = await p.chromium.launch(args=["--no-sandbox", "--disable-gpu"])
             page = await browser.new_page(viewport={"width": 1080, "height": 1080})
-            await page.goto("http://127.0.0.1:8000/carte.html", wait_until="domcontentloaded", timeout=30_000)
+            await page.goto(f"http://127.0.0.1:8000/carte.html{params}", wait_until="domcontentloaded",
+                            timeout=30_000)
             # Attendre que carte.html signale la fin du rendu
             await page.wait_for_function(
                 "document.body.dataset.pret === '1'",
@@ -130,11 +134,12 @@ async def generer_carte_png(jour: date, dossier: Path = DOSSIER_PUBLICATIONS) ->
         return None
 
 
-async def generer_carousel_png(jour: date, dossier: Path = DOSSIER_PUBLICATIONS) -> list[Path]:
-    """Ouvre carousel.html, screenshot chaque .slide → publications/AAAA-MM-JJ/slide-N.png."""
+async def generer_carousel_png(jour: date, dossier: Path = DOSSIER_PUBLICATIONS,
+                               suffixe: str = "", params: str = "") -> list[Path]:
+    """Ouvre carousel.html{params}, screenshot chaque .slide → publications/AAAA-MM-JJ{suffixe}/slide-N.png."""
     from playwright.async_api import async_playwright
 
-    dossier_jour = dossier / jour.isoformat()
+    dossier_jour = dossier / f"{jour.isoformat()}{suffixe}"
     dossier_jour.mkdir(parents=True, exist_ok=True)
     chemins: list[Path] = []
 
@@ -143,7 +148,8 @@ async def generer_carousel_png(jour: date, dossier: Path = DOSSIER_PUBLICATIONS)
             browser = await p.chromium.launch(args=["--no-sandbox", "--disable-gpu"])
             # Hauteur large pour contenir les 5 slides empilées
             page = await browser.new_page(viewport={"width": 1080, "height": 5400})
-            await page.goto("http://127.0.0.1:8000/carousel.html", wait_until="domcontentloaded", timeout=30_000)
+            await page.goto(f"http://127.0.0.1:8000/carousel.html{params}", wait_until="domcontentloaded",
+                            timeout=30_000)
             await page.wait_for_function(
                 "document.body.dataset.pret === '1'",
                 timeout=30_000,
@@ -205,3 +211,92 @@ async def post_daily_recap(dossier: Path = DOSSIER_PUBLICATIONS) -> None:
         logger.info("Carrousel Instagram : %d slides dans %s", len(slides), slides[0].parent)
 
     logger.info("Publication prête — texte + images disponibles sur /publications")
+
+
+# ── Bilans du dimanche : semaine, et mois le dernier dimanche ──────────────
+
+_MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août",
+         "septembre", "octobre", "novembre", "décembre"]
+
+
+def _compose_recap_periode(type_: str, agg: dict, evolution: int | None = None) -> str:
+    """Texte d'un bilan de période (type_ : « semaine » ou « mois »), même format que le bilan du jour.
+
+    evolution : écart en % du coût avec la semaine précédente (None : pas de ligne de comparaison).
+    """
+    smic = get_settings().smic_horaire
+    du, au = date.fromisoformat(agg["du"]), date.fromisoformat(agg["au"])
+    bornes = f"{du.day:02d}/{du.month:02d} → {au.day:02d}/{au.month:02d}"
+    titre = "de la semaine" if type_ == "semaine" else f"{'d’' if _MOIS[au.month - 1][0] in 'ao' else 'de '}{_MOIS[au.month - 1]}"
+    mv, inc = agg["total_minutes_voyageurs"], agg["total_incidents"]
+    pire = next((l["line_id"] for l in agg["lignes"] if l["minutes_voyageurs"] > 0), None)
+
+    lines = [
+        f"🚨 Bilan {titre} ({bornes}) — RER & Transilien 🚨",
+        "",
+        f"{_fmt(agg['cout_eur'])} € perdus à cause des retards",
+        f"{_fmt_duree(mv)} de vie {_accord_gache(mv)}",
+        f"{_fmt(inc)} incident{'s' if inc != 1 else ''}"
+        + (f", {LINE_DISPLAY.get(pire, pire)} en tête" if pire else ""),
+    ]
+    if evolution is not None:
+        lines.append("Autant que la semaine dernière" if evolution == 0
+                     else f"{evolution:+d} % par rapport à la semaine dernière".replace("-", "−"))
+    lines += ["", f"Base SMIC {smic:.2f} €/h · idf-retard.fr".replace(".", ",", 1)]
+    return "\n".join(lines)
+
+
+async def _metriques_entre(du: date, au: date) -> list:
+    async with AsyncSessionLocal() as db:
+        stmt = select(DailyMetric).where(DailyMetric.date >= du, DailyMetric.date <= au)
+        return (await db.execute(stmt)).scalars().all()
+
+
+async def _publier_periode(type_: str, jour: date, agg: dict, evolution: int | None, dossier: Path) -> None:
+    if agg["total_incidents"] == 0:
+        logger.info("Bilan %s du %s : aucun incident — pas de publication", type_, jour)
+        return
+    suffixe = f"-{type_}"
+    texte = _compose_recap_periode(type_, agg, evolution)
+    chemin = enregistrer_publication(texte, jour, dossier, suffixe)
+    logger.info("Bilan %s enregistré : %s\n%s", type_, chemin, texte)
+    params = f"?type={type_}&du={agg['du']}&au={agg['au']}"
+    await generer_carte_png(jour, dossier, suffixe, params)
+    await generer_carousel_png(jour, dossier, suffixe, params)
+
+
+async def post_recaps_periode(dossier: Path = DOSSIER_PUBLICATIONS, jour: date | None = None) -> None:
+    """Le dimanche (planifié à 19h35 dans main.py) : bilan de la semaine, plus celui du mois le dernier dimanche.
+
+    Chaque bilan est protégé : l'échec de l'un ne fait pas perdre l'autre.
+    """
+    from backend.periodes import (agreger, est_dernier_dimanche, evolution_pct, mois_de, semaine_de,
+                                  trains_prevus_offre)
+    from backend.metrics import premier_jour_affiche
+
+    jour = jour or datetime.now(ZoneInfo("Europe/Paris")).date()
+    if jour.weekday() != 6:
+        logger.info("Bilans de période : %s n'est pas un dimanche — rien à faire", jour)
+        return
+    smic = get_settings().smic_horaire
+
+    try:
+        du, au = semaine_de(jour)
+        du_prec, au_prec = du - timedelta(days=7), du - timedelta(days=1)
+        rows = await _metriques_entre(du_prec, au)
+        agg = agreger(rows, du, au, smic, trains_prevus_offre)
+        # Comparaison seulement si la semaine précédente est entièrement fiable
+        evolution = None
+        if premier_jour_affiche(du_prec) == du_prec:
+            evolution = evolution_pct(agg["cout_eur"], agreger(rows, du_prec, au_prec, smic)["cout_eur"])
+        await _publier_periode("semaine", jour, agg, evolution, dossier)
+    except Exception:
+        logger.exception("Erreur bilan de la semaine du %s", jour)
+
+    if est_dernier_dimanche(jour):
+        try:
+            du, au = mois_de(jour)
+            agg = agreger(await _metriques_entre(du, au), du, au, smic, trains_prevus_offre)
+            await _publier_periode("mois", jour, agg, None, dossier)
+        except Exception:
+            logger.exception("Erreur bilan du mois au %s", jour)

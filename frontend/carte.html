@@ -74,7 +74,7 @@
   </header>
 
   <div class="hero">
-    <div class="kicker">Aujourd'hui, les retards ont coûté</div>
+    <div class="kicker" id="kicker">Aujourd'hui, les retards ont coûté</div>
     <div class="montant" id="montant">—</div>
     <div class="legende">aux voyageurs d'Île-de-France</div>
   </div>
@@ -95,6 +95,7 @@
 </div>
 
 <script src="/duree.js"></script>
+<script src="/periode.js"></script>
 <script>
 const META = {
   RER_A:['RER A','#E2231A','#fff'], RER_B:['RER B','#5191CF','#fff'],
@@ -108,11 +109,10 @@ const META = {
 const nb = v => v.toLocaleString('fr-FR').replace(/ | /g, ' ');
 
 (async () => {
-  const today = await (await fetch('/api/stats/today')).json();
+  const { today, lines } = await chargerDonnees();
 
-  document.getElementById('date').textContent =
-    new Date(today.date + 'T12:00:00').toLocaleDateString('fr-FR',
-      {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  document.getElementById('date').textContent = libellePeriode(today);
+  document.getElementById('kicker').textContent = PERIODE.quand + ', les retards ont coûté';
   var montantEl = document.getElementById('montant');
   montantEl.textContent = nb(today.cout_eur).replace(/ /g, ' ') + ' €';
   if (today.cout_eur > 999999) montantEl.classList.add('montant-sm');
@@ -122,12 +122,12 @@ const nb = v => v.toLocaleString('fr-FR').replace(/ | /g, ' ');
   document.getElementById('inc').textContent = nb(today.total_incidents);
   document.getElementById('nbl').textContent = today.nb_lignes_perturbees;
 
-  // Coût en euros du jour, ligne par ligne (mv × SMIC/60)
+  // Coût en euros ligne par ligne : fourni pour une période (arrondi par ligne × jour, comme le total),
+  // sinon mv × SMIC/60
   const SMIC = 12.31;
-  const lines = await (await fetch('/api/stats/today/lines')).json();
   const stats = lines.map(l => ({
     id: l.line_id,
-    cout: Math.round((l.minutes_voyageurs || 0) * SMIC / 60)
+    cout: l.cout_eur ?? Math.round((l.minutes_voyageurs || 0) * SMIC / 60)
   }));
 
   const top = stats.sort((a,b) => b.cout - a.cout).slice(0, 5);
