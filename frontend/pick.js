@@ -296,7 +296,7 @@
         var jours = Math.floor(cout / (smicHoraire * 7));
         if (jours > 0) {
           var joursLabel;
-          if (jours < 365) joursLabel = jours.toLocaleString('fr-FR') + ' jours';
+          if (jours < 365) joursLabel = jours.toLocaleString('fr-FR') + (jours > 1 ? ' journées' : ' journée');
           else {
             var mois = Math.round(jours / 30.44);
             if (mois < 24) joursLabel = mois + ' mois';
@@ -306,7 +306,7 @@
               joursLabel = a + ' ans' + (m ? ' ' + m + ' mois' : '');
             }
           }
-          ppSmic.textContent = 'soit ' + joursLabel + ' de travail au SMIC';
+          ppSmic.textContent = 'soit ' + joursLabel + ' de SMIC';
         } else {
           ppSmic.textContent = '';
         }
@@ -418,7 +418,7 @@
         var jours = Math.floor(cout / (smicHoraire * 7));
         if (jours > 0) {
           var joursLabel;
-          if (jours < 365) joursLabel = jours.toLocaleString('fr-FR') + ' jours';
+          if (jours < 365) joursLabel = jours.toLocaleString('fr-FR') + (jours > 1 ? ' journées' : ' journée');
           else {
             var mois = Math.round(jours / 30.44);
             if (mois < 24) joursLabel = mois + ' mois';
@@ -430,7 +430,7 @@
           }
           ctx.fillStyle = RED;
           ctx.font = '700 36px Roboto, sans-serif';
-          ctx.fillText('soit ' + joursLabel + ' de travail au SMIC', cx, 670);
+          ctx.fillText('soit ' + joursLabel + ' de SMIC', cx, 670);
         }
 
         // Classement
@@ -480,7 +480,7 @@
       var jours = Math.floor(cout / (smicHoraire * 7));
       var joursLabel = '';
       if (jours > 0) {
-        if (jours < 365) joursLabel = jours.toLocaleString('fr-FR') + ' jours';
+        if (jours < 365) joursLabel = jours.toLocaleString('fr-FR') + (jours > 1 ? ' journées' : ' journée');
         else {
           var mois = Math.round(jours / 30.44);
           if (mois < 24) joursLabel = mois + ' mois';
@@ -501,7 +501,7 @@
       }
 
       var txt = '\u26A0\uFE0F\u26A0\uFE0F Aujourd\u2019hui ' + article + meta.name + ' nous a co\u00FBt\u00E9 ' + coutTxt + '\u00A0\u20AC';
-      if (joursLabel) txt += ', soit ' + joursLabel + ' de travail au SMIC.';
+      if (joursLabel) txt += ', soit ' + joursLabel + ' de SMIC.';
       else txt += '.';
       txt += rankTxt;
       txt += '\n\nEt toi, ta ligne nous a co\u00FBt\u00E9 combien\u00A0? \u26A0\uFE0F\u26A0\uFE0F';

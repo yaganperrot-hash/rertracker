@@ -40,7 +40,7 @@
     }
     .hero-date {
       font-weight: 400;
-      font-size: 11px;
+      font-size: 13px;
       letter-spacing: 2px;
       text-transform: uppercase;
       color: var(--sub);
@@ -48,12 +48,12 @@
     }
     .hero-time {
       font-weight: 400;
-      font-size: 11px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
+      font-size: 13px;
+      letter-spacing: 1px;
       color: var(--muted);
       margin-bottom: 12px;
     }
+    .hero-time.alerte { color: var(--red); font-weight: 500; }
     .hero-subtitle {
       font-weight: 500;
       font-size: clamp(16px, 2.4vw, 22px);
@@ -64,7 +64,7 @@
     .hero-counter {
       font-weight: 900;
       font-size: clamp(52px, 10.4vw, 112px);
-      letter-spacing: -3px;
+      letter-spacing: -.03em;
       line-height: .88;
       color: var(--ink);
     }
@@ -83,7 +83,7 @@
     }
     .cumul-soit {
       font-weight: 500;
-      font-size: 12px;
+      font-size: 13px;
       color: var(--ink);
       margin-bottom: 6px;
     }
@@ -95,13 +95,13 @@
     }
     .cumul-label {
       font-weight: 500;
-      font-size: 12px;
+      font-size: 14px;
       color: var(--ink);
       margin-top: 5px;
     }
     .cumul-note {
       font-weight: 400;
-      font-size: 10px;
+      font-size: 12px;
       color: var(--sub);
       margin-top: 5px;
     }
@@ -118,7 +118,7 @@
     }
     .footer-left, .footer-right {
       font-weight: 400;
-      font-size: 12px;
+      font-size: 13px;
       color: var(--sub);
     }
     .footer-right a {
@@ -131,6 +131,7 @@
 
     @media (max-width: 768px) {
       .hero { padding: 22px 16px 16px; }
+      .hero-date, .hero-time { padding: 0 44px; }   /* laisse la place au bouton menu */
       .cumul { padding: 0 16px 18px; }
       .cumul-value { font-size: 22px; }
       footer { padding: 14px 16px; flex-direction: column; align-items: flex-start; }
@@ -164,7 +165,7 @@
     <div class="cumul-soit">soit</div>
     <div class="cumul-value" id="cumul-value">—</div>
     <div class="cumul-label" id="cumul-label">de vie perdus collectivement</div>
-    <div class="cumul-note" id="cumul-note">base SMIC — €/h · ≈ — salaires journaliers</div>
+    <div class="cumul-note" id="cumul-note">base SMIC — €/h · ≈ — journées de SMIC</div>
   </div>
 </section>
 
@@ -206,7 +207,7 @@
     return n.toLocaleString('fr-FR');
   }
 </script>
-<script src="pick.js?v=10"></script>
+<script src="pick.js?v=11"></script>
 <script>
   var HEURES_JOUR = 7;
 
@@ -215,23 +216,57 @@
     document.getElementById('cumul-label').textContent = 'de vie ' + accordPerdu(mv) + ' collectivement';
     document.getElementById('cumul-note').textContent =
       'base SMIC ' + smic.toLocaleString('fr-FR') + ' €/h · ≈ ' +
-      fmt(Math.floor(cout / (smic * HEURES_JOUR))) + ' salaires journaliers';
+      fmt(Math.floor(cout / (smic * HEURES_JOUR))) + ' journées de SMIC';
+  }
+
+  /* ── Fraîcheur : heure du dernier relevé réel (serveur), pas l'heure de l'appareil ── */
+  var dernierReleve = null;   // Date du dernier relevé temps réel, ou null
+  var chargeUneFois = false;  // au moins un chargement réussi
+  var echec = false;          // dernier chargement en échec
+
+  function heure(d) {
+    return d.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris'})
+      .replace(':', ' h ');
+  }
+
+  function renderFraicheur() {
+    var el = document.getElementById('hero-time');
+    var txt = '', alerte = false;
+    if (echec && !chargeUneFois) {
+      txt = 'Données indisponibles — nouvel essai dans 5 min';
+      alerte = true;
+    } else if (echec) {
+      txt = 'Connexion perdue — chiffres du relevé de ' + (dernierReleve ? heure(dernierReleve) : '—');
+      alerte = true;
+    } else if (dernierReleve) {
+      txt = 'Dernier relevé à ' + heure(dernierReleve);
+      // Relevés toutes les 5 min de 6 h à minuit : au-delà de 15 min, la collecte est en pause
+      if (Date.now() - dernierReleve.getTime() > 15 * 60000) txt += ' · collecte en pause';
+    }
+    el.textContent = txt || ' ';
+    el.classList.toggle('alerte', alerte);
   }
 
   async function fetchToday() {
     try {
       const res = await fetch('/api/stats/today');
-      if (!res.ok) return;
+      if (!res.ok) throw new Error('HTTP ' + res.status);
       const stats = await res.json();
       const cout = stats.cout_eur || 0;
       document.getElementById('hero-eur').textContent = fmt(cout) + ' €';
       renderCumul(stats.total_minutes_voyageurs || 0, cout, stats.smic_horaire);
-    } catch (_) {}
+      dernierReleve = stats.dernier_releve ? new Date(stats.dernier_releve) : null;
+      chargeUneFois = true;
+      echec = false;
+    } catch (_) {
+      echec = true;   // on garde les derniers chiffres affichés
+    }
+    renderFraicheur();
   }
   fetchToday();
   setInterval(fetchToday, 300000);
 
-  /* ── Date/heure ── */
+  /* ── Date ── */
   function updateDate() {
     const now = new Date();
     const jours = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
@@ -240,19 +275,20 @@
     document.getElementById('hero-date').textContent =
       jours[now.getDay()] + ' ' + now.getDate() + ' ' + mois[now.getMonth()] + ' ' +
       now.getFullYear();
-    document.getElementById('hero-time').textContent =
-      'MàJ ' + String(now.getHours()).padStart(2, '0') + 'h' +
-      String(now.getMinutes()).padStart(2, '0');
+    renderFraicheur();   // « collecte en pause » apparaît même sans nouveau chargement
   }
   updateDate();
   setInterval(updateDate, 60000);
 
-  /* ── Picker ── */
+  /* ── Picker : rouvre la dernière ligne choisie (enregistrée par pick.js) ── */
+  var ligneMemo = null;
+  try { ligneMemo = localStorage.getItem('pick_line'); } catch (_) {}
   Pick.init(document.getElementById('pick-container'), {
     showTitle: true,
     showPageLink: false,
     showRank: true,
     defaultPeriod: 'jour',
+    preselect: LINE_META[ligneMemo] ? ligneMemo : undefined,
   });
 
   /* ── Hamburger ── */

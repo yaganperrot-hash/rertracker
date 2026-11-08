@@ -5,7 +5,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -70,7 +70,15 @@ def _serialize_incident(r: Incident, now_utc: datetime, smic: float) -> dict:
 
 @router.get("/stats/today")
 async def stats_today(db: DbDep):
-    return await get_today_stats(db)
+    """Totaux du jour + heure du dernier relevé temps réel (dernière écriture en base, UTC) : l'accueil affiche
+    la fraîcheur réelle des chiffres, pas l'heure de l'appareil du visiteur."""
+    stats = await get_today_stats(db)
+    dernier = (await db.execute(
+        select(func.max(Incident.updated_at)).where(Incident.source == "realtime"))).scalar()
+    if dernier is not None and dernier.tzinfo is None:
+        dernier = dernier.replace(tzinfo=timezone.utc)
+    stats["dernier_releve"] = dernier.isoformat() if dernier else None
+    return stats
 
 
 @router.get("/stats/today/lines")

@@ -131,3 +131,26 @@ def test_reference_donne_le_debut_des_donnees_fiables():
     import asyncio
     ref = asyncio.run(reference())
     assert ref["debut_donnees_fiables"] == get_settings().debut_donnees_fiables.isoformat()
+
+
+class TestStatsToday:
+    """L'accueil affiche l'heure du dernier relevé réel (serveur), en UTC explicite."""
+
+    async def _appel(self, dernier):
+        from unittest.mock import AsyncMock, MagicMock, patch
+        from backend.api import stats_today
+        db = MagicMock()
+        db.execute = AsyncMock(return_value=MagicMock(scalar=MagicMock(return_value=dernier)))
+        with patch("backend.api.get_today_stats", AsyncMock(return_value={"cout_eur": 10})):
+            return await stats_today(db)
+
+    async def test_dernier_releve_en_utc(self):
+        stats = await self._appel(datetime(2026, 11, 8, 10, 5, tzinfo=timezone.utc))
+        assert stats == {"cout_eur": 10, "dernier_releve": "2026-11-08T10:05:00+00:00"}
+
+    async def test_date_naive_lue_comme_utc(self):
+        stats = await self._appel(datetime(2026, 11, 8, 10, 5))
+        assert stats["dernier_releve"] == "2026-11-08T10:05:00+00:00"
+
+    async def test_aucun_releve(self):
+        assert (await self._appel(None))["dernier_releve"] is None
