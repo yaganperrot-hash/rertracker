@@ -109,6 +109,7 @@ a { color: var(--muted); }
   font-size: clamp(22px, 4vw, 32px); font-weight: 900;
   font-variant-numeric: tabular-nums; line-height: 1.1; color: var(--ink);
 }
+.kpi-value.kpi-duree { color: var(--red); }
 .kpi-label {
   font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
   color: var(--muted); margin-top: 4px;
@@ -402,6 +403,13 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
     return fmtNombre(n);
   }
 
+  // Durées : règle de duree.js (jamais de minutes brutes). Tuile : unité principale seule au-delà de 2 ans
+  // (« 342 ans »), le détail complet est dans le panneau.
+  function dureeTuile(min) {
+    return formatDuree(min, true).replace(/^([\d\s  ]+ ans) .*/, '$1');
+  }
+  function labelDuree(min) { return 'de vie ' + accordPerdu(min); }
+
   function fmtDelta(pct) {
     if (pct === null || pct === undefined) return null;
     if (Math.abs(pct) < 0.5) return { texte: '=' + NBSP + '0' + NBSP + '%', classe: 'nd' };
@@ -442,7 +450,7 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
       fmtCompact(t.nb_cancelled),
       fmtCompact(t.nb_disruptions),
       (donnees ? donnees.filter(function(l) { return l.cout[p].euros > 0; }).length : 0) + '/13',
-      fmtCompact(t.minutes),
+      dureeTuile(t.minutes),
     ];
 
     var container = $('kpi-bar');
@@ -452,8 +460,8 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
       var card = document.createElement('div');
       card.className = 'kpi-card' + (kpiOuvert === kpi.cle ? ' active' : '');
       card.innerHTML =
-        '<div class="kpi-value">' + esc(valeurs[i]) + '</div>' +
-        '<div class="kpi-label">' + esc(kpi.label) + '</div>';
+        '<div class="kpi-value' + (kpi.cle === 'minutes' ? ' kpi-duree' : '') + '">' + esc(valeurs[i]) + '</div>' +
+        '<div class="kpi-label">' + esc(kpi.cle === 'minutes' ? labelDuree(t.minutes) : kpi.label) + '</div>';
 
       if (kpi.cle) {
         card.title = 'Voir le détail';
@@ -517,8 +525,9 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
 
     // Chiffre total
     html += '<div style="text-align:center;margin-bottom:18px">' +
-      '<div style="font-size:clamp(28px,5vw,42px);font-weight:900;color:var(--ink);font-variant-numeric:tabular-nums">' + fmtNombre(totalVal) + '</div>' +
-      '<div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:4px">' + esc(kpi.label) + ' sur ' + (parLigne.length) + ' ligne' + (parLigne.length > 1 ? 's' : '') + '</div>' +
+      '<div style="font-size:clamp(28px,5vw,42px);font-weight:900;color:var(--' + (cle === 'minutes' ? 'red' : 'ink') + ');font-variant-numeric:tabular-nums">' +
+        (cle === 'minutes' ? esc(formatDuree(totalVal)) : fmtNombre(totalVal)) + '</div>' +
+      '<div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:4px">' + esc(cle === 'minutes' ? labelDuree(totalVal) : kpi.label) + ' sur ' + (parLigne.length) + ' ligne' + (parLigne.length > 1 ? 's' : '') + '</div>' +
     '</div>';
 
     // Barres par ligne
@@ -526,14 +535,15 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
     parLigne.forEach(function(l) {
       var w = maxVal > 0 ? (l.valeur / maxVal * 100) : 0;
       var detail = cle === 'minutes'
-        ? formatDuree(l.valeur, true) + ' · ' + fmtEurosCompact(l.euros)
+        ? fmtEurosCompact(l.euros)
         : fmtNombre(l.valeur) + ' ' + kpi.label + ' · ' + fmtEurosCompact(l.euros) + ' · ' + formatDuree(l.minutes, true);
       html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">' +
         '<span class="ligne-badge" style="background:' + l.fond + ';color:' + l.texte + ';font-size:12px;padding:3px 8px;min-width:48px;text-align:center">' + esc(l.lbl) + '</span>' +
         '<div style="flex:1;height:8px;background:var(--bg2);border-radius:4px;overflow:hidden">' +
           '<div style="height:100%;width:' + w.toFixed(1) + '%;background:' + l.fond + ';border-radius:4px"></div>' +
         '</div>' +
-        '<span style="font-size:13px;font-weight:700;min-width:50px;text-align:right;white-space:nowrap">' + fmtNombre(l.valeur) + '</span>' +
+        '<span style="font-size:13px;font-weight:700;min-width:50px;text-align:right;white-space:nowrap">' +
+          (cle === 'minutes' ? formatDuree(l.valeur, true) : fmtNombre(l.valeur)) + '</span>' +
       '</div>' +
       '<div style="font-size:11px;color:var(--muted);margin:-2px 0 8px 58px">' + esc(detail) + '</div>';
     });
