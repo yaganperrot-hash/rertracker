@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Alerte ligne — IDF-RETARD</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  /* Image d'alerte Telegram / X (backend/alertes.py) : 1200×675, rendue par Chromium.
+     Paramètres déjà formatés par le serveur : ligne, euros, duree, quand, depuis. */
+  :root{ --bg:#F7F4EF; --bg2:#EDEAE4; --ink:#000; --sub:#333; --muted:#555; --red:#C0392B; --ligne:#555; --ligne-txt:#fff; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1200px;height:675px;overflow:hidden}
+  body{background:var(--bg);color:var(--ink);font-family:'Roboto',sans-serif;-webkit-font-smoothing:antialiased}
+  .carte{width:1200px;height:675px;display:flex;flex-direction:column;border-top:14px solid var(--ligne)}
+  .corps{flex:1;padding:44px 64px 0;display:flex;flex-direction:column}
+
+  header{display:flex;align-items:center;justify-content:space-between}
+  .pastille{height:76px;min-width:76px;padding:0 26px;border-radius:38px;display:flex;align-items:center;
+            justify-content:center;background:var(--ligne);color:var(--ligne-txt);font-size:40px;font-weight:900}
+  .quand{font-size:24px;font-weight:500;color:var(--sub);text-align:right}
+
+  .hero{flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center;padding-bottom:10px}
+  .kicker{font-size:28px;font-weight:500;letter-spacing:.02em;color:var(--muted)}   /* pas d'uppercase : « 7H40 » */
+  .montant{font-size:168px;font-weight:900;line-height:.95;letter-spacing:-.035em;margin:14px 0 18px;white-space:nowrap}
+  .montant.long{font-size:136px}
+  .duree{font-size:38px;font-weight:700;color:var(--red)}
+
+  footer{display:flex;justify-content:space-between;align-items:center;margin:0 64px;padding:20px 0 28px;
+         border-top:2px solid var(--ink);font-size:20px;color:var(--sub)}
+  .url{font-size:22px;font-weight:900;color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="carte">
+  <div class="corps">
+    <header>
+      <div class="pastille" id="pastille">—</div>
+      <div class="quand" id="quand"></div>
+    </header>
+    <div class="hero">
+      <div class="kicker" id="kicker">Temps perdu par les voyageurs</div>
+      <div class="montant" id="montant">—</div>
+      <div class="duree" id="duree"></div>
+    </div>
+  </div>
+  <footer>
+    <div>Coût au SMIC horaire brut · données PRIM IDF Mobilités</div>
+    <div class="url">idf-retard.fr</div>
+  </footer>
+</div>
+<script>
+// Couleurs de ligne : celles de carte.html et de l'accueil
+const META = {
+  RER_A:['RER A','#E2231A','#fff'], RER_B:['RER B','#5191CF','#fff'],
+  RER_C:['RER C','#C8A800','#1a1a17'], RER_D:['RER D','#00814F','#fff'],
+  RER_E:['RER E','#B04191','#fff'],
+  TRANSILIEN_H:['Ligne H','#7B7B7B','#fff'], TRANSILIEN_J:['Ligne J','#D2B464','#1a1a17'],
+  TRANSILIEN_K:['Ligne K','#8C4B31','#fff'], TRANSILIEN_L:['Ligne L','#9F3E96','#fff'],
+  TRANSILIEN_N:['Ligne N','#333333','#fff'], TRANSILIEN_P:['Ligne P','#E87722','#fff'],
+  TRANSILIEN_R:['Ligne R','#228B22','#fff'], TRANSILIEN_U:['Ligne U','#7B0F1F','#fff'],
+};
+(async () => {
+  const q = new URLSearchParams(location.search);
+  const [nom, fond, texte] = META[q.get('ligne')] || [q.get('ligne') || '—', '#555', '#fff'];
+  const racine = document.documentElement.style;
+  racine.setProperty('--ligne', fond);
+  racine.setProperty('--ligne-txt', texte);
+  document.getElementById('pastille').textContent = nom;
+  document.getElementById('quand').textContent = q.get('quand') || '';
+  if (q.get('depuis')) document.getElementById('kicker').textContent = 'Temps perdu depuis ' + q.get('depuis');
+  const euros = (q.get('euros') || '—').replace(/[  ]/g, ' ');
+  const montant = document.getElementById('montant');
+  montant.textContent = euros + ' €';
+  if (euros.replace(/\D/g, '').length > 6) montant.classList.add('long');
+  document.getElementById('duree').textContent = 'soit ' + (q.get('duree') || '');
+  await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 3000))]);
+  document.body.dataset.pret = '1';
+})();
+</script>
+</body>
+</html>

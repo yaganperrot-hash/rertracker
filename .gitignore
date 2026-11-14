@@ -59,3 +59,6 @@ output/
 # Claude Code local settings
 .claude/settings.local.json
 logs/*.out
+
+# Alertes Telegram : images et état anti-spam (backend/alertes.py)
+publications/alertes/

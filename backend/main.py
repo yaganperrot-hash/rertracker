@@ -17,6 +17,7 @@ from backend.metrics import compute_daily_metrics, journee_de
 from backend.bilans import generer_bilans
 from backend.api import router
 from backend.bot import post_daily_recap, post_recaps_periode
+from backend.alertes import verifier_alertes
 
 settings = get_settings()
 logging.basicConfig(level=settings.log_level)
@@ -104,6 +105,8 @@ async def lifespan(app: FastAPI):
             return
         await collect_rt_delays()
         await compute_daily_metrics()
+        # Alerte Telegram si une ligne dégénère : ne lève jamais (try/except interne), la collecte n'en dépend pas
+        await verifier_alertes()
 
     # Perturbations déclarées : sans coût dans le calcul, cadence propre (compteur Navitia)
     async def _perturbations_cycle():
