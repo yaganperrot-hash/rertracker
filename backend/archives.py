@@ -262,11 +262,12 @@ def rendre_jour(gabarit: str, line_id: str, jour: date, hist: dict, detail: dict
         corps += ['<section class="bloc">',
                   f'  <h2>Les trains qui ont coûté le plus cher</h2>',
                   '  <table>',
-                  '    <thead><tr><th>Heure</th><th>Train</th><th>Retard</th><th class="d">Coût</th></tr></thead>',
+                  '    <thead><tr><th>Départ prévu</th><th>Train</th><th>Retard</th><th class="d">Coût</th></tr></thead>',
                   '    <tbody>']
         for t in detail["trains"]:
             trajet = escape(t["gare"] or "Gare non précisée")
-            if t["direction"]:
+            # Retard relevé au terminus : gare et direction identiques, la flèche n'apprend rien
+            if t["direction"] and t["direction"] != t["gare"]:
                 trajet += f" → {escape(t['direction'])}"
             if t["mission"]:
                 trajet += f' <span class="mission">{escape(t["mission"])}</span>'

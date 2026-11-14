@@ -97,7 +97,7 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb reta
 ## Commandes fréquentes
 
 ```bash
-# Tests (517 tests, ~15 s)
+# Tests (518 tests, ~15 s)
 venv/Scripts/python -m pytest tests/ -x -q          # Windows
 ./venv/bin/python -m pytest tests/ -x -q             # Mac
 

@@ -156,6 +156,12 @@ class TestPageJour:
         assert "8 h 42" in html and "Gare du Nord → Aéroport CDG 2" in html and "25 min" in html
         assert "1 846 €" in html and "Supprimé" in html
 
+    def test_retard_releve_au_terminus_sans_fleche(self):
+        detail = _detail()
+        detail["trains"][0].update(gare="Mitry - Claye", direction="Mitry - Claye")
+        html = self._page(detail=detail)
+        assert "Mitry - Claye →" not in html and "Mitry - Claye <span" in html
+
     def test_texte_de_l_operateur_echappe(self):
         html = self._page()
         assert "<script>alert" not in html and "&lt;script&gt;alert(1)" in html
