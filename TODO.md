@@ -35,10 +35,16 @@
 - [ ] **Bug : la fonction partager** (bouton Share dans le pick panel) — 2026-10-12 : le partage natif partait après
   des attentes (données, `toBlob`), ce que Safari refuse hors du clic ; l'image est maintenant préparée à l'ouverture
   du menu et le partage part dans le clic. **À confirmer sur téléphone** (non testé dans un navigateur).
-- [ ] **Domaine `retards-idf.fr` inexistant** (NXDOMAIN le 2026-10-12) mais imprimé sur l'image de partage
-  (`pick.js`) et le carrousel (`carousel.html`). Le lien du tweet utilise désormais l'adresse réelle du site.
+- [x] **Domaine `retards-idf.fr` inexistant** : plus aucune mention dans le code le 2026-11-14, tout pointe sur
+  `idf-retard.fr`.
 
 ## À faire
+- [ ] **Référencement (2026-11-14)** — fait dans le code : `robots.txt`, `sitemap.xml`, `llms.txt`, titres et
+  descriptions par page, pages de ligne et accueil avec phrase chiffrée écrite par le serveur (`backend/seo.py`).
+  Reste, hors code : déclarer `idf-retard.fr` dans Google Search Console et Bing Webmaster Tools et y soumettre
+  `https://idf-retard.fr/sitemap.xml` ; relire les impressions après 4 à 8 semaines. Piste suivante : une page
+  d'archive par ligne et par jour (`/rer-b/2026-11-12`). `/annee` n'est ni dans le menu ni dans le sitemap :
+  à supprimer ou à rediriger vers `/statistiques`.
 - [x] **VPS (2026-10-12)** : redéployé avec `--workers 1` — un seul relevé par intervalle constaté dans les logs
   (avant : deux, quota Estimated Timetable 796 → 795 dans le même cycle) ; 328 tests au vert dans l'image.
 - [ ] **VPS — sécurité** : connexion SSH par mot de passe désactivée le 2026-10-12

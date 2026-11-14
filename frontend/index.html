@@ -3,7 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IDF-RETARD — Compteur en temps réel</title>
+  <title>IDF-RETARD — Retards RER et Transilien : compteur en temps réel</title>
+  <meta name="description" content="Combien les retards des RER et Transiliens coûtent aux Franciliens aujourd'hui : euros et minutes perdues, ligne par ligne, mesurés en temps réel à partir des données d'Île-de-France Mobilités.">
+  <link rel="canonical" href="https://idf-retard.fr/">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="IDF-RETARD">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:title" content="IDF-RETARD — Retards RER et Transilien : compteur en temps réel">
+  <meta property="og:description" content="Combien les retards des RER et Transiliens coûtent aux Franciliens aujourd'hui : euros et minutes perdues, ligne par ligne, mesurés en temps réel à partir des données d'Île-de-France Mobilités.">
+  <meta property="og:url" content="https://idf-retard.fr/">
+  <meta property="og:image" content="https://idf-retard.fr/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@idfretard">
+  <script type="application/ld+json">
+  {"@context": "https://schema.org", "@type": "WebSite", "name": "IDF-RETARD", "url": "https://idf-retard.fr/",
+   "inLanguage": "fr", "description": "Compteur en temps réel du coût des retards des RER et Transiliens d'Île-de-France."}
+  </script>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="nav.css?v=2">
   <link rel="stylesheet" href="pick.css?v=9">
@@ -106,6 +124,29 @@
       margin-top: 5px;
     }
 
+    /* ── Résumé écrit par le serveur (backend/seo.py) : lisible sans JavaScript ── */
+    .resume {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 26px 32px;
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--sub);
+    }
+    .resume h1, .resume h2 {
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--ink);
+      margin-bottom: 8px;
+    }
+    .resume strong { color: var(--ink); }
+    .resume a { color: var(--sub); text-underline-offset: 2px; }
+    .resume-lignes { margin-top: 10px; font-size: 13px; }
+    .resume-lignes a { white-space: nowrap; }
+
     /* ── Footer ── */
     footer {
       border-top: 2px solid var(--ink);
@@ -155,7 +196,7 @@
 <section class="hero">
   <div class="hero-date" id="hero-date">&nbsp;</div>
   <div class="hero-time" id="hero-time">&nbsp;</div>
-  <div class="hero-subtitle">Aujourd'hui, les retards des RER et Transiliens ont coûté</div>
+  <h1 class="hero-subtitle">Aujourd'hui, les retards des RER et Transiliens ont coûté</h1>
   <div class="hero-counter" id="hero-eur">— €</div>
 </section>
 
@@ -171,6 +212,8 @@
 
 <!-- Et toi, ta ligne ? -->
 <div class="pick-section" id="pick-container"></div>
+
+<!--SEO:RESUME-->
 
 <!-- Footer -->
 <footer>

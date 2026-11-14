@@ -18,6 +18,7 @@ from backend.bilans import generer_bilans
 from backend.api import router
 from backend.bot import post_daily_recap, post_recaps_periode
 from backend.alertes import verifier_alertes
+from backend import seo
 
 settings = get_settings()
 logging.basicConfig(level=settings.log_level)
@@ -194,6 +195,7 @@ _CACHE_CONTROL = {
     "/bilan.css": "public, max-age=86400",  # chargés avec ?v=N par les pages
     "/bilan.js": "public, max-age=86400",
 }
+_HORS_INDEX = ("/api/", "/data/", "/share/")
 
 
 @app.middleware("http")
@@ -207,11 +209,44 @@ async def cache_bilans(request: Request, call_next):
     # Jamais de cache sur un 404 : le premier calcul peut ne pas être encore écrit
     if valeur and response.status_code == 200:
         response.headers["Cache-Control"] = valeur
+    # Réponses JSON et pages de partage : explorables (les pages en ont besoin) mais jamais listées par un moteur
+    if chemin.startswith(_HORS_INDEX):
+        response.headers["X-Robots-Tag"] = "noindex"
     return response
 
 
+# ── Référencement (backend/seo.py) ──
+
+_CACHE_PAGE = {"Cache-Control": "public, max-age=300"}
+
+
+@app.api_route("/robots.txt", methods=["GET", "HEAD"], include_in_schema=False)
+async def robots_txt():
+    return Response(seo.robots_txt(), media_type="text/plain; charset=utf-8",
+                    headers={"Cache-Control": "public, max-age=86400"})
+
+
+@app.api_route("/sitemap.xml", methods=["GET", "HEAD"], include_in_schema=False)
+async def sitemap_xml():
+    return Response(seo.sitemap_xml(journee_de(datetime.now(PARIS_TZ))), media_type="application/xml",
+                    headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.api_route("/llms.txt", methods=["GET", "HEAD"], include_in_schema=False)
+async def llms_txt():
+    return Response(seo.llms_txt(), media_type="text/plain; charset=utf-8",
+                    headers={"Cache-Control": "public, max-age=86400"})
+
+
+# Accueil : la phrase chiffrée du jour est écrite dans le HTML (lisible sans JavaScript)
+@app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
+async def page_accueil():
+    gabarit = (frontend_dir / "index.html").read_text(encoding="utf-8")
+    return HTMLResponse(await seo.page_accueil(gabarit), headers=_CACHE_PAGE)
+
+
 # Déclarées avant le mount "/" qui, sinon, les masquerait
-@app.get("/statistiques", include_in_schema=False)
+@app.api_route("/statistiques", methods=["GET", "HEAD"], include_in_schema=False)
 async def page_statistiques():
     return FileResponse(frontend_dir / "statistiques.html")
 
@@ -236,18 +271,20 @@ async def page_mon_trajet():
     return FileResponse(frontend_dir / "mon-trajet.html")
 
 
-@app.get("/temps-reel", include_in_schema=False)
+@app.api_route("/temps-reel", methods=["GET", "HEAD"], include_in_schema=False)
 async def page_temps_reel():
     return FileResponse(frontend_dir / "temps-reel.html")
 
 
 # Pages par ligne : une route explicite par slug (pas de catch-all
 # qui masquerait les fichiers statiques comme nav.css, pick.js, etc.)
+# Titre, description et phrase chiffrée propres à la ligne sont écrits dans le HTML par backend/seo.py.
 _ligne_html = frontend_dir / "ligne.html"
 for _slug in SLUG_TO_ID:
-    @app.get(f"/{_slug}", include_in_schema=False)
+    @app.api_route(f"/{_slug}", methods=["GET", "HEAD"], include_in_schema=False)
     async def _page_ligne(_s=_slug):
-        return FileResponse(_ligne_html)
+        gabarit = _ligne_html.read_text(encoding="utf-8")
+        return HTMLResponse(await seo.page_ligne(gabarit, SLUG_TO_ID[_s]), headers=_CACHE_PAGE)
 
 
 # ── Partage réseaux sociaux ──

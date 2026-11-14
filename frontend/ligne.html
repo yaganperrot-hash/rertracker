@@ -3,8 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!--SEO:HEAD-->
   <title id="page-title">IDF-RETARD</title>
   <meta name="description" id="page-desc" content="Combien les retards de cette ligne coûtent aux usagers franciliens.">
+  <meta name="robots" content="noindex">
+  <!--/SEO:HEAD-->
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/nav.css">
   <link rel="stylesheet" href="/pick.css?v=9">
@@ -153,6 +157,29 @@
       vertical-align: middle;
     }
 
+    /* ── Résumé écrit par le serveur (backend/seo.py) : lisible sans JavaScript ── */
+    .resume {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 26px 32px;
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--sub);
+    }
+    .resume h1, .resume h2 {
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--ink);
+      margin-bottom: 8px;
+    }
+    .resume strong { color: var(--ink); }
+    .resume a { color: var(--sub); text-underline-offset: 2px; }
+    .resume-lignes { margin-top: 10px; font-size: 13px; }
+    .resume-lignes a { white-space: nowrap; }
+
     /* ── Lien méthode ── */
     .methode-link {
       text-align: center;
@@ -237,6 +264,8 @@
   </div>
 </div>
 
+<!--SEO:RESUME-->
+
 <!-- Lien méthode -->
 <div class="methode-link">
   <a href="/methode.html">Comment sont calculés ces chiffres ? → Méthodologie</a>
@@ -284,11 +313,6 @@
     document.body.innerHTML = '<div style="text-align:center;padding:60px;font-size:18px">Ligne inconnue.</div>';
   } else {
     const meta = LINE_META[lineId];
-
-    // Titre et méta
-    document.getElementById('page-title').textContent = meta.name + ' — IDF-RETARD';
-    document.getElementById('page-desc').content =
-      'Combien les retards du ' + meta.name + ' coûtent aux usagers. Compteur en temps réel.';
 
     // Réseau pour l'onglet par défaut
     let defaultTab = 'rer';

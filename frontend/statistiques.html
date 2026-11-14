@@ -3,8 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IDF-RETARD — Statistiques</title>
-<meta name="description" content="Bilan chiffré du réseau RER et Transilien d'Île-de-France : retards, suppressions, perturbations et coûts.">
+<title>Statistiques des retards RER et Transilien : semaine, mois, année — IDF-RETARD</title>
+<meta name="description" content="Bilan chiffré des retards des RER et Transiliens d'Île-de-France par semaine, mois et année : coût pour les voyageurs, minutes perdues, suppressions et causes, ligne par ligne.">
+<link rel="canonical" href="https://idf-retard.fr/statistiques">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="IDF-RETARD">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:title" content="Statistiques des retards RER et Transilien : semaine, mois, année — IDF-RETARD">
+<meta property="og:description" content="Bilan chiffré des retards des RER et Transiliens d'Île-de-France par semaine, mois et année : coût pour les voyageurs, minutes perdues, suppressions et causes, ligne par ligne.">
+<meta property="og:url" content="https://idf-retard.fr/statistiques">
+<meta property="og:image" content="https://idf-retard.fr/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@idfretard">
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "Dataset",
+ "name": "Retards et suppressions de trains des RER et Transiliens d'Île-de-France",
+ "description": "Minutes-voyageurs perdues et coût estimé des retards et suppressions de trains sur les RER A, B, C, D, E et les Transiliens H, J, K, L, N, P, R, U, par ligne et par jour, mesurés à partir du flux temps réel PRIM d'Île-de-France Mobilités.",
+ "url": "https://idf-retard.fr/statistiques", "inLanguage": "fr", "isAccessibleForFree": true,
+ "temporalCoverage": "2026-09-16/..", "spatialCoverage": {"@type": "Place", "name": "Île-de-France"},
+ "creator": {"@type": "Organization", "name": "IDF-RETARD", "url": "https://idf-retard.fr/"},
+ "isBasedOn": "https://prim.iledefrance-mobilites.fr/"}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -302,7 +324,7 @@ main[aria-busy="true"] { opacity: .45; transition: opacity .15s; }
     <section class="hero" aria-label="Chiffres de la période">
       <div class="hero-date" id="h-date">&nbsp;</div>
       <div class="hero-time" id="h-time">&nbsp;</div>
-      <div class="hero-subtitle" id="h-subtitle">Ce mois-ci, les retards ont coûté</div>
+      <h1 class="hero-subtitle" id="h-subtitle">Ce mois-ci, les retards ont coûté</h1>
       <div class="hero-counter" id="h-cout">— €</div>
       <div class="hero-unit">au SMIC horaire brut · réseau IDF complet</div>
     </section>

@@ -97,7 +97,7 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb reta
 ## Commandes fréquentes
 
 ```bash
-# Tests (328 tests, ~13 s)
+# Tests (481 tests, ~15 s)
 venv/Scripts/python -m pytest tests/ -x -q          # Windows
 ./venv/bin/python -m pytest tests/ -x -q             # Mac
 
@@ -122,6 +122,10 @@ python -m backend.offre horaires   # Mon trajet, indépendant
   génération des JSON bilans, extraction des causes, bot X, transfert d'incidents entre bases.
 - Frontend : `frontend/` — HTML/CSS/JS vanilla, une page par vue ; nav et sélecteur de ligne
   factorisés (`nav.css`, `pick.*`).
+- Référencement : `backend/seo.py` (robots.txt, sitemap.xml, llms.txt). L'accueil et les pages de ligne sont des
+  gabarits : le serveur y écrit titre, description et phrase chiffrée du jour aux marqueurs `<!--SEO:…-->`
+  (lisibles sans JavaScript par les moteurs et les robots d'IA). Toute nouvelle page publique : titre, description,
+  `canonical`, un seul `<h1>`, et une entrée dans `seo.PAGES_PUBLIQUES` ; toute page interne : `noindex`.
 - Tests → `tests/` (`test_*.py`, pytest). Config/env → `backend/config.py`.
 - JSON statiques : `data/frequentation.json` (tracké) ; `frontend/data/` (régénéré, gitignored).
 - Spécifique Claude Code : état de session dans `.claude/` (SESSION.md, DEBUG.md, TASKS.md,

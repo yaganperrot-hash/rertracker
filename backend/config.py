@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     debut_donnees_fiables: date = date(2026, 9, 16)
     archive_flux_jours: int = 3           # réponses brutes du flux Estimated Timetable gardées dans logs/flux_brut/ (0 = aucune)
 
+    site_url: str = "https://idf-retard.fr"   # adresse publique : sitemap, robots.txt, canonical (backend/seo.py)
+
     # Alertes Telegram « une ligne dégénère » (backend/alertes.py, ALERTES.md) — calibrées par le backtest
     alerte_seuil_euros: int = 100_000     # coût d'une ligne sur la fenêtre glissante qui déclenche seul (backtest 28/10–10/11 : 4 alertes/semaine)
     alerte_duree_incident_min: int = 30   # un train retardé d'au moins ce temps déclenche si coût ≥ seuil × ratio
