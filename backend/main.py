@@ -18,7 +18,7 @@ from backend.bilans import generer_bilans
 from backend.api import router
 from backend.bot import post_daily_recap, post_recaps_periode
 from backend.alertes import verifier_alertes
-from backend import seo
+from backend import archives, seo
 
 settings = get_settings()
 logging.basicConfig(level=settings.log_level)
@@ -228,7 +228,9 @@ async def robots_txt():
 
 @app.api_route("/sitemap.xml", methods=["GET", "HEAD"], include_in_schema=False)
 async def sitemap_xml():
-    return Response(seo.sitemap_xml(journee_de(datetime.now(PARIS_TZ))), media_type="application/xml",
+    # Base injoignable : le sitemap garde ses pages fixes (historique() renvoie None, jamais d'exception)
+    pages_archive = archives.chemins_archives(await archives.historique())
+    return Response(seo.sitemap_xml(journee_de(datetime.now(PARIS_TZ)), pages_archive), media_type="application/xml",
                     headers={"Cache-Control": "public, max-age=3600"})
 
 
@@ -285,6 +287,33 @@ for _slug in SLUG_TO_ID:
     async def _page_ligne(_s=_slug):
         gabarit = _ligne_html.read_text(encoding="utf-8")
         return HTMLResponse(await seo.page_ligne(gabarit, SLUG_TO_ID[_s]), headers=_CACHE_PAGE)
+
+
+# Archives (backend/archives.py) : historique d'une ligne et une page par jour terminé, écrits par le serveur.
+_archive_html = frontend_dir / "archive.html"
+_CACHE_ARCHIVE = {"Cache-Control": "public, max-age=3600"}
+
+
+def _reponse_archive(code: int, contenu: str) -> Response:
+    if code == 200:
+        return HTMLResponse(contenu, headers=_CACHE_ARCHIVE)
+    if code == 302:
+        return RedirectResponse(contenu, status_code=302)
+    entetes = {"Retry-After": "300"} if code == 503 else None
+    return Response(contenu, status_code=code, media_type="text/plain; charset=utf-8", headers=entetes)
+
+
+for _slug in SLUG_TO_ID:
+    # « historique » déclaré avant « {jour} », qui sinon l'attraperait
+    @app.api_route(f"/{_slug}/historique", methods=["GET", "HEAD"], include_in_schema=False)
+    async def _page_historique(_s=_slug):
+        gabarit = _archive_html.read_text(encoding="utf-8")
+        return _reponse_archive(*await archives.reponse_historique(gabarit, SLUG_TO_ID[_s]))
+
+    @app.api_route(f"/{_slug}/{{jour}}", methods=["GET", "HEAD"], include_in_schema=False)
+    async def _page_jour(jour: str, _s=_slug):
+        gabarit = _archive_html.read_text(encoding="utf-8")
+        return _reponse_archive(*await archives.reponse_jour(gabarit, SLUG_TO_ID[_s], jour))
 
 
 # ── Partage réseaux sociaux ──

@@ -97,7 +97,7 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb reta
 ## Commandes fréquentes
 
 ```bash
-# Tests (481 tests, ~15 s)
+# Tests (517 tests, ~15 s)
 venv/Scripts/python -m pytest tests/ -x -q          # Windows
 ./venv/bin/python -m pytest tests/ -x -q             # Mac
 
@@ -126,6 +126,9 @@ python -m backend.offre horaires   # Mon trajet, indépendant
   gabarits : le serveur y écrit titre, description et phrase chiffrée du jour aux marqueurs `<!--SEO:…-->`
   (lisibles sans JavaScript par les moteurs et les robots d'IA). Toute nouvelle page publique : titre, description,
   `canonical`, un seul `<h1>`, et une entrée dans `seo.PAGES_PUBLIQUES` ; toute page interne : `noindex`.
+- Archives : `backend/archives.py` + gabarit `frontend/archive.html` — une page par ligne et par jour terminé
+  (`/rer-b/2026-11-12`) et un historique par ligne (`/rer-b/historique`), écrits par le serveur, listés dans le
+  sitemap. Lecture seule ; base injoignable → 503, jamais 404 (un 404 ferait retirer la page des moteurs).
 - Tests → `tests/` (`test_*.py`, pytest). Config/env → `backend/config.py`.
 - JSON statiques : `data/frequentation.json` (tracké) ; `frontend/data/` (régénéré, gitignored).
 - Spécifique Claude Code : état de session dans `.claude/` (SESSION.md, DEBUG.md, TASKS.md,

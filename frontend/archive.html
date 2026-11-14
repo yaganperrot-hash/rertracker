@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!--SEO:HEAD-->
+  <title>Archives — IDF-RETARD</title>
+  <meta name="robots" content="noindex">
+  <!--/SEO:HEAD-->
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/nav.css?v=2">
+  <style>
+    /* Gabarit des pages d'archive (backend/archives.py) : jour d'une ligne et historique d'une ligne.
+       Le contenu est écrit par le serveur au marqueur SEO:CORPS — aucune donnée chargée en JavaScript. */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #F7F4EF;
+      --bg2:    #EDEAE4;
+      --border: #D4CFC7;
+      --ink:    #000000;
+      --muted:  #555555;
+      --sub:    #333333;
+      --red:    #C0392B;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Roboto', sans-serif;
+      font-size: 16px;
+      overflow-x: hidden;
+    }
+    a { color: var(--sub); text-underline-offset: 2px; }
+    a:hover { color: var(--ink); }
+
+    main { max-width: 860px; margin: 0 auto; padding: 0 32px 8px; }
+
+    .entete { text-align: center; padding: 26px 0 22px; border-bottom: 1px solid var(--border); }
+    .fil { font-size: 13px; color: var(--muted); margin-bottom: 14px; padding: 0 44px; }
+    .fil a { color: var(--muted); }
+    h1 {
+      font-weight: 500;
+      font-size: clamp(18px, 2.6vw, 24px);
+      line-height: 1.35;
+      margin-bottom: 14px;
+    }
+    .pastille {
+      display: inline-block;
+      min-width: 1.7em;
+      padding: 0 .35em;
+      border-radius: 6px;
+      font-weight: 900;
+      line-height: 1.7em;
+      text-align: center;
+      vertical-align: baseline;
+      margin-right: 4px;
+    }
+    .cout {
+      font-weight: 900;
+      font-size: clamp(44px, 9vw, 88px);
+      letter-spacing: -.03em;
+      line-height: .95;
+      margin-bottom: 16px;
+    }
+    .chapeau { max-width: 680px; margin: 0 auto; font-size: 15px; line-height: 1.6; color: var(--sub); }
+    .chapeau strong { color: var(--ink); }
+
+    .chiffres {
+      list-style: none;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px 36px;
+      padding: 18px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+      color: var(--sub);
+    }
+    .chiffres strong { font-weight: 700; font-size: 20px; color: var(--red); margin-right: 4px; }
+
+    .bloc { padding: 26px 0 6px; }
+    h2 {
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border-bottom: 2px solid var(--ink);
+      padding-bottom: 8px;
+      margin-bottom: 4px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th {
+      text-align: left;
+      font-weight: 500;
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 10px 8px 6px;
+    }
+    td { padding: 9px 8px; border-top: 1px solid var(--border); vertical-align: top; }
+    tbody tr:first-child td { border-top: 0; }
+    th.d, td.d { text-align: right; white-space: nowrap; }
+    td.d { font-weight: 500; }
+    td:first-child { white-space: nowrap; }
+    .mission { color: var(--muted); font-size: 12px; margin-left: 4px; }
+
+    .liste { list-style: none; font-size: 14px; line-height: 1.5; }
+    .liste li { padding: 10px 8px; border-top: 1px solid var(--border); }
+    .liste li:first-child { border-top: 0; }
+    .categorie {
+      display: inline-block;
+      background: var(--bg2);
+      font-size: 12px;
+      padding: 1px 8px;
+      margin-left: 4px;
+      white-space: nowrap;
+    }
+
+    .note { font-size: 12px; line-height: 1.5; color: var(--muted); padding: 10px 8px 0; }
+    .jours {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px 20px;
+      padding: 22px 8px;
+      margin-top: 20px;
+      border-top: 1px solid var(--border);
+      font-size: 14px;
+    }
+    .jours.autres { display: block; text-align: center; line-height: 1.9; }
+    .jours.autres a { white-space: nowrap; }
+    .pied { text-align: center; padding-bottom: 22px; }
+
+    footer {
+      border-top: 2px solid var(--ink);
+      padding: 18px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--sub);
+    }
+    .footer-right a { text-decoration: none; margin-left: 14px; }
+
+    @media (max-width: 768px) {
+      main { padding: 0 16px 8px; }
+      .entete { padding-top: 22px; }
+      td, th { padding-left: 4px; padding-right: 4px; }
+      .jours { flex-direction: column; align-items: center; }
+      footer { padding: 14px 16px; flex-direction: column; align-items: flex-start; }
+      .footer-right a:first-child { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<button class="nav-burger" id="nav-burger" aria-label="Menu">&#9776;</button>
+<ul class="nav-menu" id="nav-menu">
+  <li><a href="/">Aujourd'hui</a></li>
+  <li><a href="/temps-reel">Temps réel</a></li>
+  <li><a href="/statistiques">Statistiques</a></li>
+  <li><a href="/methode.html">Méthode</a></li>
+</ul>
+
+<main>
+<!--SEO:CORPS-->
+</main>
+
+<footer>
+  <div class="footer-left">Données : API PRIM · IDF Mobilités · Licence Open Data Etalab</div>
+  <div class="footer-right">
+    <a href="/methode.html">Méthodologie</a>
+    <a href="mailto:idf.retard@gmail.com">Contact</a>
+    <a href="https://x.com/idfretard" target="_blank" rel="noopener">X</a>
+    <a href="https://instagram.com/idfretard" target="_blank" rel="noopener">Instagram</a>
+  </div>
+</footer>
+
+<script>
+(function() {
+  var btn = document.getElementById('nav-burger');
+  var menu = document.getElementById('nav-menu');
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    menu.classList.toggle('open');
+  });
+  document.addEventListener('click', function(e) {
+    if (!menu.contains(e.target)) menu.classList.remove('open');
+  });
+})();
+</script>
+</body>
+</html>

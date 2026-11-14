@@ -93,11 +93,15 @@ def urls_sitemap() -> list[str]:
     return PAGES_PUBLIQUES + [f"/{slug}" for slug in LINE_SLUGS.values()]
 
 
-def sitemap_xml(jour: date) -> str:
-    """Toutes les pages publiques. `lastmod` = jour des chiffres, sauf la Méthode qui ne change pas chaque jour."""
+def sitemap_xml(jour: date, archives: list[str] | None = None) -> str:
+    """Toutes les pages publiques, puis les pages d'archive (`archives.chemins_archives`). `lastmod` = jour des
+    chiffres pour les pages vivantes ; rien pour la Méthode ni pour une journée terminée, qui ne changent plus."""
     entrees = []
     for chemin in urls_sitemap():
         lastmod = "" if chemin == "/methode.html" else f"<lastmod>{jour.isoformat()}</lastmod>"
+        entrees.append(f"  <url><loc>{xml_escape(site() + chemin)}</loc>{lastmod}</url>")
+    for chemin in archives or []:
+        lastmod = f"<lastmod>{jour.isoformat()}</lastmod>" if chemin.endswith("/historique") else ""
         entrees.append(f"  <url><loc>{xml_escape(site() + chemin)}</loc>{lastmod}</url>")
     return ('<?xml version="1.0" encoding="UTF-8"?>\n'
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
@@ -132,7 +136,14 @@ def llms_txt() -> str:
         "## Lignes",
         "",
     ]
-    lignes += [f"- [Retards {nom_ligne_long(lid)}]({site()}/{slug})" for lid, slug in LINE_SLUGS.items()]
+    lignes += [f"- [Retards {nom_ligne_long(lid)}]({site()}/{slug}) — "
+               f"[historique jour par jour]({site()}/{slug}/historique)" for lid, slug in LINE_SLUGS.items()]
+    lignes += [
+        "",
+        "Chaque journée terminée a sa page : `/{ligne}/{AAAA-MM-JJ}`, par exemple "
+        f"{site()}/rer-b/{get_settings().debut_donnees_fiables.isoformat()} (coût, trains les plus coûteux, "
+        "perturbations déclarées).",
+    ]
     lignes += [
         "",
         "## Données",
@@ -225,9 +236,11 @@ def resume_ligne(line_id: str, chiffres: dict | None) -> str:
     else:
         ligne = chiffres["lignes"].get(line_id, {"minutes": 0, "cout": 0})
         phrase = _phrase(chiffres, sujet, ligne["minutes"], ligne["cout"])
+    archives = (f'<a href="/{LINE_SLUGS[line_id]}/historique">Historique des retards {escape(sujet)}, '
+                'jour par jour</a>.')
     return ('<section class="resume">\n'
             f'  <h1>Retards {escape(nom_ligne_long(line_id))} aujourd\'hui</h1>\n'
-            f'  <p>{phrase} {_SUITE}</p>\n'
+            f'  <p>{phrase} {_SUITE} {archives}</p>\n'
             f'  {_liens_lignes(sauf=line_id)}\n'
             '</section>')
 

@@ -42,8 +42,9 @@
 - [ ] **Référencement (2026-11-14)** — fait dans le code : `robots.txt`, `sitemap.xml`, `llms.txt`, titres et
   descriptions par page, pages de ligne et accueil avec phrase chiffrée écrite par le serveur (`backend/seo.py`).
   Reste, hors code : déclarer `idf-retard.fr` dans Google Search Console et Bing Webmaster Tools et y soumettre
-  `https://idf-retard.fr/sitemap.xml` ; relire les impressions après 4 à 8 semaines. Piste suivante : une page
-  d'archive par ligne et par jour (`/rer-b/2026-11-12`). `/annee` n'est ni dans le menu ni dans le sitemap :
+  `https://idf-retard.fr/sitemap.xml` ; relire les impressions après 4 à 8 semaines. Pages d'archive par ligne et
+  par jour en ligne le 2026-11-14 (`/rer-b/2026-11-12`, `/rer-b/historique`, `backend/archives.py`) : rendu à
+  vérifier sur bureau et mobile. `/annee` n'est ni dans le menu ni dans le sitemap :
   à supprimer ou à rediriger vers `/statistiques`.
 - [x] **VPS (2026-10-12)** : redéployé avec `--workers 1` — un seul relevé par intervalle constaté dans les logs
   (avant : deux, quota Estimated Timetable 796 → 795 dans le même cycle) ; 328 tests au vert dans l'image.
