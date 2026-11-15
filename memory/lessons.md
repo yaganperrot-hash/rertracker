@@ -259,3 +259,10 @@
   prévenir. Seules preuves : heure du dernier incident en base et quota restant au premier relevé.
 - Claude Code peut lancer le serveur de façon durable : `nohup caffeinate -i ./venv/bin/python -m uvicorn … >>
   logs/uvicorn.out 2>&1 < /dev/null & disown` survit à la commande (un simple `run_in_background` est tué).
+
+## Statistiques rapportées à l'offre (2026-11-15)
+- Un « % de trains perturbés » calculé avec nos compteurs n'est pas la ponctualité officielle : retard et suppression
+  ne sont mesurés qu'à moins de 10 min du passage estimé, couverture du flux ≈ 68 %. Le chiffre est sous-estimé — le
+  nommer « mesuré » et l'expliquer dans la page Méthode.
+- Retard médian / p95 : seuls les percentiles des tranches réseau existent dans `bilans.py` ; par ligne, c'est un
+  nouveau calcul (zone critique).
