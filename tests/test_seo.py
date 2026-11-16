@@ -233,6 +233,11 @@ class TestRoutes:
         assert b"<urlset" in (await main.sitemap_xml()).body
         assert (await main.llms_txt()).body.decode("utf-8") == seo.llms_txt()
 
+    def test_fichier_verification_google(self):
+        """Search Console : le fichier doit rester à la racine du site, contenu inchangé."""
+        nom = "googlec7b3c79ab2405109.html"
+        assert _lire(nom).strip() == f"google-site-verification: {nom}"
+
     async def test_accueil(self, chiffres):
         rep = await main.page_accueil()
         assert rep.status_code == 200
