@@ -1,7 +1,7 @@
 """Tests du récap quotidien : formatage des durées, montant, enregistrement dans le projet."""
 from datetime import date
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -118,3 +118,27 @@ async def test_aucun_incident_aucune_publication(tmp_path):
 def test_bilan_ne_parle_que_des_lignes_suivies():
     # Métro retiré de la collecte (2026-09-12) : le post ne doit pas l'annoncer
     assert "Métro" not in _compose_tweet(3, 1000, ["RER_A"], date(2026, 9, 10), euros=205)
+
+
+async def test_recap_envoye_sur_telegram_avec_la_carte(tmp_path):
+    rows = [SimpleNamespace(nb_incidents=5, minutes_voyageurs=97, line_id="RER_A", est_jour_perturbe=True)]
+    png = tmp_path / "carte.png"
+    envoi = AsyncMock(return_value=True)
+    with patch("backend.bot.AsyncSessionLocal", return_value=_Session(rows)),          patch("backend.bot.get_settings", return_value=SimpleNamespace(smic_horaire=12.31)),          patch("backend.bot.generer_carte_png", AsyncMock(return_value=png)),          patch("backend.bot.generer_carousel_png", AsyncMock(return_value=[])),          patch("backend.alertes.envoyer_telegram", envoi):
+        await post_daily_recap(dossier=tmp_path)
+    texte, image = envoi.await_args.args
+    assert "perdus à cause des retards" in texte and image == png
+
+
+async def test_echec_telegram_ne_perd_pas_la_publication(tmp_path):
+    rows = [SimpleNamespace(nb_incidents=5, minutes_voyageurs=97, line_id="RER_A", est_jour_perturbe=True)]
+    with patch("backend.bot.AsyncSessionLocal", return_value=_Session(rows)),          patch("backend.bot.get_settings", return_value=SimpleNamespace(smic_horaire=12.31)),          patch("backend.bot.generer_carte_png", AsyncMock(return_value=None)),          patch("backend.bot.generer_carousel_png", AsyncMock(return_value=[])),          patch("backend.alertes.envoyer_telegram", AsyncMock(side_effect=RuntimeError("panne"))):
+        await post_daily_recap(dossier=tmp_path)
+    assert len(list(tmp_path.glob("*.txt"))) == 1
+
+
+async def test_aucun_incident_aucun_envoi_telegram(tmp_path):
+    envoi = AsyncMock(return_value=True)
+    with patch("backend.bot.AsyncSessionLocal", return_value=_Session([])),          patch("backend.bot.get_settings", return_value=SimpleNamespace(smic_horaire=12.31)),          patch("backend.alertes.envoyer_telegram", envoi):
+        await post_daily_recap(dossier=tmp_path)
+    envoi.assert_not_awaited()

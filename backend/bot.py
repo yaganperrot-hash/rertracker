@@ -1,7 +1,8 @@
 """
 bot.py — Récap quotidien à 19h30 : bilan du jour même (incidents, minutes-voyageurs, coût) ;
 le dimanche à 19h35, bilan de la semaine, et du mois le dernier dimanche (agrégats : periodes.py).
-Enregistré dans publications/ (texte + carte PNG + carousel Instagram), récupérable sur /publications.
+Enregistré dans publications/ (texte + carte PNG + carousel Instagram), récupérable sur /publications,
+et envoyé sur Telegram (texte à copier + carte) quand le bot est configuré.
 """
 import logging
 import os
@@ -169,6 +170,20 @@ async def generer_carousel_png(jour: date, dossier: Path = DOSSIER_PUBLICATIONS,
     return chemins
 
 
+async def _envoyer_recap_telegram(texte: str, image: Path | None) -> None:
+    """Envoie le récap (texte à copier + carte) sur Telegram. Ne lève jamais : la publication est déjà enregistrée.
+
+    Sans TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID, envoyer_telegram logue un warning et ne fait rien.
+    """
+    try:
+        from backend.alertes import envoyer_telegram  # import local : alertes importe déjà ce module
+
+        if await envoyer_telegram(texte, image):
+            logger.info("Récap envoyé sur Telegram")
+    except Exception:
+        logger.exception("Envoi du récap sur Telegram impossible")
+
+
 async def post_daily_recap(dossier: Path = DOSSIER_PUBLICATIONS) -> None:
     """Récap quotidien, planifié à 19h30 par le scheduler dans main.py.
 
@@ -210,6 +225,7 @@ async def post_daily_recap(dossier: Path = DOSSIER_PUBLICATIONS) -> None:
     if slides:
         logger.info("Carrousel Instagram : %d slides dans %s", len(slides), slides[0].parent)
 
+    await _envoyer_recap_telegram(tweet_text, chemin_png)
     logger.info("Publication prête — texte + images disponibles sur /publications")
 
 
@@ -261,8 +277,9 @@ async def _publier_periode(type_: str, jour: date, agg: dict, evolution: int | N
     chemin = enregistrer_publication(texte, jour, dossier, suffixe)
     logger.info("Bilan %s enregistré : %s\n%s", type_, chemin, texte)
     params = f"?type={type_}&du={agg['du']}&au={agg['au']}"
-    await generer_carte_png(jour, dossier, suffixe, params)
+    chemin_png = await generer_carte_png(jour, dossier, suffixe, params)
     await generer_carousel_png(jour, dossier, suffixe, params)
+    await _envoyer_recap_telegram(texte, chemin_png)
 
 
 async def post_recaps_periode(dossier: Path = DOSSIER_PUBLICATIONS, jour: date | None = None) -> None:

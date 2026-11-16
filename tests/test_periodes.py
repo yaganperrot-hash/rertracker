@@ -208,3 +208,14 @@ async def test_liste_publications_avec_bilans_du_dimanche(tmp_path, monkeypatch)
     ]
     semaine = pubs[1]
     assert (semaine["texte"], semaine["has_png"], semaine["nb_slides"]) == ("2026-11-08-semaine", True, 1)
+
+
+async def test_bilan_semaine_envoye_sur_telegram(tmp_path):
+    dimanche = date(2026, 11, 8)
+    rows = [_row(dimanche, mv=2240), _row(dimanche - timedelta(days=7), mv=2000)]
+    carte, carousel = _sans_images()
+    envoi = AsyncMock(return_value=True)
+    with _mock_base(rows), carte, carousel, patch("backend.alertes.envoyer_telegram", envoi):
+        await post_recaps_periode(dossier=tmp_path, jour=dimanche)
+    assert envoi.await_count == 1
+    assert "Bilan de la semaine" in envoi.await_args.args[0]
